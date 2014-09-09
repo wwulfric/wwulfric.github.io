@@ -31,3 +31,5 @@ comments:
   provider: "disqus"
   disqus:
     short_name: "storm-spirit"
+sass:
+    style: :compressed

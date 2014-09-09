@@ -20,3 +20,14 @@ defaults:
     values:
       layout: "post"
       author: "wulfric"
+      comments: true
+      analytics: true  
+analytics:
+  provider: google 
+  google: 
+  tracking_id: 'UA-54608037-1'
+
+comments:
+  provider: "disqus"
+  disqus:
+    short_name: "storm-spirit"

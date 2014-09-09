@@ -2,3 +2,6 @@
 	path = _posts
 	url = https://github.com/wwulfric/articles.git
 
+[submodule "_plugins/kramdown-with-pygments"]
+	path = _plugins/kramdown-with-pygments
+	url = https://github.com/mvdbos/kramdown-with-pygments.git

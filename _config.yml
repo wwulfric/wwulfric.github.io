@@ -9,7 +9,8 @@ url: "http://wwulfric.github.io" # the base hostname & protocol for your site
 github_username:  wwulfric
 
 # Build settings
-markdown: kramdown
+# KramdownPygments is based on kramdown and share config
+markdown: KramdownPygments
 kramdown:
   input: GFM
 defaults:
@@ -21,10 +22,10 @@ defaults:
       layout: "post"
       author: "wulfric"
       comments: true
-      analytics: true  
+      analytics: true
 analytics:
-  provider: google 
-  google: 
+  provider: google
+  google:
     tracking_id: 'UA-54608037-1'
 
 comments:

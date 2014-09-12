@@ -16,11 +16,20 @@
       }
     }
     #comments{
-      @include top-seprater(2em);
+      display: none;
+    }
+    #tags{
+      color: $lightest-color;
     }
   }
 }
 footer{
   @include top-seprater(2em);
   text-align: center;
+}
+
+.modal{
+  width: 600px;
+  padding: 2em;
+  background-color: $bg-color;
 }

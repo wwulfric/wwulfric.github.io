@@ -17,8 +17,9 @@ layout: default
   {% include tags.html %}
 
   {% if page.comments %}
+     <p><a href="#comments" rel="modal:open">评论</a></p>
     <div id="comments">
-      {% include disqus_comments.html  %}
+      {% include duoshuo_comments.html  %}
     </div>
   {% endif %}
 </div>

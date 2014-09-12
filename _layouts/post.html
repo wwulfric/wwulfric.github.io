@@ -12,9 +12,9 @@ layout: default
     {{ content }}
   </article>
 
-  <div id="tags">
-    {{ page.tags }}
-  </div>
+  {% include cc.html %}
+
+  {% include tags.html %}
 
   {% if page.comments %}
     <div id="comments">

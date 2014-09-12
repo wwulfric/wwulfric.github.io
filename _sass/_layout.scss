@@ -1,0 +1,26 @@
+@charset "utf-8";
+.content{
+  margin: 0 auto;
+  width: 720px;
+  word-wrap: break-word;
+  word-break: normal;
+  .post{
+    h2{
+      background-color: $header-color;
+      padding-left: 5px;
+      border: 1px groove $lighter-color;
+    }
+    blockquote{
+      p{
+        margin-bottom: 0em !important;
+      }
+    }
+    #comments{
+      @include top-seprater(2em);
+    }
+  }
+}
+footer{
+  @include top-seprater(2em);
+  text-align: center;
+}

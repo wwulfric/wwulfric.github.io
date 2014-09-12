@@ -2,20 +2,20 @@
 layout: compress
 ---
 <!DOCTYPE html>
-<html>
+<html class='borderbox'>
 
   {% include head.html %}
 
   <body>
+    <div class='content'>
+      {% include header.html %}
 
-    {% include header.html %}
+      {{ content }}
 
-    {{ content }}
+      {% include footer.html %}
 
-    {% include footer.html %}
-
-    {% include google_analytics.html %}
-
+      {% include google_analytics.html %}
+    </div>
   </body>
 
 </html>

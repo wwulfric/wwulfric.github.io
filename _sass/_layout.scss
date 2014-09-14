@@ -1,10 +1,42 @@
 @charset "utf-8";
+.pull-right{
+  float: right;
+}
+.pull-left{
+  float: left;
+}
+
 .content{
   margin: 0 auto;
   width: 720px;
   word-wrap: break-word;
   word-break: normal;
   .post{
+    .post-header{
+      $date-width: 70px;
+      margin-left: -$date-width;
+      .date{
+        color: $border-color;
+        &:hover{
+          color: $lightest-color;
+        }
+        font-family: monospace;
+        width: $date-width;
+        .day-month{
+          text-align: center;
+          .day{
+            font-size: 2em;
+            line-height: 1em;
+          }
+        }
+        .year{
+          transform: rotate(-90deg);
+          margin-top: 0.6em;
+          font-size: 1.2em;
+          margin-left: -0.8em;
+        }
+      }
+    }
     h2{
       background-color: $header-color;
       padding-left: 5px;
@@ -18,8 +50,17 @@
     #comments{
       display: none;
     }
-    #tags{
+    #additional{
       color: $lightest-color;
+      a{
+        color: $lightest-color;
+        border: none;
+        &:hover{
+          color: $lighter-color;
+        }
+      }
+      #tags{
+      }
     }
   }
 }

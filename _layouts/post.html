@@ -3,23 +3,36 @@ layout: default
 ---
 <div class="post typo">
 
-  <header class="post-header">
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>{{ page.date | date: "%d" }}</div>
+        <div class='month'>{{ page.date | date: "%b" | upcase }}</div>
+      </div>
+      <div class='year pull-left'>{{ page.date | date: "%Y" }}</div>
+    </div>
     <h1 class="post-title">{{ page.title }}</h1>
-    <p class="post-meta">{{ page.date | date: "%b %-d, %Y" }}{% if page.author %} • {{ page.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
   </header>
+
+  {% include cc.html %}
 
   <article class="post-content">
     {{ content }}
   </article>
 
-  {% include cc.html %}
-
-  {% include tags.html %}
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      {% include tags.html %}
+    </div>
+    {% if page.comments %}
+      <a class='pull-right' href="#comments" rel="modal:open">评论</a>
+    {% endif %}
+  </div>
 
   {% if page.comments %}
-     <p><a href="#comments" rel="modal:open">评论</a></p>
     <div id="comments">
-      {% include duoshuo_comments.html  %}
+      {% include duoshuo_comments.html %}
     </div>
   {% endif %}
+
 </div>

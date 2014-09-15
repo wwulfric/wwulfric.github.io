@@ -86,7 +86,7 @@ class Jekyll::Converters::Markdown::KramdownPygments
         :smart_quotes         => @config['kramdown']['smart_quotes'],
         :kramdown_default_lang => @config['kramdown']['default_lang'],
         :input                => @config['kramdown']['input']
-    }).to_pygments_html
+    }).to_html
     return html;
   end
 end

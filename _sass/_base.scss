@@ -39,6 +39,21 @@ $font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monos
   padding-top: $pad;
 }
 
+/* don't support so many browser */
+@mixin rotate($deg){
+  transform:rotate($deg);
+  -ms-transform:rotate($deg); 	/* IE 9 */
+  -moz-transform:rotate($deg); 	/* Firefox */
+  -webkit-transform:rotate($deg); /* Safari 和 Chrome */
+  -o-transform:rotate($deg); 	/* Opera */
+}
+
+@mixin word-break(){
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
 .box { @include border-radius(10px); }
 
 $normal-border: 1px solid $border-color;

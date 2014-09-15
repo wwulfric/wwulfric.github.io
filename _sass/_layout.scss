@@ -9,8 +9,6 @@
 .content{
   margin: 0 auto;
   width: 720px;
-  word-wrap: break-word;
-  word-break: normal;
   .post{
     .post-header{
       $date-width: 70px;
@@ -46,6 +44,9 @@
       p{
         margin-bottom: 0em !important;
       }
+    }
+    pre{
+      @include word-break();
     }
     #comments{
       display: none;

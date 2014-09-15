@@ -11,6 +11,7 @@ github_username:  wwulfric
 # Build settings
 # KramdownPygments is based on kramdown and share config
 markdown: kramdown
+highlighter: false
 excerpt_separator: ""
 kramdown:
   input: GFM

@@ -1,3 +1,6 @@
 [submodule "_posts"]
 	path = _posts
 	url = https://github.com/wwulfric/articles.git
+[submodule "_site"]
+	path = _site
+	url = git@github_wwulfric:wwulfric/wwulfric.github.io.git

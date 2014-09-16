@@ -10,6 +10,10 @@ github_username:  wwulfric
 permalink: /:year/:month/:title/
 
 # Build settings
+gems: [jekyll-assets]
+assets:
+  js_compressor:  uglifier
+  css_compressor: sass
 # KramdownPygments is based on kramdown and share config
 markdown: KramdownPygments
 highlighter: pygments
@@ -35,9 +39,5 @@ analytics:
   google:
     tracking_id: 'UA-54608037-1'
 
-comments:
-  provider: "disqus"
-  disqus:
-    short_name: "storm-spirit"
 sass:
   style: :compressed

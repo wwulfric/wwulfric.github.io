@@ -6,9 +6,10 @@ module Kramdown
 
       begin
         require 'pygments'
+        require 'mini_magick'
       rescue LoadError
         STDERR.puts 'You are missing a library required for syntax highlighting. Please run:'
-        STDERR.puts '  $ [sudo] gem install pygments'
+        STDERR.puts '  $ [sudo] gem install pygments mini_magick'
         raise FatalException.new("Missing dependency: Pygments")
       end
 
@@ -37,9 +38,14 @@ module Kramdown
       end
 
       def convert_img(el, indent)
+        image = MiniMagick::Image.open el.attr['src']
+        width = image[:width]
+        unless el.attr['src'].match(/R-/).nil?
+          width /= 2
+        end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>
-            <img#{html_attributes(el.attr)} />
+            <img#{html_attributes(el.attr)} width=#{width} />
           </a>
           <figcaption>#{el.attr['alt']}</figcaption>
         </figure>"

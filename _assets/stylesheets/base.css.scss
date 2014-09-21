@@ -33,12 +33,6 @@ $font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monos
 	height: $property;
 }
 
-@mixin top-seprater($pad){
-  border-top: $normal-border;
-  margin-top: $pad;
-  padding-top: $pad;
-}
-
 /* don't support so many browser */
 @mixin rotate($deg){
   transform:rotate($deg);

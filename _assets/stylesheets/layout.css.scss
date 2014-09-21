@@ -53,6 +53,8 @@
     }
     #additional{
       color: $lightest-color;
+      padding: 1em;
+      border-top: $normal-border;
       a{
         color: $lightest-color;
         border: none;
@@ -67,7 +69,9 @@
   }
 }
 footer{
-  @include top-seprater(2em);
+  border-top: 4px solid black;
+  margin-top: 3em;
+  padding: 1em 0em;
   text-align: center;
 }
 

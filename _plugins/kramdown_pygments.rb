@@ -40,8 +40,10 @@ module Kramdown
       def convert_img(el, indent)
         image = MiniMagick::Image.open el.attr['src']
         width = image[:width]
+        height = image[:height]
         unless el.attr['src'].match(/R-/).nil?
           width /= 2
+          height /= 2
         end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>

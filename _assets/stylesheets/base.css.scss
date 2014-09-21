@@ -20,6 +20,8 @@ $mark-color: #EFF1C2;
 // $font-family : "Helvetica Neue", "Helvetica", Arial, "Hiragino Sans GB", "WenQuanYi Micro Hei", SimSun, sans-serif;
 $font-family : "HelveticaNeue-Light","Helvetica Neue Light","Helvetica Neue",Helvetica,Arial,sans-serif;
 $font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monospace;
+$font-Josefin: "Josefin Slab", serif;
+// $font-Italianno: 'Italianno', cursive;
 
 @mixin border-radius($radius) {
   -webkit-border-radius: $radius;

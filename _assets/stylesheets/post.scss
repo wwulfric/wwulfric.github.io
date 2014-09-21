@@ -1,0 +1,65 @@
+.content{
+  margin: 0 auto;
+  width: 720px;
+  .post{
+    .post-header{
+      $date-width: 70px;
+      margin-left: -$date-width;
+      .date{
+        color: $border-color;
+        &:hover{
+          color: $lightest-color;
+        }
+        font-family: monospace;
+        width: $date-width;
+        .day-month{
+          text-align: center;
+          .day{
+            font-size: 2em;
+            line-height: 1em;
+          }
+        }
+        .year{
+          transform: rotate(-90deg);
+          margin-top: 0.6em;
+          font-size: 1.2em;
+          margin-left: -0.8em;
+        }
+      }
+    }
+    h2{
+      background-color: $header-color;
+      padding-left: 5px;
+      border: 1px groove $lighter-color;
+    }
+    blockquote{
+      p{
+        margin-bottom: 0em !important;
+      }
+    }
+    pre{
+      @include word-break();
+    }
+    #comments{
+      display: none;
+    }
+    #additional{
+      color: $lightest-color;
+      padding: 1em;
+      border-top: $normal-border;
+      a{
+        color: $lightest-color;
+        border: none;
+        &:hover{
+          color: $lighter-color;
+        }
+      }
+    }
+    figure{
+      a{border: none;}
+    }
+  }
+}
+#ds-thread{
+  width: 600px;
+}

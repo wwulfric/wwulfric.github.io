@@ -48,6 +48,16 @@ $font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monos
   word-break: break-all;
 }
 
+@mixin normal-color(){
+  color: $main-color;
+  background-color: $bg-color;
+}
+
+@mixin reverse-color(){
+  color: $bg-color;
+  background-color: $main-color;
+}
+
 .box { @include border-radius(10px); }
 
 $normal-border: 1px solid $border-color;

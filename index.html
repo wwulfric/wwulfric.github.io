@@ -2,16 +2,16 @@
 layout: default
 ---
 
-<ul class="post-list">
-  {% for post in site.posts %}
-    <li>
-      <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
+{% for sentence in site.data.sentences %}
 
-      <h2>
-        <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
-      </h2>
-    </li>
-  {% endfor %}
-</ul>
+<div class="sentence clearfix">
+  <p>
+    {{ sentence.content }}
+  </p>
 
-<p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | prepend: site.baseurl }}">via RSS</a></p>
+  <span class='author pull-right'>
+    --- {{ sentence.author }}「{{ sentence.name }}」
+  </span>
+</div>
+
+{% endfor %}

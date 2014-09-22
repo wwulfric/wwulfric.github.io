@@ -1,7 +1,9 @@
 ---
 layout: page
-title:  关于我
+title:  About
 permalink: /about/
 ---
 
 你好，我是 wulfric.
+
+`echo ssqhbney#ciweh.yki | tr w-za-v a-z`

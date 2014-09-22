@@ -6,7 +6,7 @@ layout: default
 
 <div class="sentence clearfix">
   <p>
-    {{ sentence.content }}
+    {{ sentence.content | remove: ' ' }}
   </p>
 
   <span class='author pull-right'>

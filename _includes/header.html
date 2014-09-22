@@ -1,9 +1,9 @@
-<header class='header-header'>
+<h1 class='header-header'>
   {% assign titles = site.title | split: ' ' %}
   <a class="site-title" href="{{ site.baseurl }}/">
     <span id='titile-first-part'>{{ titles.first | upcase }}</span><span id='titile-last-part'>{{ titles.last | upcase }} </span>
   </a>
-</header>
+</h1>
 <nav class='header-nav'>
   <a class="page-link" href="{{ "/archive/" | prepend: site.baseurl }}">ARCHIVE</a>
   /

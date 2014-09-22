@@ -10,7 +10,7 @@ github_username:  wwulfric
 permalink: /:year/:month/:title/
 
 # Build settings
-gems: [jekyll-assets]
+gems: [jekyll-assets, jekyll-sitemap]
 assets:
   js_compressor:  uglifier
   css_compressor: sass

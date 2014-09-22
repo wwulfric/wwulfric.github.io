@@ -47,9 +47,12 @@ module Kramdown
         end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>
-            <img#{html_attributes(el.attr)} width=#{width} />
+            <img#{html_attributes(el.attr)} width=#{width} height=#{height} />
           </a>
-          <figcaption>#{el.attr['alt']}</figcaption>
+          <figcaption>
+            <i class='icon-pencil'></i>
+            #{el.attr['alt']}
+          </figcaption>
         </figure>"
       end
 

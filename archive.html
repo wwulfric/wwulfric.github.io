@@ -1,0 +1,12 @@
+---
+layout: page
+title: Blog Posts
+permalink: /archive/
+---
+
+<div class='archive clearfix'>
+  {% for post in site.posts %}
+    <a href='{{ post.url }}' class="pull-left archive-title">{{ post.title }}</a>
+    <span class='pull-right archive-date'>{{ post.date | date: "%F" }}</span>
+  {% endfor %}
+</div>

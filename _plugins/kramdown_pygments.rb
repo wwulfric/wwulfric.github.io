@@ -34,7 +34,7 @@ module Kramdown
             attr['class'] = "language-#{lang}"
           end
         end
-        "<code#{html_attributes(attr)}>#{code}</code>"
+        "<span#{html_attributes(attr)} class='codespan'>#{code}</span>"
       end
 
       def convert_img(el, indent)

@@ -179,6 +179,11 @@ mark{
   padding:2px;margin:0 5px;
 }
 
+.codespan{
+  background: $darker-bg-color;
+  padding:2px;margin:0 5px;
+}
+
 /* 代码片断 */
 pre, code, pre tt{
   font-family:$font-mono;

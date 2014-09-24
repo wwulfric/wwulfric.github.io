@@ -10,7 +10,7 @@
         &:hover{
           color: $lightest-color;
         }
-        font-family: monospace;
+        font-family: $font-google-mono;
         width: $date-width;
         .day-month{
           text-align: center;
@@ -45,7 +45,7 @@
     }
     #additional{
       color: $lightest-color;
-      padding: 1em;
+      padding: 1em 0em 0em;
       border-top: $normal-border;
       a{
         color: $lightest-color;

@@ -11,7 +11,7 @@ a:hover{
 }
 
 footer{
-  font-family: $font-Josefin;
+  font-family: $font-google-mono;
   border-top: 4px solid black;
   margin-top: 1.1em;
   padding: 1.1em 0em;
@@ -19,7 +19,7 @@ footer{
 }
 
 .header-header{
-  font-family: $font-Josefin;
+  font-family: $font-google-mono;
   font-size: 3em;
   text-align: center;
   padding: 0.7em 0 0.3em;
@@ -37,13 +37,14 @@ footer{
   }
 }
 nav.header-nav{
-  font-family: $font-Josefin;
+  font-family: $font-google-mono;
   text-align: center;
   font-size: 1.1em;
   margin-bottom: 1.1em;
   padding-bottom: 1.1em;
   border-bottom: 4px solid #000;
   a{
+    padding: 0em .2em;
     @include normal-color();
     &:hover{
       @include reverse-color();
@@ -69,4 +70,8 @@ nav.header-nav{
   .author{
     margin-top: 1em;
   }
+}
+
+#title-404{
+  color: $em-color;
 }

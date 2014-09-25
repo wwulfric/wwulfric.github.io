@@ -1,2 +1,7 @@
 <i class='icon-tags'></i>
-{{ page.tags | join: ', ' }}
+<!-- {{ page.tags | join: ', ' }} -->
+{% for tag in page.tags %}
+    <a class='tag' href="/tags/{{ tag }}">
+      {{ tag }}
+    </a>
+{% endfor %}

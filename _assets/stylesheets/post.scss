@@ -44,6 +44,11 @@
       display: none;
     }
     #additional{
+      #tags{
+        a{
+          margin-right: 0.5em;
+        }
+      }
       color: $lightest-color;
       padding: 1em 0em 0em;
       border-top: $normal-border;

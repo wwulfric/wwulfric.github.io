@@ -20,7 +20,7 @@
           }
         }
         .year{
-          transform: rotate(-90deg);
+          @include rotate(-90deg);
           margin-top: 0.6em;
           font-size: 1.2em;
           margin-left: -0.8em;

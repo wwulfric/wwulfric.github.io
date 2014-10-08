@@ -5,7 +5,7 @@ description: > # this means to ignore newlines until "baseurl:"
   因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好……
   希望自己能够通过博客，得到成长。
 baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://wwulfric.github.io" # the base hostname & protocol for your site
+url: "http://wulfric.me" # the base hostname & protocol for your site
 github_username:  wwulfric
 permalink: /:year/:month/:title/
 

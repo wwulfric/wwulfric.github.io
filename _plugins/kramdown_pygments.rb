@@ -3,7 +3,6 @@
 module Kramdown
   module Converter
     class Html
-
       begin
         require 'pygments'
         require 'mini_magick'
@@ -44,6 +43,12 @@ module Kramdown
         unless el.attr['src'].match(/R-/).nil?
           width /= 2
           height /= 2
+        end
+        img_max_width = 720
+        if width > img_max_width
+          ratio = width.to_f / img_max_width
+          width = img_max_width
+          height = (height / ratio).to_i
         end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>

@@ -50,14 +50,14 @@ module Kramdown
           width = img_max_width
           height = (height / ratio).to_i
         end
+        unless el.attr['alt'].empty?
+          figcaption = "<figcaption><i class='icon-pencil'></i>#{el.attr['alt']}</figcaption>"
+        end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>
             <img#{html_attributes(el.attr)} width=#{width} height=#{height} />
           </a>
-          <figcaption>
-            <i class='icon-pencil'></i>
-            #{el.attr['alt']}
-          </figcaption>
+          #{figcaption}
         </figure>"
       end
 

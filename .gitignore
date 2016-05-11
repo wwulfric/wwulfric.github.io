@@ -1,3 +1,5 @@
 _site
+.asset-cache
 .sass-cache
 _deploy.sh
+.ruby-version

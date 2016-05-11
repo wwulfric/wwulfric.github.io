@@ -1,0 +1,27 @@
+---
+layout: page
+title: Search
+permalink: /search/
+---
+<div id='search'>
+  <form><input type='text' id='ts-search-input'></form>
+  <div id='ts-results-container'></div>
+</div>
+<script>
+var option = {
+  engineKey: 'e743133f35a4830fe852',
+  resultContainingElement: '#ts-results-container',
+  renderStyle: 'inline'
+};
+(function(w,d,t,u,n,s,e){
+  s = d.createElement(t);
+  s.src = u;
+  s.async = 1;
+  w[n] = function(r){
+    w[n].opts = r;
+  };
+  e = d.getElementsByTagName(t)[0];
+  e.parentNode.insertBefore(s, e);
+})(window,document,'script','//tinysou-cdn.b0.upaiyun.com/ts.js','_ts');
+_ts(option);
+</script>

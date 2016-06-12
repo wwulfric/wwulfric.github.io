@@ -1,6 +1,6 @@
 .content{
   margin: 0 auto;
-  width: 720px;
+  max-width: 720px;
   .post{
     .post-header{
       $date-width: 70px;
@@ -65,6 +65,13 @@
       a{border: none;}
     }
   }
+}
+@media screen and (max-width: 720px) {
+    .post {
+        .post-content {
+            margin: 0 5%;
+        }
+    }
 }
 #ds-thread{
   width: 600px;

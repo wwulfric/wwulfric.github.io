@@ -100,7 +100,7 @@ module Kramdown
         end
         "<figure>
           <a class='post-image' rel='post-image' href='#{el.attr['src']}'>
-            <img#{html_attributes(el.attr)} width=#{width} height=#{height} />
+            <img#{html_attributes(el.attr)} width=#{width} />
           </a>
           #{figcaption}
         </figure>"

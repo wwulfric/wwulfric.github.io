@@ -94,9 +94,9 @@ module Kramdown
             width = img_max_width
             height = (height / ratio).to_i
           end
+          # add water mark
+          el.attr['src'] = "#{src}-watermark"
         end
-        # add water mark
-        el.attr['src'] = "#{src}-watermark"
         unless el.attr['alt'].empty?
           figcaption = "<figcaption><i class='icon-pencil'></i>#{el.attr['alt']}</figcaption>"
         end

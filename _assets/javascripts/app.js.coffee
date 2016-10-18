@@ -3,7 +3,7 @@
 
 $ ->
 
-  $('.post-image').fancybox()
+#  $('.post-image').fancybox()
 
   $('#get-comment').fancybox
         'href' : $(this).attr('href'),

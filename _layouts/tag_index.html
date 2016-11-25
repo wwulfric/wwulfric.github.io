@@ -2,7 +2,7 @@
 layout: page
 ---
 
-{% for post in site.tags.[page.tag] %}
+{% for post in site.tags[page.tag] %}
   <div class='archive clearfix'>
     <a href='{{ post.url }}' class="pull-left archive-title">{{ post.title }}</a>
     <span class='pull-right archive-date'>{{ post.date | date: "%F" }}</span>

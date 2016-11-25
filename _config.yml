@@ -24,9 +24,8 @@ kramdown:
   smart_quotes: ["apos", "apos", "quot", "quot"]
   syntax_highlighter: rouge  
   enable_coderay: false
-  coderay:
-    coderay_line_numbers: nil
-    coderay_css: style
+  line_numbers: nil
+  css: style
 defaults:
   -
     scope:

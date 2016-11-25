@@ -2,7 +2,7 @@
 layout: page
 ---
 
-{% for post in site.categories.[page.category] %}
+{% for post in site.categories[page.category] %}
   <div class='archive clearfix'>
     <a href='{{ post.url }}' class="pull-left archive-title">{{ post.title }}</a>
     <span class='pull-right archive-date'>{{ post.date | date: "%F" }}</span>

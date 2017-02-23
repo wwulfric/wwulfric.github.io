@@ -1,0 +1,5 @@
+gem install jekyll
+gem install jekyll-assets
+gem install jekyll-sitemap
+gem install rouge
+gem install coffee-script

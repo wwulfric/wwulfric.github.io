@@ -109,7 +109,6 @@ module Kramdown
           #{figcaption}
         </figure>"
       end
-
     end
   end
 end

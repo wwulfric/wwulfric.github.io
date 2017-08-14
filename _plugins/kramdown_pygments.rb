@@ -95,17 +95,23 @@ module Kramdown
             height = (height / ratio).to_i
           end
           # add water mark
-          origin_webp = "#{src}-origin.webp"
+          # origin_webp = "#{src}-origin.webp"
           article_webp = "#{src}-article.webp"
-          el.attr['src'] = article_webp
+          # origin_png = "#{src}-origin.png"
+          article_png = "#{src}-article.png"
+          webp_source = "<source srcset=\"#{article_webp}\" type=\"image/webp\">"
+          png_source = "<source srcset=\"#{article_png}\" type=\"image/png\">"
+          el.attr['src'] = article_png
         end
         unless el.attr['alt'].empty?
           figcaption = "<figcaption><i class='icon-pencil'></i>#{el.attr['alt']}</figcaption>"
         end
         "<figure>
-          <a class='post-image' rel='post-image' href='#{origin_webp}'>
+          <picture>
+            #{webp_source}
+            #{png_source}
             <img#{html_attributes(el.attr)} width=#{width} />
-          </a>
+          </picture>
           #{figcaption}
         </figure>"
       end

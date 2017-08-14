@@ -57,8 +57,10 @@ input::-moz-focus-inner{
 
 /* 去掉各Table cell 的边距并让其边重合 */
 table{
+  min-width: 100%;
   border-collapse:collapse;
   border-spacing:0;
+  font-size: .9em;
 }
 
 /* IE bug fixed: th 不继承 text-align */

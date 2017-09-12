@@ -2,10 +2,12 @@
   margin: 0 auto;
   max-width: 720px;
   .post{
+    position: relative;
     .post-header{
       $date-width: 70px;
-      margin-left: -$date-width;
       .date{
+        position: absolute;
+        left: -$date-width;
         color: $border-color;
         &:hover{
           color: $lightest-color;
@@ -72,9 +74,16 @@
   }
 }
 @media screen and (max-width: 720px) {
+    .main {
+        max-width: 96%;
+        margin: 0 auto;
+    }
     .post {
         .post-content {
             margin: 0 5%;
+        }
+        .date {
+            display: none;
         }
     }
 }

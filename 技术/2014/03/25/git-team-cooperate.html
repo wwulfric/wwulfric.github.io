@@ -1,0 +1,26 @@
+<!DOCTYPE html> <html class='borderbox'> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title>Git 团队协作实践</title> <meta name="description" content="这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。 "> <link rel="stylesheet" href="/css/main.css"> <link rel="canonical" href="http://wwulfric.github.io/%E6%8A%80%E6%9C%AF/2014/03/25/git-team-cooperate.html"> <script src="/js/jquery-2.1.1.min.js"></script> <script src="/js/jquery.modal.min.js"></script> <script src="/js/main.js"></script> </head> <body> <div class='content'> <header> <a class="site-title" href="/">Storm Spirit</a> </header> <div class="post typo"> <header class="post-header clearfix"> <div class='date pull-left clearfix'> <div class='day-month pull-left'> <div class='day'>25</div> <div class='month'>MAR</div> </div> <div class='year pull-left'>2014</div> </div> <h1 class="post-title">Git 团队协作实践</h1> </header> <blockquote id='by-nc-nd'> 声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh_TW" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。 </blockquote> <article class="post-content"> <p>本文是关于使用 Git 进行团队协作的一种实践，目的是使得 Git 的历史清晰明了，团队成员责任明确。</p> <!--more--> <h2 id="编辑">编辑</h2> <p>从 master 分支上新建分支，通过<code>git checkout -b new-feature</code>创建<code>new-feature</code>分支，开始工作</p> <ul> <li>编辑</li> <li>提交</li> <li>重复上述步骤</li> </ul> <p>完成之后，提交到仓库<code>git push origin new-feature</code>。</p> <h2 id="code-review">Code Review</h2> <p>提交之后，发 pull request，拉同事来做 code review。Code review 完成之后，在本地执行<code>git fetch</code>，从远端下载最新的更新。</p> <h2 id="合并与提交">合并与提交</h2> <p>开始合并工作—使用 rebase 而不是 merge：使用 rebase 将自己的更改提交合并成一个功能性的提交，这样在 master 分支的历史就会清晰明了，而 merge 会将每一个 commit 插入到历史里，增加了 review 的复杂度。如图所示，merge 提交之后，commit b 插入到 master 的历史纪录里；而 rebase 不会破坏 master 的提交记录。</p> <p><figure> <a class='post-image' rel='post-image' href='http://wulfric.qiniudn.com/R-git-merge-and-rebase.png'> <img src="http://wulfric.qiniudn.com/R-git-merge-and-rebase.png" alt="git merge and rebase" /> </a> <figcaption>git merge and rebase</figcaption> </figure></p> <div class="highlight"><pre><code class="language-bash">git rebase -i origin/master
+<span class="c1"># 该命令会新建一个未命名的分支，在该分支上执行合并</span>
+<span class="c1"># 执行后会跳到编辑页面，保留第一个 pick，其他 pick 改成 squash，保存退出</span>
+git status
+<span class="c1"># 执行下 git status，会看到分支已经更改</span>
+<span class="c1"># 此时一般会出现冲突，执行 git status 查看冲突</span>
+<span class="c1"># 编辑冲突</span>
+  <span class="c1"># 编辑冲突完成，继续，循环上述操作直到没有冲突</span>
+  <span class="c1"># 编辑完可能需要使用 git add -u 加入</span>
+  git add -u
+  git rebase --continue
+  <span class="c1"># 如果遇到问题，abort 掉这次rebase，重新执行</span>
+  git rebase --abort
+<span class="c1"># 冲突编辑完毕后</span>
+<span class="c1"># 复制 git log 的最新 commit id</span>
+git checkout master
+git rebase <span class="c1">#得到远端最新 master 内容</span>
+<span class="c1"># 上面获取远端 master 内容如有异常，可以尝试 git reset --hard origin/master</span>
+git cherry-pick commit_id <span class="c1">#该 commit id 就是刚才复制的内容</span>
+<span class="c1"># 修改 commit 信息，使用简洁的描述，比如 fixed #99: user management</span>
+git commit --amend
+<span class="c1"># 检查一下，提交更改</span>
+git push origin master</code></pre></div> <p>little tips:</p> <p>在做衍合的时候，先衍合到共同的历史记录，然后再衍合</p> <div class="highlight"><pre><code class="language-bash"><span class="c1"># a--b--c</span>
+<span class="c1"># \--d--e</span>
+git rebase -i a
+git rebase -i origin/master</code></pre></div> </article> <div id='additional' class='clearfix'> <div id="tags" class='pull-left'> git, 协作, rebase, merge </div> <a class='pull-right' href="#comments" rel="modal:open">评论</a> </div> <div id="comments"> <!-- 多说评论框 start --> <div class="ds-thread" data-thread-key="/%E6%8A%80%E6%9C%AF/2014/03/25/git-team-cooperate.html" data-title="Git 团队协作实践" data-url="http://wwulfric.github.io/%E6%8A%80%E6%9C%AF/2014/03/25/git-team-cooperate.html"></div> <!-- 多说评论框 end --> <!-- 多说公共JS代码 start (一个网页只需插入一次) --> <script type="text/javascript"> var duoshuoQuery = {short_name:"storm-spirit"}; (function() { var ds = document.createElement('script'); ds.type = 'text/javascript';ds.async = true; ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js'; ds.charset = 'UTF-8'; (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds); })(); </script> <!-- 多说公共JS代码 end --> </div> </div> <footer> <a class="page-link" href="/about/">wulfric</a> © 2013~2014. All rights reserved. </footer> <script> (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })(window,document,'script','//www.google-analytics.com/analytics.js','ga'); ga('create', 'UA-54608037-1', 'auto'); ga('send', 'pageview'); </script> </div> </body> </html>

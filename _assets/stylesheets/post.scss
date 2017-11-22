@@ -42,7 +42,7 @@
     pre{
       @include word-break();
     }
-    #comments{
+    .comments-hide{
       display: none;
     }
     .footnotes {

@@ -343,7 +343,8 @@ h1, h2, h3, h4, h5, h6{
 }
 
 .typo-em, .typo em, legend, caption{
-  color:$em-color;
+  // color:$em-color;
+  font-style: italic;
   font-weight:inherit;
 }
 

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>git 工具介绍</title>
+  <meta name="description" content="本文介绍了一些辅助 git 更好工作的工具。
+
+">
+  <meta name="keywords" content="SourceTree,P4Merge,tig,git">
+  <link rel="canonical" href="http://wulfric.me/2015/08/git-tools/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>14</div>
+        <div class='month'>AUG</div>
+      </div>
+      <div class='year pull-left'>2015</div>
+    </div>
+    <h1 class="post-title">git 工具介绍</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>本文介绍了一些辅助 git 更好工作的工具。</p>
+
+<p>git <a href="https://git-scm.com/download/gui/linux">官网</a>收集了几乎所有市面上的图形界面客户端。</p>
+
+<p><a href="https://www.sourcetreeapp.com/">SourceTree</a>。在各种<a href="http://www.slant.co/topics/465/~what-are-the-best-git-clients-for-mac-os-x">测评</a>中，SourceTree 一般被评价为 MAC 下性价比最高的。SourceTree 在查看 commit 信息，浏览文件的 git log 等方面特别便利。不过一些较为复杂的操作，比如 merge 和 rebase 还是在命令行操作比较放心。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/git/sourcetree.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/git/sourcetree.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/git/sourcetree.png-article.png" alt="SourceTree" title="SourceTree" width=700 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>SourceTree</figcaption>
+        </figure></p>
+
+<p><a href="http://www.perforce.com/product/components/perforce-visual-merge-and-diff-tools">P4Merge</a> 也是<a href="http://www.slant.co/topics/48/~what-are-the-best-visual-merge-tools-for-git">测评</a>中可视化合并工具中性价比最高的。可以将 P4Merge 配置为 git 的默认可视化合并工具，参见<a href="http://wulfric.me/2015/01/git-merge-with-p4merge/">使用 P4Merge 作为 GIT 的可视化合并工具</a>。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>P4Merge</figcaption>
+        </figure></p>
+
+<p>PS: P4Merge 并没有针对 Retina 屏优化，请使用 <a href="http://retinizer.mikelpr.com/">Retinizer</a> 工具修正一下。</p>
+
+<p>最近发现了一款新的三方合并和比较工具：<a href="http://www.kaleidoscopeapp.com/">Kaleidoscope</a>，效果很棒，只是价格偏高。 官网有 screenshots，做的比较漂亮。</p>
+
+<p><a href="https://github.com/jonas/tig">tig</a> 则是终端的 git 工具，可以认为是终端下的SourceTree。有了这么一个工具，便可以在终端快速的查看 commit 和 diff 信息了。有了 tig，再也不需要记住各种<span class="codespan">git log</span>和<span class="codespan">git diff</span>的命令了。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/tig.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/tig.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/tig.png-article.png" alt="tig" title="tig" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>tig</figcaption>
+        </figure></p>
+
+<p>我的使用习惯是，用 SourceTree 看平时的 commit 和 diff，rebase 或 merge 的时候出现冲突用 p4Merge 解决，临时在终端查看 commit 和 diff 用 tig。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- SourceTree, P4Merge, tig, git -->
+
+    <a class='tag' href="/tags/SourceTree">
+      SourceTree
+    </a>
+
+    <a class='tag' href="/tags/P4Merge">
+      P4Merge
+    </a>
+
+    <a class='tag' href="/tags/tig">
+      tig
+    </a>
+
+    <a class='tag' href="/tags/git">
+      git
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

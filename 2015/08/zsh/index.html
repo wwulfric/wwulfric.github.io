@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>一些命令行效率工具</title>
+  <meta name="description" content="Zsh
+
+">
+  <meta name="keywords" content="zsh,oh-my-zsh,autojump,proxychains,ag,htop,ccat">
+  <link rel="canonical" href="http://wulfric.me/2015/08/zsh/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>13</div>
+        <div class='month'>AUG</div>
+      </div>
+      <div class='year pull-left'>2015</div>
+    </div>
+    <h1 class="post-title">一些命令行效率工具</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <h2 id="zsh">Zsh</h2>
+
+<p>Zsh 也许是目前最好用的 shell，是 bash 替代品中较为优秀的一个。这里列举了 zsh 的一些优点：<a href="https://www-s.acm.illinois.edu/workshops/zsh/why.html">为什么要使用 zsh</a>。</p>
+
+<p>Mac 自带 zsh，不过我们当然要用最新版啦，其他发行版请参照各自的软件安装方法。安装完毕后，重新打开 iTerm2。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>brew install zsh
+chsh -s <span class="sb">`</span>which zsh<span class="sb">`</span>
+</code></pre>
+</div>
+
+<h3 id="补全">补全</h3>
+
+<p>zsh 的命令补全功能非常强大，可以补齐路径，补齐命令，补齐参数等。（请问你记住 tar 的所有参数了吗😃，只要 <span class="codespan">tar -</span>加 tab 键，再也不用 <a href="https://zh.wikipedia.org/zh/RTFM">rtfm</a> 了😂）</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-zsh-autocomplete.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-zsh-autocomplete.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-zsh-autocomplete.png-article.png" alt="zsh auto complete" title="zsh auto complete" width=511 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>zsh auto complete</figcaption>
+        </figure></p>
+
+<p>按下 tab 键显示出所有待选项后，再按一次 tab 键，即进入选择模式，进入选择模式后，按 tab 切向下一个选项，按 shift+tab 键切向上一个选项，ctrl+f/b/n/p 可以向前后左右切换。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-zsh-tab-tab.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-zsh-tab-tab.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-zsh-tab-tab.png-article.png" alt="zsh tab 切换" title="zsh tab 切换" width=560 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>zsh tab 切换</figcaption>
+        </figure></p>
+
+<p>以前杀进程是<span class="codespan">ps aux | grep xxx</span>查进程的 PID，然后<span class="codespan">kill PID</span>。有了 zsh，直接<span class="codespan">kill xxx</span>然后按下 tab 键即可～</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="nb">kill </span>emacs
+<span class="c"># 按下 tab，变成：</span>
+<span class="nb">kill </span>59683
+</code></pre>
+</div>
+
+<h3 id="别名">别名</h3>
+
+<p>zsh 不仅支持普通 alias，还支持针对文件类型的 alias。我配置的文件类型 alias 如下：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="nb">alias</span> -s <span class="nv">gz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
+<span class="nb">alias</span> -s <span class="nv">tgz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
+<span class="nb">alias</span> -s <span class="nv">zip</span><span class="o">=</span><span class="s1">'unzip'</span>
+<span class="nb">alias</span> -s <span class="nv">bz2</span><span class="o">=</span><span class="s1">'tar -xjvf'</span>
+<span class="nb">alias</span> -s <span class="nv">php</span><span class="o">=</span>vi
+<span class="nb">alias</span> -s <span class="nv">py</span><span class="o">=</span>vi
+<span class="nb">alias</span> -s <span class="nv">rb</span><span class="o">=</span>vi
+<span class="nb">alias</span> -s <span class="nv">html</span><span class="o">=</span>vi
+<span class="nb">alias </span><span class="nv">gcid</span><span class="o">=</span><span class="s2">"git log | head -1 | awk '{print substr(</span><span class="se">\$</span><span class="s2">2,1,7)}' | pbcopy"</span>
+</code></pre>
+</div>
+
+<p>配置完毕之后，在 zsh 下直接输入<span class="codespan">xxx.rb</span>，将自动用 vi 打开，直接输入<span class="codespan">xxx.tgz</span>，将直接按照<span class="codespan">tar -xzvf</span>解压。最后一个<span class="codespan">gcid</span>将当前 git 项目的第一个 commit 的 id 复制到系统剪切板（<span class="codespan">pbcopy</span>是 Mac 下的复制到系统剪切板命令，linux 请参考相应的发行版更改），在执行 rebase 的时候特别方便。</p>
+
+<h3 id="跳转">跳转</h3>
+
+<p>zsh 的目录跳转更为智能，你无需输入<span class="codespan">cd</span>，直接输入路径即可。<span class="codespan">..</span>表示后退一级目录，<span class="codespan">../../</span>表示后退两级，依次类推。（<span class="codespan">...</span>的作用和<span class="codespan">../../</span>相同）</p>
+
+<p>输入<span class="codespan">d</span>，将列出当前 session 访问过的所有目录，再按提示的数字即可进入相应目录。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>~
+<span class="gp">&gt; </span>d
+0	~
+1	~/Applications
+2	~/.proxychains
+3	/opt/homebrew-cask/Caskroom
+
+~
+<span class="gp">&gt; </span>1
+~/Applications
+</code></pre>
+</div>
+
+<h3 id="历史记录">历史记录</h3>
+
+<p>zsh 的历史记录跨 session，可以共享。历史记录支持受限查找。比如，输入<span class="codespan">git</span>，再按向上箭头，会搜索用过的所有 git 命令。</p>
+
+<h3 id="通配符搜索">通配符搜索</h3>
+
+<p><span class="codespan">ls *.png</span>查找当前目录下所有 png 文件，<span class="codespan">ls **/*.png</span>递归查找。</p>
+
+<h2 id="oh-my-zsh">oh-my-zsh</h2>
+
+<p><a href="https://github.com/robbyrussell/oh-my-zsh">oh-my-zsh</a> 是最为流行的 zsh 配置文件，提供了大量的主题和插件，极大的拓展了 zsh 的功能，推动了 zsh 的流行，有点类似于 rails 之于 ruby。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># install</span>
+<span class="c"># via curl</span>
+sh -c <span class="s2">"</span><span class="k">$(</span>curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh<span class="k">)</span><span class="s2">"</span>
+<span class="c"># via wget </span>
+sh -c <span class="s2">"</span><span class="k">$(</span>wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -<span class="k">)</span><span class="s2">"</span>
+</code></pre>
+</div>
+
+<p>安装过后，<span class="codespan">source ~/.zshrc</span>使之生效。</p>
+
+<h3 id="主题">主题</h3>
+
+<p>oh-my-zsh 内置了大量主题，可在<span class="codespan">~/.oh-my-zsh/themes</span>中查看具体的配置。官网提供了一些主题的<a href="https://github.com/robbyrussell/oh-my-zsh/wiki/themes">截图</a>。也可参见我的<a href="http://www.zhihu.com/question/33277508/answer/58979821">知乎回答</a>。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 我用的主题是 avit，可以很好的显示 git 信息</span>
+/Volumes/Disk Image/cloudoffice  master ✔                                     37m
+<span class="gp">&gt; </span>鼠标在新一行
+</code></pre>
+</div>
+
+<h3 id="插件">插件</h3>
+
+<p>oh-my-zsh 提供极为丰富的插件，在<span class="codespan">~/.oh-my-zsh/plugins</span>目录下查看具体的配置。在<span class="codespan">.zshrc</span>中写入<span class="codespan">plugin(git autojump osx)</span>即可使用插件，下面介绍几个特别优秀的插件。</p>
+
+<h4 id="git">git</h4>
+
+<p>精简 git 命令，减少输入字符数。参见 <a href="https://github.com/robbyrussell/oh-my-zsh/wiki/Plugin:git">Plugin:git</a>。该插件提供的快捷命令比较多，挑几个常用和好记的记忆即可，不必全记。我常用的有<span class="codespan">gst</span>, <span class="codespan">ggp</span>, <span class="codespan">gco</span>, <span class="codespan">gcm</span>, <span class="codespan">gcp</span> 等。</p>
+
+<h4 id="autojump">autojump</h4>
+
+<p><a href="https://github.com/wting/autojump">autojump</a> 按照你的使用频率记录路径，使得目录的跳转更为方便。安装<span class="codespan">brew install autojump</span>。如需跳转到包含 'foo' 的目录，执行<span class="codespan">j foo</span>，这是最基础，也是最常用的命令。除此之外，还有<span class="codespan">jc</span>, <span class="codespan">jo</span>, <span class="codespan">jco</span>命令，查看官网文档获取更多的使用方法。</p>
+
+<h4 id="osx">osx</h4>
+
+<p>该插件增强 Mac 下的使用体验，提供了如下命令：</p>
+
+<ul>
+  <li><span class="codespan">cdf</span>: 在 Finder 中打开要 cd 的目录；</li>
+  <li><span class="codespan">quick-look</span>: 快速预览该文件，类似于在 Finder 中按下空格键；</li>
+  <li><span class="codespan">man preview</span>: 在 preview 中打开 man page；</li>
+  <li><span class="codespan">itunes</span>: 命令行操作 iTunes。</li>
+</ul>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">&gt; </span>itunes
+itunes:shift:2: <span class="nb">shift </span>count must be &lt;<span class="o">=</span> <span class="nv">$#</span>
+Usage: itunes &lt;option&gt;
+option:
+	launch|play|pause|stop|rewind|resume|quit
+	mute|unmute	control volume <span class="nb">set
+	</span>next|previous	play next or previous track
+	shuf|shuffle <span class="o">[</span>on|off|toggle]	Set shuffled playback. Default: toggle. Note: toggle doesn<span class="s1">'t support the MiniPlayer.
+	vol	Set the volume, takes an argument from 0 to 100
+	help	show this message and exit
+</span></code></pre>
+</div>
+
+<p>其他命令可查看<a href="https://github.com/robbyrussell/oh-my-zsh/blob/master/plugins/osx/osx.plugin.zsh">插件</a>。</p>
+
+<h2 id="proxychains">proxychains</h2>
+
+<p>proxychains 是命令行的科学上网工具。安装<span class="codespan">brew install proxychains-ng</span>。如图所示，亚马逊 S3 存储服务和 github 并不稳定，有时候需要科学上网才能访问。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 原命令</span>
+brew cask install xxx
+<span class="c"># 使用 proxychains</span>
+proxychains4 brew cask install xxx
+</code></pre>
+</div>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/proxychain.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/proxychain.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/proxychain.png-article.png" alt="proxychains" title="proxychains" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>proxychains</figcaption>
+        </figure></p>
+
+<p>使用 proxychains 需要本地先开启科学上网的工具，比如 VPN/shadowsocks，然后在配置文件中添加相应的配置，其配置方法和 chrome 下的科学上网插件很相似，可以参考相关文档。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 在文件 ~/.proxychains/proxychains.conf 的末尾 ProxyList 部分，参照 ProxyList format Examples 添加，比如我用的是 shadowsocks，则配置是：</span>
+socks5 	127.0.0.1 1080
+</code></pre>
+</div>
+
+<h2 id="其他">其他</h2>
+
+<h3 id="ag">ag</h3>
+
+<p><a href="https://github.com/ggreer/the_silver_searcher">ag</a> 是一个新的搜索工具：</p>
+
+<ul>
+  <li>与<span class="codespan">ack</span>相比，速度有了巨大的提升，这里有一个<a href="http://dongweiming.github.io/blog/archives/ack/">对比</a>；</li>
+  <li>搜索会忽略<span class="codespan">.gitignore</span>和<span class="codespan">.hgignore</span>中的 pattern；</li>
+  <li>不想搜索的文件可以把对应的 pattern 写到<span class="codespan">.agignore</span>中；</li>
+  <li>命令比<span class="codespan">ack</span>短 33%，且一只手可以按全。</li>
+</ul>
+
+<p>最后一条虽然看似戏谑，却道出了工具的本质：哪怕是能减少输入一个字符，也是必要的进步。</p>
+
+<h3 id="htop">htop</h3>
+
+<p><a href="http://hisham.hm/htop/">htop</a> 是一款运行于 Linux 系统监控与进程管理软件，用于取代 Unix 下传统的 top。与 top 只提供最消耗资源的进程列表不同，htop 提供所有进程的列表，并且使用彩色标识出处理器、swap 和内存状态。<sup id="fnref:htop-wiki"><a href="#fn:htop-wiki" class="footnote">1</a></sup></p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/htop.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/htop.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/htop.png-article.png" alt="htop" title="htop" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>htop</figcaption>
+        </figure></p>
+
+<p>htop 命令优点<sup id="fnref:htop-lizhenghn"><a href="#fn:htop-lizhenghn" class="footnote">2</a></sup>:</p>
+
+<ul>
+  <li>快速查看关键性能统计数据，如 CPU（多核布局）、内存/交换使用；</li>
+  <li>可以横向或纵向滚动浏览进程列表，以查看所有的进程和完整的命令行；</li>
+  <li>杀掉进程时可以直接选择而不需要输入进程号；</li>
+  <li>通过鼠标操作条目；</li>
+  <li>比 top 启动得更快。</li>
+</ul>
+
+<h3 id="ccat">ccat</h3>
+
+<p><a href="https://github.com/jingweno/ccat">ccat</a> 是上色的<span class="codespan">cat</span>，在 cat 的基础上提供了语法高亮。可通过<span class="codespan">brew install ccat</span>安装。目前已支持<span class="codespan">ruby</span>, <span class="codespan">python</span>, <span class="codespan">javascript</span>, <span class="codespan">java</span>, <span class="codespan">c</span>, <span class="codespan">go</span>。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-ccat.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-ccat.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-ccat.png-article.png" alt="ccat" title="ccat" width=498 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ccat</figcaption>
+        </figure></p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:htop-wiki">
+      <p><a href="https://zh.wikipedia.org/wiki/Htop">Htop - 维基百科，自由的百科全书</a>&nbsp;<a href="#fnref:htop-wiki" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:htop-lizhenghn">
+      <p><a href="http://www.cnblogs.com/lizhenghn/p/3728610.html">Linux下超级命令htop的学习使用 - lizhenghn - 博客园</a>&nbsp;<a href="#fnref:htop-lizhenghn" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- zsh, oh-my-zsh, autojump, proxychains, ag, htop, ccat -->
+
+    <a class='tag' href="/tags/zsh">
+      zsh
+    </a>
+
+    <a class='tag' href="/tags/oh-my-zsh">
+      oh-my-zsh
+    </a>
+
+    <a class='tag' href="/tags/autojump">
+      autojump
+    </a>
+
+    <a class='tag' href="/tags/proxychains">
+      proxychains
+    </a>
+
+    <a class='tag' href="/tags/ag">
+      ag
+    </a>
+
+    <a class='tag' href="/tags/htop">
+      htop
+    </a>
+
+    <a class='tag' href="/tags/ccat">
+      ccat
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

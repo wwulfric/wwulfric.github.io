@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>使用 P4Merge 作为 GIT 的可视化合并工具</title>
+  <meta name="description" content="P4Merge 是一款非常优秀的 git merge 工具，且跨平台兼容。尽管 git 亦有内部实现的 merge 工具，但并不如 P4Merge 易用。我们可以通过配置.gitconfig文件来设置 git 使用外部 merge 工具。
+
+">
+  <meta name="keywords" content="P4Merge,git,merge">
+  <link rel="canonical" href="http://wulfric.me/2015/01/git-merge-with-p4merge/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>28</div>
+        <div class='month'>JAN</div>
+      </div>
+      <div class='year pull-left'>2015</div>
+    </div>
+    <h1 class="post-title">使用 P4Merge 作为 GIT 的可视化合并工具</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>P4Merge 是一款非常优秀的 git merge 工具，且跨平台兼容。尽管 git 亦有内部实现的 merge 工具，但并不如 P4Merge 易用。我们可以通过配置<span class="codespan">.gitconfig</span>文件来设置 git 使用外部 merge 工具。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>P4Merge</figcaption>
+        </figure></p>
+
+<p>首先，下载安装 <a href="http://www.perforce.com/product/components/perforce-visual-merge-and-diff-tools">P4Merge</a>。MAC 下可以通过<span class="codespan">brew cask install p4merge</span>来安装。</p>
+
+<p>在系统可访问的目录下（我们这里使用<span class="codespan">/usr/local/bin/</span>）创建两个可执行文件<span class="codespan">extMerge</span>和<span class="codespan">extDiff</span>，其内容如下。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>cat /usr/local/bin/extMerge
+<span class="c">#!/bin/sh</span>
+/Applications/p4merge.app/Contents/MacOS/p4merge <span class="nv">$*</span>
+</code></pre>
+</div>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>cat /usr/local/bin/extDiff
+<span class="c">#!/bin/sh</span>
+<span class="o">[</span> <span class="nv">$# </span>-eq 7 <span class="o">]</span> <span class="o">&amp;&amp;</span> /usr/local/bin/extMerge <span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$5</span><span class="s2">"</span>
+</code></pre>
+</div>
+
+<p>别忘了添加可执行权限：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>sudo chmod +x /usr/local/bin/extMerge
+<span class="gp">$ </span>sudo chmod +x /usr/local/bin/extDiff
+</code></pre>
+</div>
+
+<p>使用 <span class="codespan">extMerge</span>和<span class="codespan">extDiff</span>的好处是，我们可以很方便的切换 merge 工具。</p>
+
+<p>最后，在你的<span class="codespan">.gitconfig</span>文件里添加如下配置：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>merge]
+    tool <span class="o">=</span> extMerge
+<span class="o">[</span>mergetool <span class="s2">"extMerge"</span><span class="o">]</span>
+    cmd <span class="o">=</span> extMerge <span class="s2">"</span><span class="nv">$BASE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$LOCAL</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$REMOTE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MERGED</span><span class="s2">"</span>
+<span class="o">[</span>diff]
+    external <span class="o">=</span> extDiff
+<span class="o">[</span>mergetool]
+    trustExitCode <span class="o">=</span> <span class="nb">false
+    </span>keepTemporaries <span class="o">=</span> <span class="nb">false
+    </span>keepBackup <span class="o">=</span> <span class="nb">false
+    </span>prompt <span class="o">=</span> <span class="nb">false</span>
+</code></pre>
+</div>
+
+<p>好了，当合并（merge/rebase） 出现冲突时，执行<span class="codespan">git mergetool</span>，即可调出 P4Merge 来解决冲突了。唯一的缺点是，目前还不支持 Retina 屏，看起来有些糊。(PS：可以用工具<a href="http://retinizer.mikelpr.com/">Retinizer</a>来解决这一问题)</p>
+
+<p>更多细节参见官网<a href="http://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#External-Merge-and-Diff-Tools">链接</a>。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- P4Merge, git, merge -->
+
+    <a class='tag' href="/tags/P4Merge">
+      P4Merge
+    </a>
+
+    <a class='tag' href="/tags/git">
+      git
+    </a>
+
+    <a class='tag' href="/tags/merge">
+      merge
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

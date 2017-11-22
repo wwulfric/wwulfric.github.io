@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>Git 配置：gitconfig 和 gitignore</title>
+  <meta name="description" content="目的：更方便的使用 git。通过全局的 gitignore 和项目下的 gitignore，使得 git 仓库尽量整洁。
+
+">
+  <meta name="keywords" content="git,gitignore,gitconfig">
+  <link rel="canonical" href="http://wulfric.me/2014/04/gitconfig-and-gitignore/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>04</div>
+        <div class='month'>APR</div>
+      </div>
+      <div class='year pull-left'>2014</div>
+    </div>
+    <h1 class="post-title">Git 配置：gitconfig 和 gitignore</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>目的：更方便的使用 git。通过全局的 gitignore 和项目下的 gitignore，使得 git 仓库尽量整洁。</p>
+
+<!--more-->
+
+<p>在家目录下创建 .gitconfig 文件，</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>user]
+	name <span class="o">=</span> 你的名字
+	email <span class="o">=</span> 你的邮箱
+<span class="o">[</span>core]
+    editor <span class="o">=</span> vim ;或其他编辑器
+    excludesfile <span class="o">=</span> 你的全局 ignore 文件地址（绝对地址）：.gitignore_global
+<span class="o">[</span>merge]
+    tool <span class="o">=</span> 你的 merge 工具，默认的是 vimdiff
+<span class="o">[</span><span class="nb">alias</span><span class="o">]</span>
+    ci <span class="o">=</span> commit -a -v
+    co <span class="o">=</span> checkout
+    st <span class="o">=</span> status
+    br <span class="o">=</span> branch
+    lg <span class="o">=</span> log --graph --pretty<span class="o">=</span>mt:<span class="s1">'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset'</span> --abbrev-commit --
+    throw <span class="o">=</span> reset --hard HEAD
+<span class="o">[</span>color]
+    ui <span class="o">=</span> <span class="nb">true</span>
+</code></pre>
+</div>
+
+<p>配置好后，你就可以使用<span class="codespan">git ci</span>, <span class="codespan">git co</span>, <span class="codespan">git st</span>等命令了。</p>
+
+<p>在家目录下创建 .gitignore_global，这个文件中放的是全局的 git ignore 文件，比如编辑器的配置文件，缓存文件，编译的文件等，下为例子</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># Compiled source #</span>
+<span class="c">###################</span>
+<span class="k">*</span>.com
+<span class="k">*</span>.class
+<span class="k">*</span>.dll
+<span class="k">*</span>.exe
+<span class="k">*</span>.o
+<span class="k">*</span>.so
+<span class="k">*</span>.pyc
+
+<span class="c"># Packages #</span>
+<span class="c">############</span>
+<span class="c"># it's better to unpack these files and commit the raw source</span>
+<span class="c"># git has its own built in compression methods</span>
+<span class="k">*</span>.7z
+<span class="k">*</span>.dmg
+<span class="k">*</span>.gz
+<span class="k">*</span>.iso
+<span class="k">*</span>.jar
+<span class="k">*</span>.rar
+<span class="k">*</span>.tar
+<span class="k">*</span>.zip
+
+<span class="c"># Logs and databases #</span>
+<span class="c">######################</span>
+<span class="k">*</span>.log
+<span class="k">*</span>.sql
+<span class="k">*</span>.sqlite
+
+<span class="c"># OS generated files #</span>
+<span class="c">######################</span>
+.DS_Store
+.DS_Store?
+._<span class="k">*</span>
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+<span class="c"># VIM swp files #</span>
+<span class="c">#####################</span>
+<span class="k">*</span>.swp
+<span class="c"># sublime project files #</span>
+<span class="c">#####################</span>
+<span class="k">*</span>.sublime-project
+</code></pre>
+</div>
+
+<p>在项目下的 .gitignore 文件应该放和项目紧密相关的 ignore 文件，比如项目的配置，数据库的配置等，如：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="k">*</span>/conf_set.php
+database.yml
+</code></pre>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- git, gitignore, gitconfig -->
+
+    <a class='tag' href="/tags/git">
+      git
+    </a>
+
+    <a class='tag' href="/tags/gitignore">
+      gitignore
+    </a>
+
+    <a class='tag' href="/tags/gitconfig">
+      gitconfig
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

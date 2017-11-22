@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>Ruby on Rails 开发和生产环境搭建</title>
+  <meta name="description" content="准备搭生产环境做一些玩具（ubuntu ruby rails nginx passenger mina postgresql），参考了阿里云，linode 和 digital ocean。DO 两三百的延迟实在不能忍受，ping 了下阿里只有 2ms，那就选这个吧！
+
+">
+  <meta name="keywords" content="ubuntu,ruby,rbenv,nginx,passenger,mina,rails,postgresql">
+  <link rel="canonical" href="http://wulfric.me/2016/03/ruby-on-rails-on-aliyun/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>21</div>
+        <div class='month'>MAR</div>
+      </div>
+      <div class='year pull-left'>2016</div>
+    </div>
+    <h1 class="post-title">Ruby on Rails 开发和生产环境搭建</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>准备搭生产环境做一些玩具（ubuntu ruby rails nginx passenger mina postgresql），参考了阿里云，linode 和 digital ocean。DO 两三百的延迟实在不能忍受，ping 了下阿里只有 2ms，那就选这个吧！</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/aliyun-youhuima.jpg-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/aliyun-youhuima.jpg-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/aliyun-youhuima.jpg-article.png" alt="使用优惠码可以打九折 dj7mxg" title="aliyun-youhuima" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>使用优惠码可以打九折 dj7mxg</figcaption>
+        </figure></p>
+
+<p>因为是自己的个人机器，所以就按照自己熟悉的 ubuntu 来配了。用 rbenv 来管理安装 ruby，用 passenger with nginx 作服务器，postgresql 作数据库，mina 来部署应用。</p>
+
+<h2 id="生产环境配置">生产环境配置</h2>
+
+<h3 id="ssh-配置">ssh 配置</h3>
+
+<p>先在本地开发环境下<span class="codespan">ssh-keygen</span>，生成登录服务器的公钥私钥<sup id="fnref:4"><a href="#fn:4" class="footnote">1</a></sup>。然后在服务器端</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>mkdir .ssh
+vi ~/.ssh/authorized_keys
+<span class="c"># 把刚才生成的公钥内容复制进去</span>
+</code></pre>
+</div>
+
+<p>尝试在本地登录，如果跳过了密码验证，说明配置正确。如果没有跳过，检查一下服务器上<span class="codespan">.ssh</span>和<span class="codespan">.ssh/authorized_keys</span>的权限：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>chmod 700 .ssh
+chmod 600 .ssh/authorized_keys
+</code></pre>
+</div>
+
+<p>为了让服务器更加安全，我们可以更改ssh登录端口，并拒绝密码登录。在服务器端<span class="codespan">vi /etc/ssh/sshd_config</span>做如下修改</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>Port xxx
+PasswordAuthentication no
+</code></pre>
+</div>
+
+<p>然后执行<span class="codespan">service ssh restart</span>使配置生效。</p>
+
+<p>PS: 可以在本地配置<span class="codespan">.ssh/config</span>如下，方便登录。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>Host nick-name
+  HostName        xxx.xxx.xxx.xxx
+  Port            xxx
+  User            someuser
+  IdentityFile    ~/.ssh/some_private_key
+</code></pre>
+</div>
+
+<p>之后本地只要<span class="codespan">ssh nick-name</span>即可登录服务器。</p>
+
+<p>更详细的配置可以参考<a href="https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-14-04">这里</a>。</p>
+
+<h3 id="创建生产环境用户">创建生产环境用户</h3>
+
+<p>创建一个用户，作为生产环境的操作者，生产环境的工具都通过这个用户来安装和配置<sup id="fnref:1"><a href="#fn:1" class="footnote">2</a></sup><sup id="fnref:3"><a href="#fn:3" class="footnote">3</a></sup>。<span class="codespan">adduser wwwroot</span>，按照提示输入密码等信息。</p>
+
+<p><span class="codespan">vi /etc/sudoers</span>，在文件中添加一行<span class="codespan">wwwroot ALL=(ALL:ALL) ALL</span>然后<span class="codespan">wq!</span>保存退出，给 wwwroot 用户添加 sudo 权限。</p>
+
+<p><span class="codespan">su - wwwroot</span>切换到 wwwroot 帐号，同上创建 <span class="codespan">~/.ssh/authorized_keys</span> 文件并复制公钥。</p>
+
+<h3 id="安装-git">安装 git</h3>
+
+<p>一般发行版都会自带 git，不过我选择安装较新的版本。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>sudo add-apt-repository ppa:git-core/ppa
+sudo apt-get update
+sudo apt-get install git
+</code></pre>
+</div>
+
+<h3 id="rbenv-安装-ruby">rbenv 安装 ruby</h3>
+<p>rbenv 是一个非常优秀的 ruby 版本管理工具，每个 ruby 版本都是编译安装在用户家目录下<span class="codespan">.rbenv</span>文件夹下，相关 gem 也是安装在这个文件夹下，便于移动和删除。在 mac 下只需简单的<span class="codespan">brew install rbenv</span>即可，在 linux 下需要 clone 代码并配置你的<span class="codespan">.bashrc</span>或<span class="codespan">.zshrc</span>文件，安装命令如下（参考 <a href="https://github.com/rbenv/rbenv#installation">rbenv install</a> 和 <a href="https://github.com/rbenv/ruby-build#installation">ruby-build install</a>）：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 安装 rbenv</span>
+git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+<span class="c"># 加速 rbenv，非必需</span>
+<span class="nb">cd</span> ~/.rbenv <span class="o">&amp;&amp;</span> src/configure <span class="o">&amp;&amp;</span> make -C src
+<span class="c"># 加入 PATH （ubuntu）</span>
+<span class="nb">echo</span> <span class="s1">'export PATH="$HOME/.rbenv/bin:$PATH"'</span> &gt;&gt; ~/.bashrc
+<span class="nb">echo</span> <span class="s1">'eval "$(rbenv init -)"'</span> &gt;&gt; ~/.bashrc
+<span class="c"># 安装 ruby-build</span>
+git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+<span class="c"># source .bashrc or source .zshrc</span>
+<span class="nb">source</span> .bashrc
+<span class="c"># rbenv install -l</span>
+<span class="nv">ruby_version</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>curl -sSL http://ruby.thoughtbot.com/latest<span class="k">)</span><span class="s2">"</span>
+<span class="c"># install ruby 需要依赖一些库（如果缺失，执行 rbenv install 的时候会提示）</span>
+sudo apt-get install -y libssl-dev libreadline-dev zlib1g-dev
+rbenv install <span class="s2">"</span><span class="nv">$ruby_version</span><span class="s2">"</span>
+rbenv global <span class="s2">"</span><span class="nv">$ruby_version</span><span class="s2">"</span>
+<span class="c"># 安装 bundler</span>
+gem install bundler
+</code></pre>
+</div>
+
+<p>至此，ruby 安装完毕。<span class="codespan">which ruby &amp;&amp; ruby --version</span>查看安装结果。</p>
+
+<p>PS：如果你的服务器在国内（比如用的阿里云国内节点），修改 <span class="codespan">.bundle/config</span> 和 <span class="codespan">.gemrc</span> 使用国内镜像。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># .bundle/config</span>
+---
+BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/: https://ruby.taobao.org
+
+<span class="c"># .gemrc</span>
+---
+:backtrace: <span class="nb">false</span>
+:bulk_threshold: 1000
+:sources:
+- https://ruby.taobao.org/
+:update_sources: <span class="nb">true</span>
+:verbose: <span class="nb">true
+</span>gem: <span class="s2">"--no-document"</span>
+</code></pre>
+</div>
+
+<h3 id="安装-passenger-with-nginx">安装 passenger with nginx</h3>
+
+<p>passenger 官方有很详细的安装<a href="https://www.phusionpassenger.com/library/install/nginx/install/oss/trusty/">教程</a>，可以作为主要的参考。官方教程主要分为三部分，standalone, with nginx 和 with apache，区别见<a href="https://www.phusionpassenger.com/library/indepth/integration_modes.html">博文</a>。我们选择安装 passenger with nginx。</p>
+
+<p>要安装 passenger with nginx，nginx 需要加上 passenger 模块重新编译安装，所以无论是否已经安装过 nginx，nginx 都需要重新安装。首先按照官方教程安装，如下：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># Install our PGP key and add HTTPS support for APT</span>
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
+sudo apt-get install -y apt-transport-https ca-certificates
+
+<span class="c"># Add our APT repository</span>
+sudo sh -c <span class="s1">'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main &gt; /etc/apt/sources.list.d/passenger.list'</span>
+sudo apt-get update
+
+<span class="c"># Install Passenger + Nginx</span>
+sudo apt-get install -y nginx-extras passenger
+<span class="c"># 网络不太好，可以多 update 几次</span>
+</code></pre>
+</div>
+
+<p>完成之后，执行<span class="codespan">passenger-install-nginx-module</span>，它会提醒你重新编译安装 nginx，按照提示一路安装过去即可。安装完毕，执行<span class="codespan">sudo /usr/bin/passenger-config validate-install</span>检查是否安装成功。</p>
+
+<p>新安装的 nginx 位于<span class="codespan">/opt/nginx</span>，查看帮助<span class="codespan">sudo /opt/nginx/sbin/nginx -h</span>。</p>
+
+<p>参照<a href="https://www.phusionpassenger.com/library/deploy/nginx/deploy/ruby/">官方说明</a>配置 nginx 部署网站。我的例子如下。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>server <span class="o">{</span>
+    listen 80;
+    <span class="c"># 如果不支持 ipv6，这里需要注释掉</span>
+    listen <span class="o">[</span>::]:80;
+
+    server_name domain_name.com;
+
+    <span class="c"># Tell Nginx and Passenger where your app's 'public' directory is</span>
+    root /var/www/html/mywebsite/current/public;
+
+    <span class="c"># Turn on Passenger</span>
+    passenger_enabled on;
+    passenger_ruby /home/wwwroot/.rbenv/versions/2.3.0/bin/ruby;
+    location ~ ^<span class="o">(</span>/assets<span class="o">)</span> <span class="o">{</span>
+    access_log        off;
+<span class="c"># 设置 assets 下面的浏览器缓存时间为最大值（由于 Rails Assets Pipline 的文件名是根据文件修改产生的 MD5 digest 文件名，所以此处可以放心开启）</span>
+		    expires           max;
+	    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>虽然配置好了，但是还需等待本地配置完成并部署成功之后才能看到效果。</p>
+
+<h3 id="安装-postgresql">安装 postgresql</h3>
+
+<p>ubuntu 14.04 的默认版本是 9.3，我要安装的版本是 9.4<sup id="fnref:5"><a href="#fn:5" class="footnote">4</a></sup>，参考 <a href="http://askubuntu.com/questions/633919/how-install-postgresql-9-4">How install postgresql 9.4</a>。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>sudo sh -c <span class="s1">'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" &gt; /etc/apt/sources.list.d/pgdg.list'</span>
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install postgresql-9.4 libpq-dev
+<span class="c"># 后者在 gem install pg 的时候需要用到</span>
+</code></pre>
+</div>
+
+<p>安装完毕开始配置<sup id="fnref:2"><a href="#fn:2" class="footnote">5</a></sup>。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 当服务器登录用户名和 postgresql 用户名相同时，postgresql 默认可以无需密码登录，所以我们先创建一个 wwwroot 用户</span>
+sudo -u postgres createuser --superuser <span class="nv">$USER</span>
+<span class="c"># 以 postgres 身份进入数据库</span>
+sudo -u postgres psql
+<span class="c"># 给刚刚生成的 wwwroot 用户设置密码。注意这个时候是在数据库的终端下，没有 $USER 变量，需要指定为 wwwroot</span>
+<span class="gp">postgres=# </span><span class="se">\p</span>assword wwwroot
+<span class="c"># 创建同名数据库</span>
+sudo -u postgres createdb <span class="nv">$USER</span>
+<span class="c"># 这个时候登录数据库就非常容易了</span>
+psql
+<span class="c"># 创建一个新的数据库</span>
+create database xxxxxxdb;
+</code></pre>
+</div>
+
+<h2 id="开发环境配置">开发环境配置</h2>
+
+<p>本地配置 Ruby on Rails，同开发环境。</p>
+
+<h3 id="安装-mina-部署网站">安装 mina 部署网站</h3>
+
+<p>本地安装 mina<span class="codespan">gem install mina</span>，调整 Gemfile。执行<span class="codespan">mina init</span>生成 <span class="codespan">deploy.rb</span>并编辑。默认生成的文件里有很多注释，参照更改即可。其他可以参考的<a href="https://github.com/mina-deploy/mina/blob/master/test_env/config/deploy.rb">配置</a>。</p>
+
+<p>编辑完成之后执行<span class="codespan">mina setup</span>，远程服务器会完成文件结构等的设置。远程目录结构为<span class="codespan">current  last_version  releases  scm  shared  tmp</span>，其中 releases 是发布的所有版本，current 是软链接，指向 releases 中当前版本。shared 文件夹放的是一些共享的配置文件。根据提示到远程创建<span class="codespan">shared/config/database.yml</span>和<span class="codespan">shared/config/secrets.yml</span>。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># database.yml</span>
+default: &amp;default
+  adapter: postgresql
+  pool: 5
+production:
+  &lt;&lt;: <span class="k">*</span>default
+  database: xxxxxxdb
+</code></pre>
+</div>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># secrets.yml</span>
+production:
+  secret_key_base: xxxx...
+</code></pre>
+</div>
+
+<p>接下来就可以执行<span class="codespan">mina deploy</span>把代码部署到服务器了。deploy 在远程服务器安装 gem 的时候可能会报错，多半是服务器没有 js 运行时或者相关依赖库导致，按照提示安装就好了。如果是 pg 安装问题，可以配置 bundler：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>bundle config build.pg --with-pg-config<span class="o">=</span>/usr/pgsql-9.4/bin/pg_config
+</code></pre>
+</div>
+
+<p>PS: 更新了<a href="/2016/09/active-job-action-cable-in-rails">Rails 应用生产环境利用  Active Job 和 Action Cable
+实现消息推送</a></p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:4">
+      <p>参考 <a href="https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/">github</a>、<a href="https://wiki.archlinux.org/index.php/SSH_keys_(简体中文)">archlinux</a> 的文档&nbsp;<a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:1">
+      <p>参考<a href="https://ruby-china.org/topics/17553">在 Aliyun 上快速部署 Ruby on Rails</a>&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:3">
+      <p>参考<a href="http://railsr.github.io/posts/nginx-passenger-mina-deploy">Deploying rails app to DO ubuntu droplet with Nginx/Passenger/Mina</a>&nbsp;<a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:5">
+      <p>centos 下安装 passenger 和 postgresql 的方法稍有不同，参见 <a href="http://www.racksam.com/2016/04/02/install-postgresql9-with-yum-on-centos6">CentOS6下最新版PostgreSQL的安装及设置-Racksam</a>、<a href="https://www.unixmen.com/postgresql-9-4-released-install-centos-7">Installing PostgreSQL 9.4 And phpPgAdmin In CentOS 7/6.5/6.4-Unixmen</a>、<a href="https://www.phusionpassenger.com/library/install/nginx/install/oss/el6">Installing Passenger-Nginx on CentOS 6 with RPM</a>。&nbsp;<a href="#fnref:5" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:2">
+      <p>参考<a href="https://help.ubuntu.com/community/PostgreSQL#Basic_Server_Setup">PostgreSQL 服务器设置</a>&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- ubuntu, ruby, rbenv, nginx, passenger, mina, rails, postgresql -->
+
+    <a class='tag' href="/tags/ubuntu">
+      ubuntu
+    </a>
+
+    <a class='tag' href="/tags/ruby">
+      ruby
+    </a>
+
+    <a class='tag' href="/tags/rbenv">
+      rbenv
+    </a>
+
+    <a class='tag' href="/tags/nginx">
+      nginx
+    </a>
+
+    <a class='tag' href="/tags/passenger">
+      passenger
+    </a>
+
+    <a class='tag' href="/tags/mina">
+      mina
+    </a>
+
+    <a class='tag' href="/tags/rails">
+      rails
+    </a>
+
+    <a class='tag' href="/tags/postgresql">
+      postgresql
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>python 数学绘图工具 matplotlib 的优化配置</title>
+  <meta name="description" content="matplotlib 是 python 下的 2D 数学绘图工具，仿 matlab 编写而成，功能强大，是 python 数值计算库中非常重要的一员。安装很简单，pip install matplotlib 即可。如果安装时遇到什么问题，一般是依赖没有安装完全，按照错误提示一路安装过去便是，参照 Installing — Matplotlib。强烈建议同时安装 ipython: pip install "ipython[notebook]"。ipython 的依赖关系较多，请耐心查看文档，所依赖的一些非 python 的程序可以通过系统的包管理工具安装，比如 brew install zeromq。
+
+">
+  <meta name="keywords" content="ipython,matplotlib,matlab,retina,中文,ggplot">
+  <link rel="canonical" href="http://wulfric.me/2015/10/better-config-for-matplotlib/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>19</div>
+        <div class='month'>OCT</div>
+      </div>
+      <div class='year pull-left'>2015</div>
+    </div>
+    <h1 class="post-title">python 数学绘图工具 matplotlib 的优化配置</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>matplotlib 是 python 下的 2D 数学绘图工具，仿 matlab 编写而成，功能强大，是 python 数值计算库中非常重要的一员。安装很简单，<span class="codespan">pip install matplotlib</span> 即可。如果安装时遇到什么问题，一般是依赖没有安装完全，按照错误提示一路安装过去便是，参照 <a href="http://matplotlib.org/users/installing.html">Installing — Matplotlib</a>。强烈建议同时安装 ipython: <span class="codespan">pip install "ipython[notebook]"</span>。ipython 的依赖关系较多，请耐心查看<a href="http://ipython.readthedocs.org/en/stable/">文档</a>，所依赖的一些非 python 的程序可以通过系统的包管理工具安装，比如 <span class="codespan">brew install zeromq</span>。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="http://jakevdp.github.com/figures/xkcd_version.png" alt="ipython xkcd" title="ipython xkcd" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ipython xkcd</figcaption>
+        </figure></p>
+
+<p>安装完成之后，先在 python 下执行如下命令，这个命令第一次调用的时候会生成 cache 文件，速度较慢，生成之后就不会出现卡顿的情况了。</p>
+
+<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+</code></pre>
+</div>
+
+<p>在 bash 中查看生成的 cache：</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">&gt; </span>ls .matplotlib
+fontList.cache matplotlibrc   tex.cache
+</code></pre>
+</div>
+
+<p>matplotlib 默认的颜色配置不好看。为了使 matlab 用户易于上手，matplotlib 的默认配色采用了与之相同的配色方案。这种对比明显的配色方案在出版物上观看时效果很好，但是并不适于在屏幕上观看<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。</p>
+
+<p>一位女程序员 <a href="https://github.com/olgabot">olgabot (Olga Botvinnik)</a> 表示不能忍，于是写了一个库改善 matplotlib 的配色: <a href="https://github.com/olgabot/prettyplotlib">olgabot/prettyplotlib</a>。我颤抖着进入她的主页，然后跪着看完了她的 CV: MIT 本科双学位（数学和生物），生物信息学博士，玩的了设计，写的了代码，还能做俄-英的医疗口译……好吧，我们还是继续说配色的事情。对于 python 和 R 语言在数值计算领域孰优孰劣的争论中，其中一种观点就是，matplotlib 的配色和 ggplot 相比，太哔丑了。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/shuo-de-hao-you-dao-li.jpg-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/shuo-de-hao-you-dao-li.jpg-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/shuo-de-hao-you-dao-li.jpg-article.png" alt="" width=394 />
+          </picture>
+          
+        </figure></p>
+
+<p>好嘛好嘛，学习别人的优点就好啦。matplotlib 提供对其配色等的个性化配置，参见<a href="http://matplotlib.org/users/customizing.html">官方文档</a>，注意系统不同，配置文件的位置也不同。这篇<a href="https://www.huyng.com/posts/sane-color-scheme-for-matplotlib">文章</a>中就给出了模仿 ggplot 配色的 <a href="https://gist.github.com/huyng/816622">gist</a>。还有这个库 <a href="https://github.com/daler/matplotlibrc">daler/matplotlibrc</a>，给出了几个不同的配色。按照官方文档的提示，把喜欢的配色文件的内容复制到你的 matplotlibrc 文件中即可。（配色问题有所<strong>更新</strong>，现在你不再需要自己修改配置文件了，官方已经内置了优雅的配色，请查看到最后）</p>
+
+<p>最好的使用 matplotlib 的环境是 <span class="codespan">ipython notebook</span>，这是一个类似于 Matlab 交互式编程的界面。在 bash 中执行 <span class="codespan">ipython notebook</span>，会在后台启动一个本地 tornado 服务，之后便可在 <span class="codespan">http://localhost:8888/notebooks</span> 中使用 notebook。效果可以查看 nbviewer 的任何一个链接，比如<a href="http://nbviewer.ipython.org/url/jakevdp.github.com/downloads/notebooks/XKCD_plots.ipynb">这个</a>。</p>
+
+<p>ipython 移除了 pylab 启动参数，所以现在你不能通过 <span class="codespan">ipython notebook --pylab=inline</span> 来获得内联查看画图的功能。需要在启动之后执行 <span class="codespan">%matplotlib inline</span>。另外，为了使画出来的图支持 retina，你还需要执行 <span class="codespan">%config InlineBackend.figure_format='retina'</span>，你可以把下面的代码作为你 .ipynb 文件的初始脚本。更多配置可参考这篇<a href="http://blog.invibe.net/posts/2015-01-07-the-right-imports-in-a-notebook.html">文章</a>。</p>
+
+<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="o">%</span><span class="n">config</span> <span class="n">InlineBackend</span><span class="o">.</span><span class="n">figure_format</span><span class="o">=</span><span class="s">'svg'</span>
+<span class="c">#config InlineBackend.figure_format='retina'</span>
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+</code></pre>
+</div>
+
+<p>matplotlib 默认不支持中文显示，查看<a href="http://hyry.dip.jp/tech/book/page/scipy/matplotlib_fast_plot.html#id6">这里</a>的设置。</p>
+
+<p>PS1: 配图为<a href="https://zh.wikipedia.org/zh/Xkcd">XKCD</a><sup id="fnref:2"><a href="#fn:2" class="footnote">2</a></sup>。</p>
+
+<p>PS2: 1.5 版本的 matplotlib 已经内置了 ggplot 配色，参见<a href="http://matplotlib.org/users/style_sheets.html">文档</a>，<a href="http://matplotlib.org/examples/style_sheets/plot_ggplot.html">示例</a>。</p>
+
+<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="k">print</span> <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">available</span>
+<span class="c"># [u'dark_background', u'bmh', u'grayscale', u'ggplot', u'fivethirtyeight']</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s">'ggplot'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="http://matplotlib.org/_images/plot_ggplot.png" alt="ggplot" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ggplot</figcaption>
+        </figure></p>
+
+<p>2.0 版本的 matplotlib 已经要抛弃传统 matlab 配色了，改用「viridis」配色，参见<a href="http://matplotlib.org/style_changes.html">文档</a>，不妨看下那个视频，蛮有趣的，他们是怎么做决定使用哪个内置配色的~顺便到<a href="http://bids.github.io/colormap/">这里</a>看看新增配色。</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p><a href="http://www.huyng.com/posts/sane-color-scheme-for-matplotlib/">Sane color scheme for Matplotlib</a>&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:2">
+      <p><a href="http://jakevdp.github.io/blog/2012/10/07/xkcd-style-plots-in-matplotlib/">XKCD-style plots in Matplotlib</a>&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- ipython, matplotlib, matlab, retina, 中文, ggplot -->
+
+    <a class='tag' href="/tags/ipython">
+      ipython
+    </a>
+
+    <a class='tag' href="/tags/matplotlib">
+      matplotlib
+    </a>
+
+    <a class='tag' href="/tags/matlab">
+      matlab
+    </a>
+
+    <a class='tag' href="/tags/retina">
+      retina
+    </a>
+
+    <a class='tag' href="/tags/中文">
+      中文
+    </a>
+
+    <a class='tag' href="/tags/ggplot">
+      ggplot
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

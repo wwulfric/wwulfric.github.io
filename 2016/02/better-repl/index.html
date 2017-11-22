@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>更好的 repl</title>
+  <meta name="description" content="在习惯使用动态语言之后，很是热衷于在 repl 下做各种尝试验证一些简单的想法。多数动态语言都内置提供了 repl，比如 python 的python，ruby 的irb，php 的php -a，nodejs 的node，甚至 haskell 这样的静态语言也有 repl: ghci。 只是这些自带的 repl 都比较简单，所以会有一些替代工具，提供更好的体验：语法高亮，即时输出，简单的代码补全和提示。
+
+">
+  <meta name="keywords" content="repl,python,ruby,php,nodejs,jupyter,rlwrap">
+  <link rel="canonical" href="http://wulfric.me/2016/02/better-repl/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>02</div>
+        <div class='month'>FEB</div>
+      </div>
+      <div class='year pull-left'>2016</div>
+    </div>
+    <h1 class="post-title">更好的 repl</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>在习惯使用动态语言之后，很是热衷于在 repl 下做各种尝试验证一些简单的想法。多数动态语言都内置提供了 repl，比如 python 的<span class="codespan">python</span>，ruby 的<span class="codespan">irb</span>，php 的<span class="codespan">php -a</span>，nodejs 的<span class="codespan">node</span>，甚至 haskell 这样的静态语言也有 repl: <span class="codespan">ghci</span>。 只是这些自带的 repl 都比较简单，所以会有一些替代工具，提供<strong>更好</strong>的体验：语法高亮，即时输出，简单的代码补全和提示。</p>
+
+<h3 id="php">php</h3>
+
+<p>php 默认的是<span class="codespan">php -a</span>，功能很差，要输出内容还必须 echo。<span class="codespan">boris</span>是更好的替代，不需输入 echo 直接输出，也有基本的语法高亮（只对输出有高亮，输入没有）。boris 没有代码补全。</p>
+
+<p>MAC 自带的 php 缺乏一些必要的组件，使得 boris 无法使用，建议使用 brew 下的 php: <span class="codespan">brew install php</span>。</p>
+
+<div  class="language-php highlighter-rouge"><pre class="highlight"><code>[1] boris&gt; class A {
+[1]     *&gt; function t(){
+[1]     *&gt; return "test";
+[1]     *&gt; }
+[1]     *&gt; }
+// NULL
+[2] boris&gt; $a = new A;
+// object(A)(
+//
+// )
+[3] boris&gt; $a-&gt;t();
+// 'test'
+</code></pre>
+</div>
+
+<h3 id="python">python</h3>
+
+<p>python 自带的也很难用，但是 python 的替代工具要比 php 多，而且极其强大，强大到可以独立作为一个工具使用，而不仅仅是 python 的 repl。</p>
+
+<p>bpython 是一个相当优秀的替代，不仅提供了很好的高亮，也可以 tab 键智能补全和提示。建议当只是想做一些简单的试验的时候，用 bpython 代替 python。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-bpython.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-bpython.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-bpython.png-article.png" alt="bpython" title="bpython.png" width=528 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>bpython</figcaption>
+        </figure></p>
+
+<p>ipython 的 terminal 看起来似乎没有 bpython 好，不仅没有语法高亮，代码提示也很一般<sup id="fnref:2"><a href="#fn:2" class="footnote">1</a></sup>。但是 ipython 是完全不同的一个工具，详情看<a href="http://ipython.org/">官网</a>，这是一个套件，支持交互式的数据可视化，ipython notebook 是一个强大的 python IDE，功能很类似 matlab（不妨参考之前的<a href="/2015/10/better-config-for-matplotlib/">文章</a>）。毕竟，一个可以招博士后的项目，绝非池中之物<sup id="fnref:1"><a href="#fn:1" class="footnote">2</a></sup>。</p>
+
+<p>ipython notebook 基于 <a href="http://jupyter.org/">jupyter</a>，功能丰富。jupyter 目前已支持 bash, haskell, julia, python, r, ruby, scala。<a href="https://try.jupyter.org/">Try</a></p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-jupyter.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-jupyter.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-jupyter.png-article.png" alt="jupyter" title="jupyter.png" width=486 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jupyter</figcaption>
+        </figure></p>
+
+<p>最近的 4.1 <a href="http://blog.jupyter.org/2016/01/08/notebook-4-1-release/">更新</a>中，更是提供了一些现代编辑器如 sublime text 和 atom 的功能，比如 Command palette，以及更强大的查找和替换。详情请查看上面博文。</p>
+
+<h3 id="ruby">ruby</h3>
+
+<p>ruby 自带的 irb 默认功能是挺简单的，但是配置好 irbrc 后，也是可以实现常见的高亮和提示功能的。然而在 ruby 世界用 pry 的更多，pry  默认配置已经足够好，还可以配置 pryrc，完全定制 pry 的样式和功能。pry 提供了一些实用<a href="https://github.com/pry/pry/wiki/Available-plugins">插件</a>，甚至有 <a href="https://github.com/kyrylo/pry-theme">pry-theme</a> 这样的项目。ruby 世界对颜值的追求一向不落人后。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-pry-rails-console.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-pry-rails-console.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-pry-rails-console.png-article.png" alt="pry-rails-console" title="pry-rails-console.png" width=507 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>pry-rails-console</figcaption>
+        </figure></p>
+
+<h3 id="nodejs">nodejs</h3>
+
+<p>nodejs 除了自带的 node，也有一些第三方 repl 增强。<a href="http://danielgtaylor.github.io/nesh/">nesh</a> 就是其中很优秀的一个。不得不说，node 世界最近发展迅速，开发者热情高涨，插件、库层出不穷。<a href="https://www.npmjs.com/browse/keyword/nesh">nesh plugins</a></p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>npm install -g nesh
+<span class="c"># Run nesh</span>
+nesh
+<span class="c"># Run nesh with CoffeeScript</span>
+nesh -c
+<span class="c"># Run nesh with ES6 through Babel</span>
+nesh -b
+</code></pre>
+</div>
+
+<p><a href="https://github.com/mksenzov/i.js/tree/master">i.js</a> 是一个受 ipython 启发而开发的项目，但不是基于 jupyter。有兴趣的不妨尝试一下。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://camo.githubusercontent.com/33b129ac20536958f30b7bc2cacd8a3b7dfdb7a8/687474703a2f2f692e696d6775722e636f6d2f706863597838502e706e67" alt="i.js screenshot" title="i.js screenshot" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>i.js screenshot</figcaption>
+        </figure></p>
+
+<h3 id="others">others</h3>
+
+<p>然而在 Linux 世界，还有很多命令行工具极其简陋，比如 sqlite3，比如 ftp，连基本的向上方向键查看命令历史的功能都没有提供，一时也没有好的替代，应该怎么办呢？</p>
+
+<p><a href="https://github.com/hanslub42/rlwrap">rlwrap</a> 正是解决这一问题的工具。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>0] % sqlite3 production.sqlite3
+SQLite version 3.8.4.1 2014-03-11 15:27:36
+Enter <span class="s2">".help"</span> <span class="k">for </span>usage hints.
+<span class="gp">sqlite&gt; </span>.tables
+albums             images             users
+articles           schema_migrations
+<span class="gp">sqlite&gt; </span>^[[A^[[A^[[A^[[A
+</code></pre>
+</div>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>1] % rlwrap sqlite3 production.sqlite3
+SQLite version 3.8.4.1 2014-03-11 15:27:36
+Enter <span class="s2">".help"</span> <span class="k">for </span>usage hints.
+<span class="gp">sqlite&gt; </span>.tables
+albums             images             users
+articles           schema_migrations
+<span class="gp">sqlite&gt; </span>.tables
+</code></pre>
+</div>
+
+<p>使用 rlwrap，方向键可用了。</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:2">
+      <p>因为 ipython terminal 还不是很好用，因此有了这个项目 <a href="http://bipython.org/">bipython</a>。尽管个人觉得不是很必要😳&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:1">
+      <p>IPython/Jupyter is hiring postdocs: the project has <a href="http://blog.jupyter.org/2015/11/19/project-jupyter-is-hiring-two-postdoctoral-fellows-uc-berkeley">two postdoctoral positions open at UC Berkeley</a>&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- repl, python, ruby, php, nodejs, jupyter, rlwrap -->
+
+    <a class='tag' href="/tags/repl">
+      repl
+    </a>
+
+    <a class='tag' href="/tags/python">
+      python
+    </a>
+
+    <a class='tag' href="/tags/ruby">
+      ruby
+    </a>
+
+    <a class='tag' href="/tags/php">
+      php
+    </a>
+
+    <a class='tag' href="/tags/nodejs">
+      nodejs
+    </a>
+
+    <a class='tag' href="/tags/jupyter">
+      jupyter
+    </a>
+
+    <a class='tag' href="/tags/rlwrap">
+      rlwrap
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

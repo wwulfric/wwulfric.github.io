@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>Alfred 和 dash 介绍</title>
+  <meta name="description" content="你生活在二维 Mac 世界里，在Applications下散落着各种应用，在Finder下散落着各种文件和文件夹，而文本内容又散落在各个文件中。命运如潮水般汹涌而来，你在平面里穿梭，寻找那命中注定的字符串。
+
+">
+  <meta name="keywords" content="MAC,alfred,dash">
+  <link rel="canonical" href="http://wulfric.me/2015/12/alfred-dash/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>28</div>
+        <div class='month'>DEC</div>
+      </div>
+      <div class='year pull-left'>2015</div>
+    </div>
+    <h1 class="post-title">Alfred 和 dash 介绍</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>你生活在二维 Mac 世界里，在<span class="codespan">Applications</span>下散落着各种应用，在<span class="codespan">Finder</span>下散落着各种文件和文件夹，而文本内容又散落在各个文件中。命运如潮水般汹涌而来，你在平面里穿梭，寻找那命中注定的字符串。</p>
+
+<p>够了！你冲出纷至沓来的字符串洪流，艰难地走向书柜，掏出一本「哆啦A梦」— 是时候穿越时空了！</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/space-wrap.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/space-wrap.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/space-wrap.png-article.png" alt="空间翘曲" title="空间翘曲" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>空间翘曲</figcaption>
+        </figure></p>
+
+<p>alfred 就是 Mac 世界里穿越时空的飞船。</p>
+
+<h2 id="alfred">Alfred</h2>
+
+<p><a href="http://www.alfredapp.com/">Alfred</a>作为 Mac 下较为常用的软件，已有大量教程，比如<a href="http://macshuo.com/?p=625">教程1</a>，<a href="http://wellsnake.com/jekyll/update/2014/06/15/001/">教程2</a>等。本文主要介绍 Alfred 的基础功能，workflow 以及与 dash 的集成。</p>
+
+<h3 id="基础功能">基础功能</h3>
+
+<p>打开<span class="codespan">Alfred Preference</span>，在<span class="codespan">Features</span>选项卡中的内容就是免费版提供的各项基础功能，如图。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/alfred-preference.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/alfred-preference.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/alfred-preference.png-article.png" alt="Alfred Preference" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>Alfred Preference</figcaption>
+        </figure></p>
+
+<p>把上述内容过一遍，就能对 Alfred 有一个比较全面的印象了。</p>
+
+<p>最常用功能：定位 APP。<span class="codespan">Option+Space</span>键打开后，键入 APP 名称，便可以轻松打开 APP。名称输入支持部分匹配，但不支持模糊匹配。</p>
+
+<p>计算器：简单计算，也可输入<span class="codespan">=</span>使用高级函数比如「sin, cos, log, ln」等。</p>
+
+<p>定位文件：<span class="codespan">Option+Space</span>键打开并输入<span class="codespan">find</span>，空格之后输入文件或文件夹的部分名称，便可找到其位置，确定后将会在 Finder 中定位该文件；如果输入的是<span class="codespan">open</span>，确定后定位并打开该文件；<span class="codespan">in</span>，搜索文件中的信息。该部分配置项在<span class="codespan">Features</span>选项卡中<span class="codespan">File Search</span>部分。</p>
+
+<p>剪贴板：Alfred 也可以操作剪贴板。获得剪贴板历史，合并剪贴板等。除此之外还可以自定义 snippet。snippet 可以操作的变量只有三个：time, date, clipboard。我做了一个 snippet，快捷键是<span class="codespan">sj</span>，内容是<span class="codespan"><span class="p">{</span><span class="err">date:medium</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="err">time</span><span class="p">}</span></span>。输入<span class="codespan">Option+Cmd+c</span>调出 Alfred 的剪贴板工具，输入<span class="codespan">sj</span>，即可输出符合 Jekyll 格式的当前时间。PS: date 的 short, medium 和 long 的配置见系统设置-时间和日期-语言和地区中。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/systempreference-datetime-languageregion.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/systempreference-datetime-languageregion.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/systempreference-datetime-languageregion.png-article.png" alt="时间设置" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>时间设置</figcaption>
+        </figure></p>
+
+<h3 id="workflow">workflow</h3>
+
+<p>workflow 作为 Alfred 的付费功能，提供了相当强大的自定义功能。workflow 支持调用脚本（shell/ruby/python/php），这为 Alfred 提供了无限可能。比如这个 workflow，就是调用 Python 脚本实现的一个有趣的功能。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-alfred-zhenxiang.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-alfred-zhenxiang.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-alfred-zhenxiang.png-article.png" alt="alfred workflow 真相" width=654 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>alfred workflow 真相</figcaption>
+        </figure></p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/alfred-workflow-example.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/alfred-workflow-example.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/alfred-workflow-example.png-article.png" alt="alfred workflow 示例" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>alfred workflow 示例</figcaption>
+        </figure></p>
+
+<p>豆瓣 workflow：输入 movie/music/book，查找豆瓣信息。
+<figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/alfred-douban.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/alfred-douban.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/alfred-douban.png-article.png" alt="alfred workflow douban" title="alfred workflow douban" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>alfred workflow douban</figcaption>
+        </figure></p>
+
+<h2 id="dash">Dash</h2>
+
+<p><a href="https://kapeli.com/dash">dash</a>是 Mac 下的文档集合工具，支持海量语言和插件。其原理倒是比较简单，就是把各种语言和框架的文档下载到本地以供查找。一方面可以节约网络查询的成本，另一方面可以原生提供针对几乎每一个编辑器和 IDE 的支持，非常的便利。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://kapeli.com/img/dash-s1.png" alt="dash" width= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dash</figcaption>
+        </figure></p>
+
+<h3 id="和-alfred-配合">和 Alfred 配合</h3>
+
+<p>配合 Alfred 下的 dash workflow，可以轻松的查找文档，如图所示。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/dash-alfred.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/dash-alfred.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/dash-alfred.png-article.png" alt="dash alfred" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dash alfred</figcaption>
+        </figure></p>
+
+<h2 id="结语">结语</h2>
+
+<p>直方图一样丛生的石头森林，命运之线下苦苦挣扎的傀儡，远方朝露晨雾中若隐若现的灯塔，这是个纷纷扰扰的世界。想要成为一个穿越时空的 <del>少女</del> 少年。<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup></p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/chuanyueshikongdeshaonv.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/chuanyueshikongdeshaonv.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/chuanyueshikongdeshaonv.png-article.png" alt="穿越时空的少女" title="穿越时空的少女" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>穿越时空的少女</figcaption>
+        </figure></p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>图片来源于剧照，和 google 图片搜得。用 google 按图找图也没有找到原版权所有者，找到的全是素材站你懂的。侵权请通知我删除。&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- MAC, alfred, dash -->
+
+    <a class='tag' href="/tags/MAC">
+      MAC
+    </a>
+
+    <a class='tag' href="/tags/alfred">
+      alfred
+    </a>
+
+    <a class='tag' href="/tags/dash">
+      dash
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

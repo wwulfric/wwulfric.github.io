@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>Jekyll 博客的一些优化插件与配置</title>
+  <meta name="description" content="在停用了一段时间后，最终还是回归博客写作了。之前使用的是 Octopress，现在换成更简单的 Jekyll。本文记录了搭建 Jekyll 博客的一些优化细节和搜集到的一些有趣的插件。
+
+">
+  <meta name="keywords" content="jekyll,compress,highlight,fontawesome,colorscheme,font">
+  <link rel="canonical" href="http://wulfric.me/2014/09/jekyll-plugs/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>17</div>
+        <div class='month'>SEP</div>
+      </div>
+      <div class='year pull-left'>2014</div>
+    </div>
+    <h1 class="post-title">Jekyll 博客的一些优化插件与配置</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>在停用了一段时间后，最终还是回归博客写作了。之前使用的是 Octopress，现在换成更简单的 Jekyll。本文记录了搭建 Jekyll 博客的一些优化细节和搜集到的一些有趣的插件。</p>
+
+<h2 id="工作方式">工作方式</h2>
+
+<p><a href="http://jekyllrb.com/">Jekyll</a> 的工作方式是，服务器端（对于 github pages，就是 github 的服务器）将特定文件夹下（根目录，<span class="codespan">_posts</span>）的文件编译成静态文件，我们只需要在该文件夹下写 md 文件就好了，无需生成 html。</p>
+
+<p>另一种工作方式则是，我们创建一个新的分支（比如 source）来存放 Jekyll 代码，生成的静态站点（在<span class="codespan">_site</span>下）作为 master 主分支，这样每次生成静态站点，然后部署到 github。</p>
+
+<p>显然，前者更加方便，但基于安全考虑，github 不支持过于自由的操作，故大量自定义的插件无法在 github pages 使用。所以只好分成两个分支，master 分支是生成站点，source 是 Jekyll 主代码。这也就是 <a href="http://octopress.org/">Octopress</a> 的工作方式了。相比于 Jekyll 的简陋，Octopress 提供了更丰富的功能，比如分类、标签、更强大的代码高亮等。与 Octopress 类似的还有基于 nodejs 的 <a href="http://hexo.io/">Hexo</a>，同样是先编译后部署，因此可以提供更强大的功能。</p>
+
+<h2 id="代码分离">代码分离</h2>
+
+<p>使用 <a href="http://git-scm.com/book/zh/Git-%E5%B7%A5%E5%85%B7-%E5%AD%90%E6%A8%A1%E5%9D%97">Git submodule</a> 分离博客的重要部分。我把文章专门放到一个 repo 里，然后通过 git submodule 的方式引入到<span class="codespan">_posts</span>文件夹下。一些插件也可以以这种方式引入到<span class="codespan">_plugins</span>里。</p>
+
+<h2 id="静态文件优化">静态文件优化</h2>
+
+<p>静态文件就是浏览器渲染网页必须的 html, css, js 和图片文件。我对 Jekyll 博客的静态文件优化主要集中在两个方面，即压缩和打包。</p>
+
+<p>Jekyll 提供了内置的对 Sass 和 CoffeeScript 的支持，见 <a href="http://jekyllrb.com/docs/assets/">Assets</a>。Jekyll 已支持对 css 的打包和压缩，但为了统一管理，还是使用了 <a href="http://ixti.net/jekyll-assets/">jekyll-assets</a> 来处理合并压缩相关的任务。该插件功能强大，参考其文档可以大大简化静态文件的管理。</p>
+
+<p>原本我也曾经使用 <a href="https://github.com/penibelst/jekyll-compress-html">jekyll-compress-html</a> 来压缩 html 文件。但因为该压缩方法会直接去除换行符，则 script 中的 // 注释会导致该段代码失效（只要有一行代码的注释是以 // 开始的，该行之后的代码都将失效）；同时，kramdown 生成的 mathjax 会比较依赖换行（<a href="https://github.com/gettalong/kramdown/issues/100">CDATA</a>），在对比了生成的 html 和压缩后的差别之后发现，压缩率并不高，故最终还是取消了该插件的使用。</p>
+
+<p>还有一些压缩静态文件的策略，比如该<a href="http://davidensinger.com/2013/08/how-i-use-reduce-to-minify-and-optimize-assets-for-production/">博文</a>中提到的 <a href="https://github.com/grosser/reduce">reduce</a>。它甚至可以压缩图片文件。我尝试了下图片压缩，比率并没有太大的惊喜（毕竟图片文件本身已经经过了高效的压缩），故最终没有使用。</p>
+
+<p>还有一个插件 <a href="https://github.com/GSI/jekyll_image_encode">jekyll_image_encode</a>，可以将图片转成 base64。其实本质上和把图片下载到本地一样，只是更加自动化。base64 转化后的 img 标签是这样的：</p>
+
+<div  class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"data:image;base64, iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c
+6QAAAAxJREFUCNdj+P//PwAF/gL+3MxZ5wAAAABJRU5ErkJggg== "</span> <span class="nt">/&gt;</span>
+</code></pre>
+</div>
+
+<p>可见，src 处已经没有 url 了，而只是图片的 base64 格式源码。当你想隐藏你的图床时，比如，七牛云可以加水印，但是如果知道 url 的话，很容易就可以去掉水印，转成 base64 可以防止这种情况。</p>
+
+<p>除此之外，我还利用 minimagick 库自动给图片加了宽度和高度属性<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。即读在线文件，获取尺寸，加到 img 里。对于 R-图片（我给在 rMBP 上制作的图片都加了 R- 前缀），即 retina 图片，width 设为1/2。另外还同时给 img 加上了 figure  wrapper 和 figcaption。代码如下，打开类<span class="codespan">Kramdown::Converter::Html</span>并重写<span class="codespan">convert_img</span>方法。</p>
+
+<div  class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">convert_img</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span>
+  <span class="n">image</span> <span class="o">=</span> <span class="no">MiniMagick</span><span class="o">::</span><span class="no">Image</span><span class="p">.</span><span class="nf">open</span> <span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'src'</span><span class="p">]</span>
+  <span class="n">width</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:width</span><span class="p">]</span>
+  <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:height</span><span class="p">]</span>
+  <span class="k">unless</span> <span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'src'</span><span class="p">].</span><span class="nf">match</span><span class="p">(</span><span class="sr">/R-/</span><span class="p">).</span><span class="nf">nil?</span>
+    <span class="n">width</span> <span class="o">/=</span> <span class="mi">2</span>
+    <span class="n">height</span> <span class="o">/=</span> <span class="mi">2</span>
+  <span class="k">end</span>
+  <span class="s2">"&lt;figure&gt;
+    &lt;a class='post-image' rel='post-image' href='</span><span class="si">#{</span><span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'src'</span><span class="p">]</span><span class="si">}</span><span class="s2">'&gt;
+      &lt;img</span><span class="si">#{</span><span class="n">html_attributes</span><span class="p">(</span><span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">)</span><span class="si">}</span><span class="s2"> width=</span><span class="si">#{</span><span class="n">width</span><span class="si">}</span><span class="s2"> height=</span><span class="si">#{</span><span class="n">height</span><span class="si">}</span><span class="s2"> /&gt;
+    &lt;/a&gt;
+    &lt;figcaption&gt;
+      &lt;i class='icon-pencil'&gt;&lt;/i&gt;
+      </span><span class="si">#{</span><span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'alt'</span><span class="p">]</span><span class="si">}</span><span class="s2">
+    &lt;/figcaption&gt;
+  &lt;/figure&gt;"</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>对于博客中常用的图标，我是用的是 <a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome</a>。Font Awesome 图标比较多，我们可以<a href="http://www.w3cplus.com/preprocessor/create-font-awesome-font-icons-with-sass.html">按需引用</a>，或者直接<a href="http://fontello.com/">定制</a>需要的图标。前者通用性更好，但实现复杂；对于博客而言，直接定制即可。</p>
+
+<p>其他可供参考的优化方法：<a href="http://pizn.github.io/2012/01/16/the-seo-for-jekyll-blog.html">seo</a>。我把每篇文章的 tags 作为 keywords 放在 html 的 header 里，把每篇文章的第一段作为 description 也放在 html 的 header 里，尽量对搜索引擎友好。</p>
+
+<h2 id="样式">样式</h2>
+
+<p>使用 markdown 写博客，我比较坚持的一点就是，写出的 markdown 文件尽最大可能保持自文档特性，即语法简洁容易理解，尽量不包含 github  不支持显示的语法。换句话说，就是尽量以 <a href="https://help.github.com/articles/github-flavored-markdown">GFM–GitHub Flavored Markdown</a> 为标准。所以我避免使用一切 Jekyll tag，除了数学公式（github 现在还不支持常见的以<span class="codespan">$</span>符识别 tex 的特性，但数学公式实在不可避免）。</p>
+
+<p>Jekyll 的代码高亮默认是使用 highlight tag。我则只使用 <a href="https://help.github.com/articles/github-flavored-markdown#fenced-code-blocks">fanced codes block</a> 来标识代码，而 kramdown 不支持 pygments。为代码高亮带来不少麻烦。可以使用<a href="https://github.com/mvdbos/kramdown-with-pygments">该插件</a>来 hack kramdown 使之支持 pygments。配合 github 风格的代码高亮 <a href="https://github.com/mojombo/tpw/blob/master/css/syntax.css">syntax</a>，神清气爽。当然，kramdown 自带 coderay 也可以完成代码高亮，两种方法任选一即可。需要注意的是，基于安全原因，大量自定义的插件无法在 github pages 使用，请注意你的 Jekyll 的工作方式。</p>
+
+<p>对于图片的显示，我选择的是<a href="http://fancyapps.com/fancybox/">fancybox</a>。</p>
+
+<p>对于网页的配色（color scheme），我在<a href="https://kuler.adobe.com/main-cxcedar-color-theme-4237607/">这个方案</a>的基础上做了些修改，得到了<a href="https://kuler.adobe.com/Copy-of-the-main-cxcedar-color-theme-4361434/">我的 color scheme</a>。这五种颜色分别用作链接色、重要标题背景色、mark 背景色、强调色和主文字颜色。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-colorscheme.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-colorscheme.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-colorscheme.png-article.png" alt="color scheme" title="color scheme" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>color scheme</figcaption>
+        </figure></p>
+
+<p>对于字体的选择，我使用的是和 <a href="https://github.com/tommy351/Octopress-Theme-Slash/">slash 主题</a>相同的 font-family，尚未对 Windows 字体做兼容性处理。关于字体的选择，可参考<a href="https://ruby-china.org/topics/14005">这篇文章</a>。</p>
+
+<p>在做博客样式的时候，我坚持轻交互。即如果不是没有交互就不行的情况，就不加交互。比如利用输入框边框颜色的变化来表示获得焦点和失去焦点的差别是非常合理的，鼠标经过代码块时边框变色就是不必要的。链接 hover 的时候有变化（下划线，变色等）是必要的，鼠标经过的时候头像旋转就是不必要的，等等。</p>
+
+<p>最终的样式如图所示：</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://wulfric.qiniudn.com/R-preview.png-article.webp" type="image/webp">
+            <source srcset="http://wulfric.qiniudn.com/R-preview.png-article.png" type="image/png">
+            <img src="http://wulfric.qiniudn.com/R-preview.png-article.png" alt="Preview" title="Preview" width=720 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>Preview</figcaption>
+        </figure></p>
+
+<p>如果对不同平台下的样式有疑问，欢迎通过评论告诉我~</p>
+
+<p>PS: 本博客将在一千年以后兼容 IE，敬请期待~</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>http://stackoverflow.com/questions/1247685/should-i-specify-height-and-width-attributes-for-my-imgs-in-html&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- jekyll, compress, highlight, fontawesome, colorscheme, font -->
+
+    <a class='tag' href="/tags/jekyll">
+      jekyll
+    </a>
+
+    <a class='tag' href="/tags/compress">
+      compress
+    </a>
+
+    <a class='tag' href="/tags/highlight">
+      highlight
+    </a>
+
+    <a class='tag' href="/tags/fontawesome">
+      fontawesome
+    </a>
+
+    <a class='tag' href="/tags/colorscheme">
+      colorscheme
+    </a>
+
+    <a class='tag' href="/tags/font">
+      font
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

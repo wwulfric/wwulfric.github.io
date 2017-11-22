@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>Linux PC 网易云音乐下载方案</title>
+  <meta name="description" content="这篇文章主要是关于我常用的音乐资源和播放器，以及怎样在网易云音乐没有提供客户端的终端获取资源的方法。
+
+">
+  <meta name="keywords" content="虾米,网易,落网,foobar,iTunes,btsync">
+  <link rel="canonical" href="http://wulfric.me/2014/09/music-player/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>25</div>
+        <div class='month'>SEP</div>
+      </div>
+      <div class='year pull-left'>2014</div>
+    </div>
+    <h1 class="post-title">Linux PC 网易云音乐下载方案</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>这篇文章主要是关于我常用的音乐资源和播放器，以及怎样在网易云音乐没有提供客户端的终端获取资源的方法。</p>
+
+<p>以前用 Windows PC 的时候，最喜欢的音乐组合是<a href="http://www.xiami.com/">虾米</a>的资源和 <a href="http://www.foobar2000.org/">Foobar</a> 播放器。虾米资源出众，Foobar 播放器无出其右。后来网易开始做云音乐，才渐渐把资源库转到网易。<a href="http://music.163.com">网易云音乐</a>和虾米相比，目前的劣势还是内容太少，很多稍微冷门的资源在虾米都能有好几页的评论，在网易云音乐确只有寥寥几条评论，甚至有时候连资源都没有；另外，网易云音乐的标签也不够完善。当然，似乎也很少有音乐资源站会提供包括作词、作曲、流派等标签齐全的资源。优点嘛，网易云音乐的体验更好，下载更方便，版权问题似乎稍微少一点。所以我现在找资源都是二者结合。</p>
+
+<p>前段时间切换到 Mac OS了，当时网易云音乐还没有出 Mac OS 的客户端，所以网易云音乐的下载就成了问题（现在 Mac OS 已经有<a href="http://music.163.com/#/download">客户端</a>，可以直接下载，但 Linux 的客户端依然缺失，而且在可预见的将来应该会一直缺失……）。我找到的解决方案是，在手机端下载音乐，然后利用 <a href="http://www.bittorrent.com/sync">BitTorrent Sync</a> 把音乐同步到 Mac。步骤如下：</p>
+
+<ol>
+  <li>手机端下载安装 BitTorrent Sync：<a href="https://play.google.com/store/apps/details?id=com.bittorrent.sync">安卓</a>，<a href="https://itunes.apple.com/us/app/bittorrent-sync/id665156116?mt=8">IOS</a>；</li>
+  <li>在手机端，将网易云音乐的下载目录<span class="codespan">netease/cloudmusic/Music</span>添加到 BitTorrent Sync 的同步目录；</li>
+  <li>在 Mac 端安装 BitTorrent Sync：<span class="codespan">brew cask install bittorrent-sync</span>，把手机端的目录同步到本地目录；</li>
+  <li>添加到本地音乐库</li>
+</ol>
+
+<p>OK，完工啦。</p>
+
+<p>不使用 dropbox 等同步盘的原因：BTSync 足够简单，只需安装不需注册登录等繁琐的步骤。同步的文件夹只要维护一个唯一的 ID 即可。</p>
+
+<p>PS: 强烈推荐一个优秀的音乐发现网站：<a href="http://www.luoo.net/">落网</a></p>
+
+<p>UPDATE: 现在网易云音乐已经出了 MAC 版，不必再从手机端下载同步到 MAC 了。但这时候我需要同步 itunes 的音乐到手机了…… BTSync 反过来用就好了。</p>
+
+<p>UPDATE2: 现在深度已经提供网易云音乐的 <a href="http://blog.deepin.org/2016/05/netease-cloud-music-for-linux-is-released/">Linux 版本</a>了。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- 虾米, 网易, 落网, foobar, iTunes, btsync -->
+
+    <a class='tag' href="/tags/虾米">
+      虾米
+    </a>
+
+    <a class='tag' href="/tags/网易">
+      网易
+    </a>
+
+    <a class='tag' href="/tags/落网">
+      落网
+    </a>
+
+    <a class='tag' href="/tags/foobar">
+      foobar
+    </a>
+
+    <a class='tag' href="/tags/iTunes">
+      iTunes
+    </a>
+
+    <a class='tag' href="/tags/btsync">
+      btsync
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>jekyll 和 octopress 博客程序的选择</title>
+  <meta name="description" content="首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 自动 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。
+
+">
+  <meta name="keywords" content="jekyll,octopress,hexo">
+  <link rel="canonical" href="http://wulfric.me/2016/05/jekyll-octopress-blog/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link href='http://fonts.lug.ustc.edu.cn/css?family=Cutive+Mono' rel='stylesheet' type='text/css'>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>11</div>
+        <div class='month'>MAY</div>
+      </div>
+      <div class='year pull-left'>2016</div>
+    </div>
+    <h1 class="post-title">jekyll 和 octopress 博客程序的选择</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 <strong>自动</strong> 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。</p>
+
+<div  class="highlighter-rouge"><pre class="highlight"><code>+----+
+     |
+     +-+article1.md
+     |
+     |
+     +-+article2.md
+     |
+     |
+     +-+article3.md
+     |
+     |
+     +-+article4.md
+</code></pre>
+</div>
+
+<p>上图是 jekyll 的 master 分支的结构（隐去了其他必要的文件，只留下 md），github 服务器上运行的 <span class="codespan">jekyll server</span> 命令会监控这里的变化，并自动把 md 文件转成 html host 出去。</p>
+
+<div  class="highlighter-rouge"><pre class="highlight"><code>+-----+                 +----+
+      |                      |
+      +-+source folder       +-+index.html
+      |                      |
+      |                      |
+      +-+public folder       +-+2016 folder-各种 html
+      |                      |
+      |                      |
+      +-+css folder          +-+2015 folder-各种 html
+      |                      |
+      |                      |
+      +-+others              +-+others
+</code></pre>
+</div>
+
+<p>上图是 octopress 的目录结构，左边是 source 分支，右边是 master 分支。octopress 的逻辑就是，在 source 分支的 source 文件夹里写 md 文件，然后执行一个转换命令，将生成的 html 文件放在 public 文件夹里。而 public 文件夹的内容就是该 repo 的 master 分支，即右边树就是 public文件夹的内容。</p>
+
+<p>PS: jekyll 的目录中同样有类似 octopress 的 source folder 和 public folder，这个暂时按下不表。</p>
+
+<p>这样，我们就可以总结出二者的优缺点：</p>
+
+<ul>
+  <li>jekyll 极为便利，比如你在移动中突然有了灵感，你可以直接在手机上登录 github，修改 md 文件，马上你的博客就更新好了。但是如果使用 octopress，你虽然也能改 md 文件，但是你不能在手机上直接把 md 转成 html，所以无法实时更新博客。</li>
+  <li>octopress 定制性更好。因为 jekyll server 是运行在 github 的服务器上，考虑到安全因素，github 禁止了几乎所有的 jekyll plugins，所以这种 host on fly 的部署方式受到很大的限制，而 octopress 是在本地转换成 html 再发布，任何插件都可以使用，而且从目录结构上来说，octopress 模板和插件制作也更方便一点。</li>
+  <li>虽然 jekyll 比 octopress 粗糙，但是 jekyll 官网可比 octopress 逼格高多了，旧 jekyll 主页是一片苍茫白色背景中央，一个超简洁的黑白配色的英文名，大概是这种<a href="https://olivermak.es/2015/10/jekyll-mix-blend-mode/">感觉</a>。也许，这就叫，less is more?</li>
+</ul>
+
+<p>在实际使用中，jekyll 的这种限制太大，几乎很难作为自己的个性化定制的博客。所以，如果不是确信自己的博客很简单且不会有插件需求，那么并不推荐 host on fly 的 jekyll。</p>
+
+<p>还记得之前所说的，jekyll 的目录中同样有类似 octopress 的 source folder 和 public folder 吗（<a href="https://jekyllrb.com/docs/structure/">jekyll 目录结构</a>）？jekyll 和 octopress 一样，都有一个 build 命令，可以将 source 中的 md 文件转成 html 放到 public 文件夹下，只要把 public 文件夹的内容设为 master 分支，就可以将 jekyll 变成 octopress 了。（两种工作方式截然不同，所以文件夹目录结构和分支也有很大的变化，我当时改动的时候也很痛苦）</p>
+
+<p>现在我在 source 分支下建立了一个 <span class="codespan">_deploy.sh</span> 文件（ <span class="codespan">_</span> 开头的文件不会被自动放到 public 下），这个命令其实就等于把 jekyll 变成 octopress 了。这种情况下，jekyll 不再 host md 文件，而和 octopress 一样 host html 文件了。当然这种情况下，你可以使用任何插件了，我就用到了 jekyll-assets, jekyll-sitemap 等插件，还自己修改了 kramdown 的 convert 函数。</p>
+
+<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<span class="c"># 编辑 md 文件</span>
+git submodule foreach git pull <span class="c"># 你可以忽略这里，我把 md 文件放在另一个 repo 中了</span>
+jekyll b
+<span class="nb">cd </span>_site <span class="c"># 等同于 octopress 的 public 文件夹</span>
+git add .
+<span class="nv">now</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>date +<span class="s2">"%Y-%m-%d %H:%M"</span><span class="k">)</span><span class="s2">"</span>
+git commit -m <span class="s2">"</span><span class="k">${</span><span class="nv">now</span><span class="k">}</span><span class="s2">"</span>
+git push origin master
+</code></pre>
+</div>
+
+<p>当然 jekyll 的 host on fly 的模式并非一无是处，单页面的个人主页，项目主页就非常适合。</p>
+
+<p>顺便说下，hexo 本质上是和 octopress 一样的，hexo 作者说 octopress 在文章数多的情况下转换速度太慢，所以自己用 nodejs 重新写了一个博客程序，也就是 hexo。事实上，如果把代码渲染这部份转移到前端，octopress 速度也没那么慢。</p>
+
+<p>最后，写出高质量的文章，设计优秀的 UI，和你强相关，和博客程序几乎无关。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- jekyll, octopress, hexo -->
+
+    <a class='tag' href="/tags/jekyll">
+      jekyll
+    </a>
+
+    <a class='tag' href="/tags/octopress">
+      octopress
+    </a>
+
+    <a class='tag' href="/tags/hexo">
+      hexo
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

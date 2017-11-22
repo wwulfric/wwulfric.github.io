@@ -4,3 +4,4 @@ _site
 _deploy.sh
 .ruby-version
 .jekyll-metadata
+.python-version

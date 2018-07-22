@@ -10,7 +10,7 @@ github_username:  wwulfric
 permalink: /:year/:month/:title/
 
 # Build settings
-gems: [jekyll-assets, jekyll-sitemap]
+plugins: [jekyll-assets, jekyll-sitemap]
 assets:
   sources:
     - _assets/fonts

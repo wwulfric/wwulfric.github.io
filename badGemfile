@@ -1,5 +1,5 @@
-gem install jekyll
-gem install jekyll-assets
-gem install jekyll-sitemap
-gem install rouge
-gem install coffee-script
+gem "jekyll", "~> 3.6.2"
+gem "jekyll-assets", "~> 2.4.0"
+gem "jekyll-sitemap", "~> 1.1.1"
+gem "rouge"
+gem "coffee-script"

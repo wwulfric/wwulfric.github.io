@@ -71,7 +71,7 @@
     <p>Effective Java 的 <a href="/2017/11/effetive-java-2#Item2">item 2</a> 的 Builder 模式可以在 Builder 的 build 中检查参数是否符合约束条件，原文和中文版译文是这样的：</p>
 
 <blockquote>
-  <p>It is critical that they be checked after copying the parameters from the builder to the object, and that they be checked on the object fields rather than the builder fields. If any invariants are violated, the <span class="codespan">build</span> method should throw an <span class="codespan">IllegalStateException</span>.</p>
+  <p>It is critical that they be checked after copying the parameters from the builder to the object, and that they be checked on the object fields rather than the builder fields. If any invariants are violated, the build method should throw an <em>IllegalStateException</em>.</p>
 
   <p>将参数从 builder 拷贝到对象中之后，并在对象域而不是 builder 域中对它们进行检验，这一点很重要。如果违反了任何约束条件，<span class="codespan">build</span>方法就应该抛出<span class="codespan">IllegalStateException</span>。</p>
 </blockquote>
@@ -100,7 +100,7 @@
 
 <p>之所以要做防御性拷贝是考虑到对象的安全，对象在创建成功之后，便不应该受到外界的影响，Effective Java 的 item 39 就是这样的一个例子；</p>
 
-<div  class="language-java highlighter-rouge"><pre class="highlight"><code><span class="c1">// Broken "immutable" time period class</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Broken "immutable" time period class</span>
 <span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">Period</span> <span class="o">{</span>
    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Date</span> <span class="n">start</span><span class="o">;</span>
    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Date</span> <span class="n">end</span><span class="o">;</span>
@@ -121,30 +121,27 @@
    <span class="kd">public</span> <span class="n">Date</span> <span class="nf">end</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="n">end</span><span class="o">;</span> <span class="o">}</span>
    <span class="o">...</span>  <span class="c1">// Remainder omitted</span>
 <span class="o">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这段代码试图将 Period 设计为一个不可变对象（immutable），但却是一个失败的例子。</p>
 
-<div  class="language-java highlighter-rouge"><pre class="highlight"><code><span class="c1">// Attack the internals of a Period instance</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Attack the internals of a Period instance</span>
 <span class="n">Date</span> <span class="n">start</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Date</span><span class="o">();</span>
 <span class="n">Date</span> <span class="n">end</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Date</span><span class="o">();</span>
 <span class="n">Period</span> <span class="n">p</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Period</span><span class="o">(</span><span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span> 
 <span class="n">end</span><span class="o">.</span><span class="na">setYear</span><span class="o">(</span><span class="mi">78</span><span class="o">);</span> <span class="c1">// Modifies internals of p!</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>因为 Date 是一个可变（mutable）对象，Period 的设计是失败的。解决方法就是防御性拷贝：</p>
 
-<div  class="language-java highlighter-rouge"><pre class="highlight"><code><span class="c1">// Repaired constructor - makes defensive copies of parameters</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Repaired constructor - makes defensive copies of parameters</span>
 <span class="kd">public</span> <span class="nf">Period</span><span class="o">(</span><span class="n">Date</span> <span class="n">start</span><span class="o">,</span> <span class="n">Date</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
    <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Date</span><span class="o">(</span><span class="n">start</span><span class="o">.</span><span class="na">getTime</span><span class="o">());</span>
    <span class="k">this</span><span class="o">.</span><span class="na">end</span>   <span class="o">=</span> <span class="k">new</span> <span class="n">Date</span><span class="o">(</span><span class="n">end</span><span class="o">.</span><span class="na">getTime</span><span class="o">());</span>
    <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">start</span><span class="o">.</span><span class="na">compareTo</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">end</span><span class="o">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span>
       <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="n">start</span> <span class="o">+</span><span class="s">" after "</span><span class="o">+</span> <span class="n">end</span><span class="o">);</span>
 <span class="o">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这样就不存在这种问题了，参数传入之后很好的和外界隔离开来（<span class="codespan">start()</span>和<span class="codespan">end()</span>方法也有相同的问题，这里就不展开了）。</p>
 
@@ -162,7 +159,7 @@
 
 <p>所以，如果某个状态由多个参数构成，我们可以在一个 setter 中赋值并验证这些参数的状态。比如我们有这样一个 build 和 setter 方法：</p>
 
-<div  class="language-java highlighter-rouge"><pre class="highlight"><code><span class="c1">// builder 的 setter 方法</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// builder 的 setter 方法</span>
 <span class="kd">public</span> <span class="n">Builder</span> <span class="nf">setStartAndEnd</span><span class="o">(</span><span class="n">Date</span> <span class="n">start</span><span class="o">,</span> <span class="n">Date</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span> 
   <span class="c1">// 验证 start &lt;= end，throw IllegalArgumentsException</span>
   <span class="c1">// 赋值     </span>
@@ -173,14 +170,13 @@
   <span class="n">SomeObject</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SomeObject</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
   <span class="c1">// 验证状态，throw IllegalStateException </span>
 <span class="o">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这里我们可以尽早的验证传入的 start 和 end 是否满足要求。同时要注意，对象上的验证仍不可省略。</p>
 
 <p>其实也有在 Builder 的 setter 中验证而不必在对象上验证参数的场景，stackexchange 的这个<a href="https://softwareengineering.stackexchange.com/a/241319">回答</a>也提到了这种可能<sup id="fnref:2:1"><a href="#fn:2" class="footnote">2</a></sup>。在这个场景中，setter 方法的参数类型和实际创建对象的参数类型不一致，那么，setter 方法必须独自验证自己的参数的状态，而对象则在创建时验证对象入参的状态。</p>
 
-<div  class="language-java highlighter-rouge"><pre class="highlight"><code><span class="c1">// builder 的 setter 方法</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// builder 的 setter 方法</span>
 <span class="kd">public</span> <span class="n">Builder</span> <span class="nf">setStartAndEnd</span><span class="o">(</span><span class="n">Date</span> <span class="n">start</span><span class="o">,</span> <span class="n">Date</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span> 
   <span class="c1">// 验证 start &lt;= end，throw IllegalArgumentsException</span>
   <span class="c1">// 赋值</span>
@@ -192,8 +188,7 @@
   <span class="n">SomeObject</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SomeObject</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
   <span class="c1">// 验证状态，throw IllegalStateException </span>
 <span class="o">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>如代码所示，builder 的 setter 方法入参是两个 Date，而构造函数的入参是 Period(实际是 Builder) 。</p>
 
@@ -241,10 +236,10 @@
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p>stackoverflow 上的这个问题 <a href="https://stackoverflow.com/questions/38173274/builder-pattern-validation-effective-java">builder-pattern-validation-effective-java</a> 的解答了这个问题，在 object 上验证 fields 更规范，因为实际上要验证的就是 object 的 fields 而不是 builder 的，builder 只是一个方便创建对象的工具&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>stackoverflow 上的这个问题 <a href="https://stackoverflow.com/questions/38173274/builder-pattern-validation-effective-java">builder-pattern-validation-effective-java</a> 的解答了这个问题，在 object 上验证 fields 更规范，因为实际上要验证的就是 object 的 fields 而不是 builder 的，builder 只是一个方便创建对象的工具 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:2">
-      <p>stackexchange 上的 <a href="https://softwareengineering.stackexchange.com/questions/241309/builder-pattern-when-to-fail">builder-pattern-when-to-fail</a> 的解答深入讨论了这个问题，而且存在不少争论，不过大体上还是认同的居多&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a>&nbsp;<a href="#fnref:2:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+      <p>stackexchange 上的 <a href="https://softwareengineering.stackexchange.com/questions/241309/builder-pattern-when-to-fail">builder-pattern-when-to-fail</a> 的解答深入讨论了这个问题，而且存在不少争论，不过大体上还是认同的居多 <a href="#fnref:2" class="reversefootnote">&#8617;</a> <a href="#fnref:2:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
     </li>
   </ol>
 </div>

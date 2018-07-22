@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="git,gitignore,gitconfig">
-  <link rel="canonical" href="http://localhost:4000/2014/04/gitconfig-and-gitignore/">
+  <link rel="canonical" href="http://wulfric.me/2014/04/gitconfig-and-gitignore/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -74,31 +74,30 @@
 
 <p>在家目录下创建 .gitconfig 文件，</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>user]
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>user]
 	name <span class="o">=</span> 你的名字
 	email <span class="o">=</span> 你的邮箱
 <span class="o">[</span>core]
-    editor <span class="o">=</span> vim ;或其他编辑器
+    editor <span class="o">=</span> vim <span class="p">;</span>或其他编辑器
     excludesfile <span class="o">=</span> 你的全局 ignore 文件地址（绝对地址）：.gitignore_global
 <span class="o">[</span>merge]
     tool <span class="o">=</span> 你的 merge 工具，默认的是 vimdiff
 <span class="o">[</span><span class="nb">alias</span><span class="o">]</span>
-    ci <span class="o">=</span> commit -a -v
+    ci <span class="o">=</span> commit <span class="nt">-a</span> <span class="nt">-v</span>
     co <span class="o">=</span> checkout
     st <span class="o">=</span> status
     br <span class="o">=</span> branch
-    lg <span class="o">=</span> log --graph --pretty<span class="o">=</span>mt:<span class="s1">'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset'</span> --abbrev-commit --
-    throw <span class="o">=</span> reset --hard HEAD
+    lg <span class="o">=</span> log <span class="nt">--graph</span> <span class="nt">--pretty</span><span class="o">=</span>mt:<span class="s1">'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset'</span> <span class="nt">--abbrev-commit</span> <span class="nt">--</span>
+    throw <span class="o">=</span> reset <span class="nt">--hard</span> HEAD
 <span class="o">[</span>color]
     ui <span class="o">=</span> <span class="nb">true</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>配置好后，你就可以使用<span class="codespan">git ci</span>, <span class="codespan">git co</span>, <span class="codespan">git st</span>等命令了。</p>
 
 <p>在家目录下创建 .gitignore_global，这个文件中放的是全局的 git ignore 文件，比如编辑器的配置文件，缓存文件，编译的文件等，下为例子</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># Compiled source #</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Compiled source #</span>
 <span class="c">###################</span>
 <span class="k">*</span>.com
 <span class="k">*</span>.class
@@ -143,15 +142,13 @@ Thumbs.db
 <span class="c"># sublime project files #</span>
 <span class="c">#####################</span>
 <span class="k">*</span>.sublime-project
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>在项目下的 .gitignore 文件应该放和项目紧密相关的 ignore 文件，比如项目的配置，数据库的配置等，如：</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="k">*</span>/conf_set.php
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">*</span>/conf_set.php
 database.yml
-</code></pre>
-</div>
+</code></pre></div></div>
 
   </article>
 

@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="vim,emacs,ide,spf13,kvim,fisa,prelude,purcell,spacemacs">
-  <link rel="canonical" href="http://localhost:4000/2016/05/editor-vim-emacs/">
+  <link rel="canonical" href="http://wulfric.me/2016/05/editor-vim-emacs/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -166,7 +166,7 @@
 
 <p>大家在做<span class="codespan">git rebase</span> 的时候经常遇到下面这种情况吧，在 vim 下，把第二到第十行的 pick 改成 squash 就非常简单：<span class="codespan">:2,10s/pick/squash</span>。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>pick 4aad920 f
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pick 4aad920 f
 pick 322877a f
 pick 34dacff f
 pick f1c9311 f
@@ -178,8 +178,7 @@ pick 9b70e6c f
 pick 5c3747b f
 
 <span class="c"># ...</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>除此之外，vim 的矩形编辑也非常犀利。比如上面的示例，也可以在矩形编辑下，选中第二到第十行的 pick，删除，然后 I 插入 squash，继而退出 insert mode 即可。</p>
 
@@ -276,7 +275,7 @@ pick 5c3747b f
 
 <p>然而比起这些来，我更喜欢的是针对编辑的一些插件，比如 <a href="https://github.com/tpope/vim-surround">vim-surround</a>，能够快速的将字符串的包裹修改或者删除。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="s2">"Hello world!"</span>  
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"Hello world!"</span>  
 <span class="c"># cs"'</span>
 <span class="s1">'Hello world!'</span>
 <span class="c"># cs'&lt;q&gt;</span>
@@ -285,8 +284,7 @@ pick 5c3747b f
 <span class="s2">"Hello world!"</span>
 <span class="c"># ds"</span>
 Hello world!
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><a href="https://github.com/tpope/vim-repeat">vim-repeat</a> 重复上一个动作。<a href="https://github.com/vim-scripts/Gundo">Gundo</a> 树形撤销历史。<a href="https://github.com/tommcdo/vim-exchange">vim-exchange</a> 交换行，或者交换选中区域。</p>
 
@@ -305,7 +303,7 @@ Hello world!
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p>vim 社区出了个 <a href="https://github.com/junegunn/vim-plug#on-demand-loading-of-plugins">vim-plug</a> 插件管理工具，这个工具可以按需加载插件，起到和 Emacs 下 major mode 相近的功能。&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>vim 社区出了个 <a href="https://github.com/junegunn/vim-plug#on-demand-loading-of-plugins">vim-plug</a> 插件管理工具，这个工具可以按需加载插件，起到和 Emacs 下 major mode 相近的功能。 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

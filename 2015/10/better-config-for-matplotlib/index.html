@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="ipython,matplotlib,matlab,retina,中文,ggplot">
-  <link rel="canonical" href="http://localhost:4000/2015/10/better-config-for-matplotlib/">
+  <link rel="canonical" href="http://wulfric.me/2015/10/better-config-for-matplotlib/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -81,16 +81,14 @@
 
 <p>安装完成之后，先在 python 下执行如下命令，这个命令第一次调用的时候会生成 cache 文件，速度较慢，生成之后就不会出现卡顿的情况了。</p>
 
-<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
-</code></pre>
-</div>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+</code></pre></div></div>
 
 <p>在 bash 中查看生成的 cache：</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">&gt; </span>ls .matplotlib
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="nb">ls</span> .matplotlib
 fontList.cache matplotlibrc   tex.cache
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>matplotlib 默认的颜色配置不好看。为了使 matlab 用户易于上手，matplotlib 的默认配色采用了与之相同的配色方案。这种对比明显的配色方案在出版物上观看时效果很好，但是并不适于在屏幕上观看<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。</p>
 
@@ -111,14 +109,13 @@ fontList.cache matplotlibrc   tex.cache
 
 <p>ipython 移除了 pylab 启动参数，所以现在你不能通过 <span class="codespan">ipython notebook --pylab=inline</span> 来获得内联查看画图的功能。需要在启动之后执行 <span class="codespan">%matplotlib inline</span>。另外，为了使画出来的图支持 retina，你还需要执行 <span class="codespan">%config InlineBackend.figure_format='retina'</span>，你可以把下面的代码作为你 .ipynb 文件的初始脚本。更多配置可参考这篇<a href="http://blog.invibe.net/posts/2015-01-07-the-right-imports-in-a-notebook.html">文章</a>。</p>
 
-<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib</span>
 <span class="o">%</span><span class="n">config</span> <span class="n">InlineBackend</span><span class="o">.</span><span class="n">figure_format</span><span class="o">=</span><span class="s">'svg'</span>
 <span class="c">#config InlineBackend.figure_format='retina'</span>
 <span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>matplotlib 默认不支持中文显示，查看<a href="http://hyry.dip.jp/tech/book/page/scipy/matplotlib_fast_plot.html#id6">这里</a>的设置。</p>
 
@@ -126,12 +123,11 @@ fontList.cache matplotlibrc   tex.cache
 
 <p>PS2: 1.5 版本的 matplotlib 已经内置了 ggplot 配色，参见<a href="http://matplotlib.org/users/style_sheets.html">文档</a>，<a href="http://matplotlib.org/examples/style_sheets/plot_ggplot.html">示例</a>。</p>
 
-<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="k">print</span> <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">available</span>
 <span class="c"># [u'dark_background', u'bmh', u'grayscale', u'ggplot', u'fivethirtyeight']</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s">'ggplot'</span><span class="p">)</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><figure>
           <picture>
@@ -147,10 +143,10 @@ fontList.cache matplotlibrc   tex.cache
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p><a href="http://www.huyng.com/posts/sane-color-scheme-for-matplotlib/">Sane color scheme for Matplotlib</a>&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p><a href="http://www.huyng.com/posts/sane-color-scheme-for-matplotlib/">Sane color scheme for Matplotlib</a> <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:2">
-      <p><a href="http://jakevdp.github.io/blog/2012/10/07/xkcd-style-plots-in-matplotlib/">XKCD-style plots in Matplotlib</a>&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+      <p><a href="http://jakevdp.github.io/blog/2012/10/07/xkcd-style-plots-in-matplotlib/">XKCD-style plots in Matplotlib</a> <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

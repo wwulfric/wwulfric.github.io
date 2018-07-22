@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="miniconda,python,brew,path">
-  <link rel="canonical" href="http://localhost:4000/2016/09/pyenv-keyerror/">
+  <link rel="canonical" href="http://wulfric.me/2016/09/pyenv-keyerror/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -82,7 +82,7 @@
 
 <p>其次，这个问题不仅在 cd 的时候会出现，执行 python 的时候也会。</p>
 
-<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="o">&gt;</span> <span class="n">python</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="n">python</span>
 <span class="n">Error</span> <span class="ow">in</span> <span class="n">sitecustomize</span><span class="p">;</span> <span class="nb">set</span> <span class="n">PYTHONVERBOSE</span> <span class="k">for</span> <span class="n">traceback</span><span class="p">:</span>
 <span class="nb">KeyError</span><span class="p">:</span> <span class="s">'PYTHONPATH'</span>
 <span class="n">Python</span> <span class="mf">3.5</span><span class="o">.</span><span class="mi">2</span> <span class="o">|</span><span class="n">Continuum</span> <span class="n">Analytics</span><span class="p">,</span> <span class="n">Inc</span><span class="o">.|</span> <span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">Jul</span>  <span class="mi">2</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">17</span><span class="p">:</span><span class="mi">52</span><span class="p">:</span><span class="mi">12</span><span class="p">)</span>
@@ -91,8 +91,7 @@
 <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">sys</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span>
 <span class="c"># 返回一个 list。着重关心其中一个元素：'/usr/local/lib/python2.7/site-packages'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这里其实就发现问题了，Python3.5 怎么会有 2.7 的 site-packages 呢？</p>
 
@@ -102,28 +101,26 @@
 
 <p>既然可能是 brew 安装的问题，执行<span class="codespan">brew doctor</span>。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>Warning: Your default Python does not recognize the Homebrew site-packages
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Warning: Your default Python does not recognize the Homebrew site-packages
 directory as a special site-packages directory, which means that .pth
 files will not be followed. This means you will not be able to import
 some modules after installing them with Homebrew, like wxpython. To fix
 this <span class="k">for </span>the current user, you can run:
-  mkdir -p /Users/username/.local/lib/python3.5/site-packages
-  <span class="nb">echo</span> <span class="s1">'import site; site.addsitedir("/usr/local/lib/python2.7/site-packages")'</span> &gt;&gt; /Users/username/.local/lib/python3.5/site-packages/homebrew.pth
-</code></pre>
-</div>
+  mkdir <span class="nt">-p</span> /Users/username/.local/lib/python3.5/site-packages
+  <span class="nb">echo</span> <span class="s1">'import site; site.addsitedir("/usr/local/lib/python2.7/site-packages")'</span> <span class="o">&gt;&gt;</span> /Users/username/.local/lib/python3.5/site-packages/homebrew.pth
+</code></pre></div></div>
 
 <p>这里就是问题所在！brew 在安装某些软件之后，可能需要用户手动做一些后续操作。想起来 brew 更新 Python 的时候，它曾经提示我这样做，于是就直接复制代码执行，结果就导致了这个问题。把homebrew.pth 的内容改成</p>
 
-<div  class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">site</span><span class="p">;</span> <span class="n">site</span><span class="o">.</span><span class="n">addsitedir</span><span class="p">(</span><span class="s">"/usr/local/lib/python3.5/site-packages"</span><span class="p">)</span>
-</code></pre>
-</div>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">site</span><span class="p">;</span> <span class="n">site</span><span class="o">.</span><span class="n">addsitedir</span><span class="p">(</span><span class="s">"/usr/local/lib/python3.5/site-packages"</span><span class="p">)</span>
+</code></pre></div></div>
 
 <p>我分析，其原因应该是 brew 没有安装 Python3，但是通过 pyenv 安装了 Python3，所以 brew 还是按照自己的意思建议你在homebrew.pth 导入 2.7 的site-packages。</p>
 
 <div class="footnotes">
   <ol>
     <li id="fn:stackoverflow_links">
-      <p><a href="http://stackoverflow.com/questions/34981284/pythonpath-error-when-trying-to-activate-a-virtual-environment">python - PYTHONPATH error when trying to activate a virtual environment - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/31601078/keyerror-pythonpath-message-when-updating-anaconda-packahes-on-mac-os-x">python - "KeyError: 'PYTHONPATH'" message when updating Anaconda packahes on Mac OS X - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/32321973/after-installing-anaconda-i-get-constant-keyerror-pythonpath-messages">python - After installing Anaconda, I get constant "KeyError: 'PYTHONPATH'" messages - Stack Overflow</a>&nbsp;<a href="#fnref:stackoverflow_links" class="reversefootnote">&#8617;</a></p>
+      <p><a href="http://stackoverflow.com/questions/34981284/pythonpath-error-when-trying-to-activate-a-virtual-environment">python - PYTHONPATH error when trying to activate a virtual environment - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/31601078/keyerror-pythonpath-message-when-updating-anaconda-packahes-on-mac-os-x">python - "KeyError: 'PYTHONPATH'" message when updating Anaconda packahes on Mac OS X - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/32321973/after-installing-anaconda-i-get-constant-keyerror-pythonpath-messages">python - After installing Anaconda, I get constant "KeyError: 'PYTHONPATH'" messages - Stack Overflow</a> <a href="#fnref:stackoverflow_links" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

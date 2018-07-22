@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="jekyll,octopress,hexo">
-  <link rel="canonical" href="http://localhost:4000/2016/05/jekyll-octopress-blog/">
+  <link rel="canonical" href="http://wulfric.me/2016/05/jekyll-octopress-blog/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -70,7 +70,7 @@
   <article class="post-content">
     <p>首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 <strong>自动</strong> 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。</p>
 
-<div  class="highlighter-rouge"><pre class="highlight"><code>+----+
+<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+----+
      |
      +-+article1.md
      |
@@ -82,12 +82,11 @@
      |
      |
      +-+article4.md
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>上图是 jekyll 的 master 分支的结构（隐去了其他必要的文件，只留下 md），github 服务器上运行的 <span class="codespan">jekyll server</span> 命令会监控这里的变化，并自动把 md 文件转成 html host 出去。</p>
 
-<div  class="highlighter-rouge"><pre class="highlight"><code>+-----+                 +----+
+<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-----+                 +----+
       |                      |
       +-+source folder       +-+index.html
       |                      |
@@ -99,8 +98,7 @@
       |                      |
       |                      |
       +-+others              +-+others
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>上图是 octopress 的目录结构，左边是 source 分支，右边是 master 分支。octopress 的逻辑就是，在 source 分支的 source 文件夹里写 md 文件，然后执行一个转换命令，将生成的 html 文件放在 public 文件夹里。而 public 文件夹的内容就是该 repo 的 master 分支，即右边树就是 public文件夹的内容。</p>
 
@@ -120,17 +118,16 @@
 
 <p>现在我在 source 分支下建立了一个 <span class="codespan">_deploy.sh</span> 文件（ <span class="codespan">_</span> 开头的文件不会被自动放到 public 下），这个命令其实就等于把 jekyll 变成 octopress 了。这种情况下，jekyll 不再 host md 文件，而和 octopress 一样 host html 文件了。当然这种情况下，你可以使用任何插件了，我就用到了 jekyll-assets, jekyll-sitemap 等插件，还自己修改了 kramdown 的 convert 函数。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
 <span class="c"># 编辑 md 文件</span>
 git submodule foreach git pull <span class="c"># 你可以忽略这里，我把 md 文件放在另一个 repo 中了</span>
 jekyll b
 <span class="nb">cd </span>_site <span class="c"># 等同于 octopress 的 public 文件夹</span>
-git add .
+git add <span class="nb">.</span>
 <span class="nv">now</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>date +<span class="s2">"%Y-%m-%d %H:%M"</span><span class="k">)</span><span class="s2">"</span>
-git commit -m <span class="s2">"</span><span class="k">${</span><span class="nv">now</span><span class="k">}</span><span class="s2">"</span>
+git commit <span class="nt">-m</span> <span class="s2">"</span><span class="k">${</span><span class="nv">now</span><span class="k">}</span><span class="s2">"</span>
 git push origin master
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>当然 jekyll 的 host on fly 的模式并非一无是处，单页面的个人主页，项目主页就非常适合。</p>
 

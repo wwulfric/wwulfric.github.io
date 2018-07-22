@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="php,数据结构,ds">
-  <link rel="canonical" href="http://localhost:4000/2017/08/php-data-structures/">
+  <link rel="canonical" href="http://wulfric.me/2017/08/php-data-structures/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
     <script type="text/x-mathjax-config">
@@ -85,11 +85,10 @@
   <article class="post-content">
     <p>在 PHP 中表示集合的数据类型就一种：Array。相信每个初学 PHP 的都会对它感到疑惑。这个东西看起来应该和其他语言中的 Array 或者 List 一样，但在 PHP 中，它是一切，即是 List，也是 Map：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$a</span> <span class="o">=</span> <span class="k">array</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
 <span class="nv">$b</span> <span class="o">=</span> <span class="k">array</span><span class="p">(</span><span class="s1">'key1'</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'key2'</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">);</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这听起来似乎很好，反正大家都使用同一种数据结构，偶尔情况下才会有些性能问题，况且升级 PHP7 之后 Array 的性能也提高了，实在不济还可以加内存。但如果我们可以通过引入更便利的数据结构优化性能，同时写代码反而更方便了，那何乐而不为呢?</p>
 
@@ -97,43 +96,39 @@
 
 <p>有些时候我们需要保存一个集合（Set），但是 Array 并不能保证元素的唯一性，<span class="codespan">array_unique</span> 有不可避免的性能损耗。一种折衷方案是，将元素当做 key，同时 value 为 true 来曲线实现 Unique Array 的功能：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$users</span> <span class="o">=</span> <span class="nx">User</span><span class="o">::</span><span class="na">find</span><span class="p">(</span><span class="nv">$ids</span><span class="p">);</span>
 <span class="nv">$res</span> <span class="o">=</span> <span class="p">[];</span>
 <span class="k">foreach</span> <span class="p">(</span><span class="nv">$users</span> <span class="k">as</span> <span class="nv">$user</span><span class="p">)</span> <span class="p">{</span>
   <span class="nv">$res</span><span class="p">[</span><span class="nv">$user</span><span class="o">-&gt;</span><span class="na">id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>PHP 的 Array 访问不存在的 key 可以得到 null，不会产生 fatal error，但会有一个 E_NOTICE。这个 E_NOTICE 会被 set_error_handler 注册的函数截获<sup id="fnref:4"><a href="#fn:4" class="footnote">1</a></sup>。显然，这种代码上的不干净和性能上的无谓开销完全是可以避免的。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$req</span> <span class="o">=</span> <span class="p">[];</span>
 <span class="nv">$req</span><span class="p">[</span><span class="s1">'user_id'</span><span class="p">];</span> <span class="c1">// PHP Notice:  Undefined offset
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>可以用 array_key_exists 和 if else 来让代码干净一些，但这样就显得啰嗦了。</p>
 
 <p>array 的一些函数式方法很难用，比如 array_map, array_walk 等，写起来也很丑陋。当然这一点原生 PHP 没什么好方法，毕竟 PHP 的面向对象的基因不是很强。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nb">array_map</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$user</span><span class="p">){</span>
   <span class="k">return</span> <span class="nv">$user</span><span class="o">-&gt;</span><span class="na">is_deleted</span><span class="p">();</span>
 <span class="p">},</span> <span class="nv">$users</span><span class="p">);</span>
 <span class="c1">// 就是这么难看
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div  class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="n">users</span><span class="p">.</span><span class="nf">map</span> <span class="p">{</span> <span class="o">|</span><span class="n">user</span><span class="o">|</span> <span class="n">user</span><span class="p">.</span><span class="nf">is_deleted?</span> <span class="p">}</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">users</span><span class="p">.</span><span class="nf">map</span> <span class="p">{</span> <span class="o">|</span><span class="n">user</span><span class="o">|</span> <span class="n">user</span><span class="p">.</span><span class="nf">is_deleted?</span> <span class="p">}</span>
 <span class="c1"># ruby 的就好看多了</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>在某些情况下，使用 Array 性能很差<sup id="fnref:1"><a href="#fn:1" class="footnote">2</a></sup>，比如下面这段代码：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$a</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">];</span>
 <span class="k">echo</span> <span class="nv">$a</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
 <span class="c1">// 6
@@ -141,8 +136,7 @@
 <span class="c1">// $a: [0,1,2,3,4,5,6,7];
 </span><span class="k">echo</span> <span class="nv">$a</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
 <span class="c1">// 5
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>看起来似乎没什么，但需要注意的是，Array 本质上是一个 Map，unshift 一个元素进来，将会改变每个元素的 key，这是一个 $O(n)$ 操作。另外，PHP 的 Array 将其 value(包括 key 和 它的 hash) 保存在一个 bucket 中，所以我们需要查看每一个 bucket 并更新 hash。PHP 内部其实是通过创建新的 array 来做 array_unshift 操作的，其性能问题可想可知<sup id="fnref:2"><a href="#fn:2" class="footnote">3</a></sup>。</p>
 
@@ -169,22 +163,19 @@
 
 <p>Collection 是基础接口，定义了一个数据集合（这里的集合指的是 Collection，不是 Set） 的基本操作，比如 foreach, json_encode, var_dump 等。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$sequence</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\Ds\Vector</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]);</span>
 <span class="nb">json_encode</span><span class="p">(</span><span class="nv">$sequence</span><span class="p">);</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Sequence 是类数组数据结构的基础接口，定义了很多重要且方便的方法，比如 contains, map, filter, reduce, find, first, last 等。从图中可知，Vector, Deque, Stack, Queue 都直接或者间接的实现了这个接口。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$sequence</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\Ds\Vector</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]);</span>
 
 <span class="nb">print_r</span><span class="p">(</span><span class="nv">$sequence</span><span class="o">-&gt;</span><span class="na">map</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$value</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nv">$value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">;</span> <span class="p">}));</span>
 <span class="nb">print_r</span><span class="p">(</span><span class="nv">$sequence</span><span class="p">);</span>
-<span class="cp">?&gt;</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Hashable 在图中看起来比较孤立，但对于 Map 和 Set 很重要。一个 Object 如果实现了 Hashable，就可以作为 Map 的 key，可以作为 Set 的元素。这样 Map 和  Set 就能像 Java 一样方便的使用了。</p>
 
@@ -202,7 +193,7 @@
 
 <p>Map。以前使用 Array 来实现 map 的地方，改用 Map 更好。二者性能几乎一致，但 Map 对内存的管理更好。而且，Map 的语法要更加友好。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$req</span> <span class="o">=</span> <span class="p">[];</span>
 <span class="nv">$req</span><span class="p">[</span><span class="s1">'user_id'</span><span class="p">];</span> <span class="c1">// PHP Notice:  Undefined offset
 </span>
@@ -214,12 +205,11 @@
 <span class="nv">$req</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">();</span>
 
 <span class="nv">$req</span><span class="o">-&gt;</span><span class="na">map</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$key</span><span class="p">,</span> <span class="nv">$value</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nv">$value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">;</span> <span class="p">});</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>不仅如此，只要 object 继承了 Hashable，Map 还允许使用 object 作为 key。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">class</span> <span class="nc">Photo</span> <span class="k">implements</span> <span class="nx">\Ds\Hashable</span> <span class="p">{</span>
     
     <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(</span><span class="nv">$id</span><span class="p">)</span> <span class="p">{</span>
@@ -241,31 +231,29 @@
 <span class="nv">$map</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Ds\Map</span><span class="p">();</span>
 <span class="nv">$map</span><span class="o">-&gt;</span><span class="na">put</span><span class="p">(</span><span class="nv">$p1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 <span class="nv">$map</span><span class="o">-&gt;</span><span class="na">put</span><span class="p">(</span><span class="nv">$p2</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Set 集合是一种元素唯一的数据结构。和 array_unique 相比性能有很大提升，而且用法也更加优雅<sup id="fnref:1:2"><a href="#fn:1" class="footnote">2</a></sup>。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$set</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Ds\Set</span><span class="p">();</span>
 <span class="nv">$set</span><span class="o">-&gt;</span><span class="na">add</span><span class="p">(</span><span class="nv">$p1</span><span class="p">);</span>
 <span class="nv">$set</span><span class="o">-&gt;</span><span class="na">add</span><span class="p">(</span><span class="nv">$p2</span><span class="p">);</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <div class="footnotes">
   <ol>
     <li id="fn:4">
-      <p>关于 PHP 的错误处理可以参考笔者的另一篇博文 <a href="/2017/08/php-error-exception/">PHP 的错误和异常处理机制</a>&nbsp;<a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+      <p>关于 PHP 的错误处理可以参考笔者的另一篇博文 <a href="/2017/08/php-error-exception/">PHP 的错误和异常处理机制</a> <a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:1">
-      <p><a href="https://medium.com/@rtheunissen/efficient-data-structures-for-php-7-9dda7af674cd">php ds 插件性能测试</a>&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a>&nbsp;<a href="#fnref:1:1" class="reversefootnote">&#8617;<sup>2</sup></a>&nbsp;<a href="#fnref:1:2" class="reversefootnote">&#8617;<sup>3</sup></a></p>
+      <p><a href="https://medium.com/@rtheunissen/efficient-data-structures-for-php-7-9dda7af674cd">php ds 插件性能测试</a> <a href="#fnref:1" class="reversefootnote">&#8617;</a> <a href="#fnref:1:1" class="reversefootnote">&#8617;<sup>2</sup></a> <a href="#fnref:1:2" class="reversefootnote">&#8617;<sup>3</sup></a></p>
     </li>
     <li id="fn:2">
-      <p>当然，这一点可能稍嫌牵强，毕竟即使是数据量很大的情况下，array_unshift 的耗时也没有那么大&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+      <p>当然，这一点可能稍嫌牵强，毕竟即使是数据量很大的情况下，array_unshift 的耗时也没有那么大 <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:3">
-      <p>github 上还在讨论可以增加一个不可变类型 Tuple，以及取消 Vector 直接使用 Deque，讨论<a href="https://github.com/php-ds/extension/issues/52">地址</a>和 <a href="https://github.com/php-ds/extension/issues/90">2.0API</a> 计划&nbsp;<a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+      <p>github 上还在讨论可以增加一个不可变类型 Tuple，以及取消 Vector 直接使用 Deque，讨论<a href="https://github.com/php-ds/extension/issues/52">地址</a>和 <a href="https://github.com/php-ds/extension/issues/90">2.0API</a> 计划 <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

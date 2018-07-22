@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="git,协作,rebase,merge">
-  <link rel="canonical" href="http://localhost:4000/2014/03/git-team-cooperate/">
+  <link rel="canonical" href="http://wulfric.me/2014/03/git-team-cooperate/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -101,7 +101,7 @@
           <figcaption><i class='icon-pencil'></i>git merge and rebase</figcaption>
         </figure></p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>git rebase -i origin/master
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git rebase <span class="nt">-i</span> origin/master
 <span class="c"># 该命令会新建一个未命名的分支，在该分支上执行合并</span>
 <span class="c"># 执行后会跳到编辑页面，保留第一个 pick，其他 pick 改成 squash，保存退出</span>
 git status
@@ -110,10 +110,10 @@ git status
 <span class="c"># 编辑冲突</span>
   <span class="c"># 编辑冲突完成，继续，循环上述操作直到没有冲突</span>
   <span class="c"># 编辑完可能需要使用 git add -u 加入</span>
-  git add -u
-  git rebase --continue
+  git add <span class="nt">-u</span>
+  git rebase <span class="nt">--continue</span>
   <span class="c"># 如果遇到问题，abort 掉这次rebase，重新执行</span>
-  git rebase --abort
+  git rebase <span class="nt">--abort</span>
 <span class="c"># 冲突编辑完毕后</span>
 <span class="c"># 复制 git log 的最新 commit id</span>
 git checkout master
@@ -121,22 +121,20 @@ git rebase <span class="c">#得到远端最新 master 内容</span>
 <span class="c"># 上面获取远端 master 内容如有异常，可以尝试 git reset --hard origin/master</span>
 git cherry-pick commit_id <span class="c">#该 commit id 就是刚才复制的内容</span>
 <span class="c"># 修改 commit 信息，使用简洁的描述，比如 fixed #99: user management</span>
-git commit --amend
+git commit <span class="nt">--amend</span>
 <span class="c"># 检查一下，提交更改</span>
 git push origin master
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>little tips:</p>
 
 <p>在做衍合的时候，先衍合到共同的历史记录，然后再衍合</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># a--b--c</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># a--b--c</span>
 <span class="c"># \--d--e</span>
-git rebase -i a
-git rebase -i origin/master
-</code></pre>
-</div>
+git rebase <span class="nt">-i</span> a
+git rebase <span class="nt">-i</span> origin/master
+</code></pre></div></div>
 
   </article>
 

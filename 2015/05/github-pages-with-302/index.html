@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="github pages,302 redirect">
-  <link rel="canonical" href="http://localhost:4000/2015/05/github-pages-with-302/">
+  <link rel="canonical" href="http://wulfric.me/2015/05/github-pages-with-302/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -85,24 +85,21 @@
 
 <p>改完之后再看一下：</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
-</code></pre>
-</div>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
+</code></pre></div></div>
 
-<div  class="highlighter-rouge"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
+<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
 ;; global options: +cmd
 ;wulfric.me.      IN A
 wulfric.me.  3600 IN A xxx.xxx.xxx.xxx
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这里的 IP 地址不再是 Github 给出的 IP 了</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -I wulfric.me/archive/
-</code></pre>
-</div>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-I</span> wulfric.me/archive/
+</code></pre></div></div>
 
-<div  class="highlighter-rouge"><pre class="highlight"><code>HTTP/1.1 200 OK
+<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
 Server: GitHub.com
 Content-Type: text/html; charset=utf-8
 Last-Modified: Fri, 17 Oct 2014 16:29:11 GMT
@@ -119,8 +116,7 @@ X-Cache: MISS
 X-Cache-Hits: 0
 X-Timer: S1413632716.122644,VS0,VE85
 Vary: Accept-Encoding
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>从返回来看，结果已经是正确的 200(OK) 了。Google Master 也能正确识别网站了。</p>
 

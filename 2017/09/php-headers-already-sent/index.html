@@ -19,13 +19,13 @@
 
   
     
-      参见 stackoverflow 回答，除此之外，还有 UTF-8 BOM 等其他原因&nbsp;&#8617;
+      参见 stackoverflow 回答，除此之外，还有 UTF-8 BOM 等其他原因 &#8617;
     
   
 
 ">
   <meta name="keywords" content="php,echo,print,ob_start,HTTP">
-  <link rel="canonical" href="http://localhost:4000/2017/09/php-headers-already-sent/">
+  <link rel="canonical" href="http://wulfric.me/2017/09/php-headers-already-sent/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -98,7 +98,7 @@
 
 <p>它本质上是一个 <strong>E_WARNING</strong>，被 error_handler 截获而抛出异常：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">function</span> <span class="nf">_error_handler</span><span class="p">(</span><span class="nv">$severity</span><span class="p">,</span> <span class="nv">$message</span><span class="p">,</span> <span class="nv">$filepath</span><span class="p">,</span> <span class="nv">$line</span><span class="p">)</span>
 <span class="p">{</span>
     <span class="c1">// ...
@@ -108,18 +108,16 @@
 </span>        <span class="k">throw</span> <span class="k">new</span> <span class="nx">ErrorException</span><span class="p">(</span><span class="s2">"Severity: </span><span class="nv">$severity</span><span class="s2">; Message: </span><span class="nv">$message</span><span class="s2">"</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>在 index.php 中我们设置 error_reporting 要报告 E_WARNING 错误，所以会走到这里并抛出异常。也就是说，我们需要找到 E_WARNING 抛出的位置和原因。</p>
 
 <h3 id="e_warning-产生的原因">E_WARNING 产生的原因</h3>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>Severity: Warning<span class="nt">&lt;/p&gt;</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>Severity: Warning<span class="nt">&lt;/p&gt;</span>
 <span class="nt">&lt;p&gt;</span>Message:  Cannot modify header information - headers already sent by (output started at .../application/controllers/my_script.php:xxx)<span class="nt">&lt;/p&gt;</span>
 <span class="nt">&lt;p&gt;</span>Filename: libraries/Session.php<span class="nt">&lt;/p&gt;</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这个错误从字面理解，就是设置 header() 的时候发现 header 中已经有内容了，那么，在异常信息中， headers already sent by () 括号里的内容就很重要了，它表明了是那一行的输出导致了这个问题。按照定位的位置，是脚本中的一个<span class="codespan">printf</span>语句；继续看，是 Session 中的 setcookie() 方法发现这个 printf 语句已经输出内容了。</p>
 
@@ -131,25 +129,23 @@
 
 <p>在实验之前，你需要把<span class="codespan">php.ini</span>中的 output_buffering 关闭或者设置一个很小的值。之后重启 php-fpm。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>PHP]
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>PHP]
 ...
 output_buffering <span class="o">=</span> 3
 ...
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这样设置表明输出的 buffer 不超过 3 个字符。</p>
 
 <p>然后重现一下这个 bug：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">public</span> <span class="k">function</span> <span class="nf">test</span><span class="p">()</span>
 <span class="p">{</span>
   <span class="k">echo</span> <span class="s1">'asd'</span><span class="p">;</span>
   <span class="nb">header</span><span class="p">(</span><span class="s1">'a: b'</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>使用 curl 访问一下，返回的 HTTP body 是 asd 和一个 headers already sent 错误信息，<span class="codespan">curl -I http://localhost/test</span>一下看看 header，发现 a: b 并没有输出到 header 中。</p>
 
@@ -157,17 +153,16 @@ output_buffering <span class="o">=</span> 3
 
 <p>修改一下代码：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">public</span> <span class="k">function</span> <span class="nf">test</span><span class="p">()</span>
 <span class="p">{</span>
   <span class="nb">header</span><span class="p">(</span><span class="s1">'b: c'</span><span class="p">);</span>
   <span class="k">echo</span> <span class="s1">'asd'</span><span class="p">;</span>
   <span class="nb">header</span><span class="p">(</span><span class="s1">'a: b'</span><span class="p">);</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
-<p>此时输出的 HTTP body 内容是相同的，但是 curl -I 看到的 header 中多了 b: c，说明 echo 之前的<span class="codespan">header()</span>正确的输出了内容。</p>
+<p>此时输出的 HTTP body 内容是相同的，但是 curl -I 看到的 header 中多了 b: c，说明 echo 之前的<span class="codespan">header()</span>正确地输出了内容。</p>
 
 <p>setcookie 方法也会发送 header：<span class="codespan">set-cookie: xxx</span>，所以一样会引起这个问题。</p>
 
@@ -183,24 +178,22 @@ output_buffering <span class="o">=</span> 3
 
 <p>我们应该避免在业务中使用，而不是禁止使用。当使用 echo 的时候，因为上述原因出现 headers already sent 错误，要看 output_buffering 设置的大小和 echo 内容的长度，这给 debug 带来了很大的不确定性，测试环境很可能会漏掉这个 case。</p>
 
-<p>在业务中，可能用到 echo 的原因有：1. 调试代码，查看变量；2. 命令行脚本的输出。对于 1，建议通过调试工具调试，或者使用插件 <a href="https://github.com/itsgoingd/clockwork">clockwork</a>；对于 2，可以在脚本中通过标准输出来输出重要内容，并不需要使用 echo。</p>
+<p>在业务中，可能用到 echo 的原因有：1. 调试代码，查看变量；2. 命令行脚本的输出。对于 1，建议通过调试工具调试，或者使用插件 <a href="https://github.com/itsgoingd/clockwork">clockwork</a>；对于 2，可以在脚本中通过标准输出来输出重要内容，不需要使用 echo。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nb">fwrite</span><span class="p">(</span><span class="nx">STDOUT</span><span class="p">,</span> <span class="nv">$content</span><span class="p">);</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>如果基于某种原因一定要使用，可以将一段输出用 ob_start 和 ob_end 包裹起来。被包裹的输出会进入内部缓冲区，在需要的时候再 flush 出来。</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="c1">// ob_start 的函数定义
 </span><span class="nx">bool</span> <span class="nb">ob_start</span> <span class="p">([</span> <span class="nx">callable</span> <span class="nv">$output_callback</span> <span class="o">=</span> <span class="k">NULL</span> <span class="p">[,</span> <span class="nx">int</span> <span class="nv">$chunk_size</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">[,</span> <span class="nx">int</span> <span class="nv">$flags</span> <span class="o">=</span> <span class="nx">PHP_OUTPUT_HANDLER_STDFLAGS</span> <span class="p">]]])</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><span class="codespan">$chunk_size=0</span>的时候，只有在关闭缓冲区的时候才会输出缓冲区的内容。<sup id="fnref:3"><a href="#fn:3" class="footnote">2</a></sup></p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">public</span> <span class="k">function</span> <span class="nf">test</span><span class="p">()</span>
 <span class="p">{</span>
   <span class="nb">ob_start</span><span class="p">();</span> <span class="c1">// 打开缓冲区
@@ -208,8 +201,7 @@ output_buffering <span class="o">=</span> 3
   <span class="nb">header</span><span class="p">(</span><span class="s1">'a: b'</span><span class="p">);</span>
   <span class="nb">ob_end_flush</span><span class="p">();</span> <span class="c1">// 关闭缓冲区，将缓冲区的内容输出到 HTTP body
 </span><span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>一般框架的输出都是这样设计的，echo 会包裹在 ob_start 和 ob_end 之间。</p>
 
@@ -217,7 +209,7 @@ output_buffering <span class="o">=</span> 3
 
 <p>ob_start 不能解决 PHP 代码不规范导致的 headers already sent：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code>           <span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>           <span class="cp">&lt;?php</span>
 <span class="k">public</span> <span class="k">function</span> <span class="nf">test</span><span class="p">()</span>
 <span class="p">{</span>
   <span class="nb">ob_start</span><span class="p">();</span> <span class="c1">// 打开缓冲区
@@ -225,13 +217,12 @@ output_buffering <span class="o">=</span> 3
   <span class="nb">header</span><span class="p">(</span><span class="s1">'a: b'</span><span class="p">);</span>
   <span class="nb">ob_end_flush</span><span class="p">();</span> <span class="c1">// 关闭缓冲区，将缓冲区的内容输出到 HTTP body
 </span><span class="p">}</span>
-<span class="c1">// 这段代码也会报错
-</span></code></pre>
-</div>
+<span class="c1">// 这段代码也会报错，因为文件开头不应该有空格或空行
+</span></code></pre></div></div>
 
 <p>使用 ob_start 需要及时的将数据输出出去，否则可能会因为字符串拼接和二进制内容冲突：</p>
 
-<div  class="language-php highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">public</span> <span class="k">function</span> <span class="nf">test</span><span class="p">()</span>
 <span class="p">{</span>
   <span class="nb">ob_start</span><span class="p">();</span> <span class="c1">// 打开缓冲区
@@ -240,8 +231,7 @@ output_buffering <span class="o">=</span> 3
   <span class="nb">ob_end_flush</span><span class="p">();</span> <span class="c1">// 关闭缓冲区，将缓冲区的内容输出到 HTTP body
 </span><span class="p">}</span>
 <span class="c1">// asd 和 imagepng() 的内容混在一起，输出的图片不可用
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="好的实践">好的实践</h3>
 
@@ -257,13 +247,13 @@ output_buffering <span class="o">=</span> 3
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p>参见 <a href="https://stackoverflow.com/questions/8028957/how-to-fix-headers-already-sent-error-in-php">stackoverflow 回答</a>，除此之外，还有 UTF-8 BOM 等其他原因&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>参见 <a href="https://stackoverflow.com/questions/8028957/how-to-fix-headers-already-sent-error-in-php">stackoverflow 回答</a>，除此之外，还有 UTF-8 BOM 等其他原因 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:3">
-      <p>使用 ob_start 的时候不受 php.ini 中的 output_buffering 大小的影响&nbsp;<a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+      <p>使用 ob_start 的时候不受 php.ini 中的 output_buffering 大小的影响 <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:2">
-      <p>参见<a href="https://help.aliyun.com/knowledge_detail/36512.html">PHP程序访问报错Warning: Cannot modify header information - headers already sent by</a> 和 <a href="http://php.net/manual/zh/outcontrol.configuration.php">PHP: 运行时配置 - Manual</a>，开启 output_buffering 可能影响 PHP 执行效率&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+      <p>参见<a href="https://help.aliyun.com/knowledge_detail/36512.html">PHP程序访问报错Warning: Cannot modify header information - headers already sent by</a> 和 <a href="http://php.net/manual/zh/outcontrol.configuration.php">PHP: 运行时配置 - Manual</a>，开启 output_buffering 可能影响 PHP 执行效率 <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

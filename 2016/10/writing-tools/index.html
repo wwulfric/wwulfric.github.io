@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="scrivener,workflowy,notes,typora,qiniu,alfred,jekyll">
-  <link rel="canonical" href="http://localhost:4000/2016/10/writing-tools/">
+  <link rel="canonical" href="http://wulfric.me/2016/10/writing-tools/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -108,21 +108,19 @@
 
 <p>在 shell 下执行同步的输出如下：</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>2016/09/23 00:13:05.006800 INFO qrsync.go:49: Syncing /Users/username/images <span class="o">=</span>&gt; your_bucket_name
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2016/09/23 00:13:05.006800 INFO qrsync.go:49: Syncing /Users/username/images <span class="o">=&gt;</span> your_bucket_name
 
 2016/09/23 00:13:05.011035 INFO qrsync.go:83: Processing file: /Users/username/.qrsync/xxx.log
 
-2016/09/23 00:13:05.422698 INFO sync.go:100: Put /Users/username/images/alfred/jekyll-title.png <span class="o">=</span>&gt; your_bucket_name:alfred/jekyll-title.png
+2016/09/23 00:13:05.422698 INFO sync.go:100: Put /Users/username/images/alfred/jekyll-title.png <span class="o">=&gt;</span> your_bucket_name:alfred/jekyll-title.png
 
-2016/09/23 00:13:05.455394 INFO sync.go:59: Sync <span class="k">done</span>!
-</code></pre>
-</div>
+2016/09/23 00:13:05.455394 INFO sync.go:59: Sync <span class="k">done</span><span class="o">!</span>
+</code></pre></div></div>
 
 <p>图片上传完毕后，我们还需要插入地址，我写了一个 alfred 的 snippet 来获取 url。在 alfred 的 Features 标签页中，选择 Clipboard，添加如下的 snippet：</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>![<span class="o">{</span>clipboard<span class="o">}](</span>http://your_qiniu_bucket.qiniudn.com/<span class="o">{</span>clipboard<span class="o">}</span> <span class="s2">"{clipboard}"</span><span class="o">)</span>
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">![{</span>clipboard<span class="o">}](</span>http://your_qiniu_bucket.qiniudn.com/<span class="o">{</span>clipboard<span class="o">}</span> <span class="s2">"{clipboard}"</span><span class="o">)</span>
+</code></pre></div></div>
 <p>我只需要复制alfred/jekyll-title.png，然后选择该 snippet，即可得到需要的 markdown 地址格式。</p>
 
 <h2 id="其他">其他</h2>
@@ -142,14 +140,13 @@
 
 <p>其内容如下：</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>---
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">---</span>
 title: <span class="o">{</span>clipboard<span class="o">}</span>
 date: <span class="o">{</span>date:medium<span class="o">}</span> <span class="o">{</span><span class="nb">time</span><span class="o">}</span>
 categories: <span class="o">[</span>技术]
 tags: <span class="o">[]</span>
----
-</code></pre>
-</div>
+<span class="nt">---</span>
+</code></pre></div></div>
 <p>这样每次调出这个 snippet 即可。</p>
 
 <p>PS：这里的 date 和 time 是操作系统所支持的，可以在系统设置-&gt;时间和日期设置-&gt;语言和时区-&gt;高级设置中查看。其中 {date:xxx} 后面的内容和 dates 中的一一对应。</p>
@@ -167,16 +164,15 @@ tags: <span class="o">[]</span>
 
 <p><a href="/2014/09/jekyll-plugs/">旧文</a>中曾提及，我使用 Jekyll 的方式和 octopress 很像，都是一个分支保存 source，一个分支用来部署。为了简化这一过程，我写了一个 script 脚本，<span class="codespan">_deploy.sh</span>（下划线开头的文件不会被转换到 site 中去）。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
 git submodule foreach git pull <span class="c"># 我把文章 source 抽成一个 repo 了</span>
 jekyll b <span class="c"># jekyll build</span>
 <span class="nb">cd </span>_site <span class="c"># site 中是部署的代码，分支是 master；外层分支是 source</span>
-git add .
+git add <span class="nb">.</span>
 <span class="nv">now</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>date +<span class="s2">"%Y-%m-%d %H:%M"</span><span class="k">)</span><span class="s2">"</span>
-git commit -m <span class="s2">"</span><span class="k">${</span><span class="nv">now</span><span class="k">}</span><span class="s2">"</span>
+git commit <span class="nt">-m</span> <span class="s2">"</span><span class="k">${</span><span class="nv">now</span><span class="k">}</span><span class="s2">"</span>
 git push origin master
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>这样每次写好文章之后，执行<span class="codespan">sh _deploy.sh</span>即可。</p>
 

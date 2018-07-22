@@ -25,7 +25,7 @@
 
 ">
   <meta name="keywords" content="分布式,dubbo,jrebel,spring,remote,hotswap">
-  <link rel="canonical" href="http://localhost:4000/2017/04/jrebel/">
+  <link rel="canonical" href="http://wulfric.me/2017/04/jrebel/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -126,7 +126,7 @@
 
 <p>当在 console 窗口观察到这些输出之后，说明应用正确启用了 JRebel 插件。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>2017-04-01 16:27:31 JRebel:  <span class="c">#############################################################</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2017-04-01 16:27:31 JRebel:  <span class="c">#############################################################</span>
 2017-04-01 16:27:31 JRebel:
 2017-04-01 16:27:31 JRebel:  JRebel Agent 7.0.6 <span class="o">(</span>201703201213<span class="o">)</span>
 2017-04-01 16:27:31 JRebel:  <span class="o">(</span>c<span class="o">)</span> Copyright ZeroTurnaround AS, Estonia, Tartu.
@@ -138,8 +138,7 @@
 2017-04-01 16:27:31 JRebel:
 2017-04-01 16:27:31 JRebel:
 2017-04-01 16:27:31 JRebel:  <span class="c">#############################################################</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="ide-运行">IDE 运行</h3>
 
@@ -155,20 +154,18 @@
 
 <h3 id="命令行运行">命令行运行</h3>
 
-<p>在 JRebel 设置页的「Startup」标签中选择「Run locally from command line」， 选择合适的 jvm 和目标环境。我的 dubbo 使用了 netty 部署，所以选择了「Standalone application」，给出的启动参数如下。</p>
+<p>在 JRebel 设置页的「Startup」标签中选择「Run locally from command line」， 选择合适的 jvm 和目标环境。我的 dubbo 没有使用 web 容器部署，所以选择了「Standalone application」，给出的启动参数如下。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># agentpath 是必需的，foo.bar.MyApp 是你要运行的程序</span>
-java -agentpath:/Users/xxxx/Library/Application Support/IntelliJIdea2017.1/jr-ide-idea/lib/jrebel6/lib/libjrebel64.dylib foo.bar.MyApp
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># agentpath 是必需的，foo.bar.MyApp 是你要运行的程序</span>
+java <span class="nt">-agentpath</span>:/Users/xxxx/Library/Application Support/IntelliJIdea2017.1/jr-ide-idea/lib/jrebel6/lib/libjrebel64.dylib foo.bar.MyApp
+</code></pre></div></div>
 
 <p>P.S.: 注意上面的「Application Support」需要换成「Application\ Support」。</p>
 
 <p>dubbo 一般推荐使用 start.sh 脚本来启动应用，我们编辑 start.sh 文件，在启动的具体位置那里，将「-agentpath:…」添加在 java 后面，大致如下。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>java -agentpath:... <span class="nv">$JAVA_OPTS</span> <span class="nv">$JAVA_MEM_OPTS</span> <span class="nv">$JAVA_DEBUG_OPTS</span> -classpath ...
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java <span class="nt">-agentpath</span>:... <span class="nv">$JAVA_OPTS</span> <span class="nv">$JAVA_MEM_OPTS</span> <span class="nv">$JAVA_DEBUG_OPTS</span> <span class="nt">-classpath</span> ...
+</code></pre></div></div>
 
 <p>各种目标环境的配置方法有着或大或小的区别，请按照自己的目标环境跟着 JRebel 给的配置方案来设置。</p>
 
@@ -189,9 +186,8 @@ java -agentpath:/Users/xxxx/Library/Application Support/IntelliJIdea2017.1/jr-id
 
 <p>同上，在 JRebel 配置页选择「Run on a remote server」，根据给出的建议配置好启动项。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>java -agentpath:... -Drebel.remoting_plugin<span class="o">=</span><span class="nb">true</span> ... -jar ...
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java <span class="nt">-agentpath</span>:... <span class="nt">-Drebel</span>.remoting_plugin<span class="o">=</span><span class="nb">true</span> ... <span class="nt">-jar</span> ...
+</code></pre></div></div>
 
 <p>在 JRebel 配置页添加远程服务器地址，注意要是能够 http 访问的 url 才可以。</p>
 
@@ -222,10 +218,10 @@ java -agentpath:/Users/xxxx/Library/Application Support/IntelliJIdea2017.1/jr-id
 <div class="footnotes">
   <ol>
     <li id="fn:hotswap-jrebel">
-      <p>HotSwap 和 JRebel 原理<a href="https://dzone.com/articles/reloading-java-classes-401">原文</a>，<a href="http://www.hollischuang.com/archives/598">译文</a>&nbsp;<a href="#fnref:hotswap-jrebel" class="reversefootnote">&#8617;</a>&nbsp;<a href="#fnref:hotswap-jrebel:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+      <p>HotSwap 和 JRebel 原理<a href="https://dzone.com/articles/reloading-java-classes-401">原文</a>，<a href="http://www.hollischuang.com/archives/598">译文</a> <a href="#fnref:hotswap-jrebel" class="reversefootnote">&#8617;</a> <a href="#fnref:hotswap-jrebel:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
     </li>
     <li id="fn:jrebel-doc">
-      <p>参照官方的<a href="https://manuals.zeroturnaround.com/jrebel/index.html">详细使用文档</a>是更好的选择&nbsp;<a href="#fnref:jrebel-doc" class="reversefootnote">&#8617;</a></p>
+      <p>参照官方的<a href="https://manuals.zeroturnaround.com/jrebel/index.html">详细使用文档</a>是更好的选择 <a href="#fnref:jrebel-doc" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="samba,远程,remote,server,rsync,ubuntu,centos">
-  <link rel="canonical" href="http://localhost:4000/2014/03/sync-in-remote-and-local/">
+  <link rel="canonical" href="http://wulfric.me/2014/03/sync-in-remote-and-local/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -95,44 +95,42 @@
 
 <h3 id="安装">安装</h3>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="nb">cd</span> ~
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
 <span class="c"># 安装 samba</span>
-sudo apt-get install samba
+<span class="nb">sudo </span>apt-get install samba
 <span class="c"># yum: sudo yum install samba</span>
 <span class="c"># 备份 samba 配置文件</span>
-sudo cp /etc/samba/smb.conf /etc/samba/smb.conf_back
+<span class="nb">sudo </span>cp /etc/samba/smb.conf /etc/samba/smb.conf_back
 <span class="c"># 修改配置文件，具体内容见下文。</span>
-sudo vim /etc/samba/smb.conf
+<span class="nb">sudo </span>vim /etc/samba/smb.conf
 <span class="c"># 或者 sudo rm /etc/samba/smb.conf &amp;&amp; sudo touch /etc/samba/smb.conf 新建一个配置文件</span>
 
 <span class="c"># 关闭 selinux</span>
-sudo vim /etc/selinux/config
+<span class="nb">sudo </span>vim /etc/selinux/config
 <span class="c"># 设置：SELINUX=disabled</span>
 
 <span class="c"># 配置 iptables</span>
-sudo iptables -I INPUT 4 -m state --state NEW -m udp -p udp --dport 137 -j ACCEPT
-sudo iptables -I INPUT 5 -m state --state NEW -m udp -p udp --dport 138 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -m tcp -p tcp --dport 139 -j ACCEPT
-sudo service iptables save
-sudo service iptables restart
-</code></pre>
-</div>
+<span class="nb">sudo </span>iptables <span class="nt">-I</span> INPUT 4 <span class="nt">-m</span> state <span class="nt">--state</span> NEW <span class="nt">-m</span> udp <span class="nt">-p</span> udp <span class="nt">--dport</span> 137 <span class="nt">-j</span> ACCEPT
+<span class="nb">sudo </span>iptables <span class="nt">-I</span> INPUT 5 <span class="nt">-m</span> state <span class="nt">--state</span> NEW <span class="nt">-m</span> udp <span class="nt">-p</span> udp <span class="nt">--dport</span> 138 <span class="nt">-j</span> ACCEPT
+<span class="nb">sudo </span>iptables <span class="nt">-I</span> INPUT 6 <span class="nt">-m</span> state <span class="nt">--state</span> NEW <span class="nt">-m</span> tcp <span class="nt">-p</span> tcp <span class="nt">--dport</span> 139 <span class="nt">-j</span> ACCEPT
+<span class="nb">sudo </span>service iptables save
+<span class="nb">sudo </span>service iptables restart
+</code></pre></div></div>
 
 <h3 id="普通配置">普通配置</h3>
 
 <p>如果服务器是在信任的局域网中，那么可以跳过权限验证，使用简单的guest 来挂载。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>mkdir guest_share
-ls -l
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir guest_share
+<span class="nb">ls</span> <span class="nt">-l</span>
 <span class="c"># 通过查看可以知道 guest_share 的权限是 775，guest 没有写权限，这会导致本地只能读而不能写</span>
 <span class="c"># 修改权限</span>
-sudo chmod -R 777 guest_share
-</code></pre>
-</div>
+<span class="nb">sudo </span>chmod <span class="nt">-R</span> 777 guest_share
+</code></pre></div></div>
 
 <p>编辑配置文件。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
 
 <span class="c">#======================= Global Settings ======================</span>
 <span class="o">[</span>global]
@@ -146,17 +144,15 @@ sudo chmod -R 777 guest_share
  writable <span class="o">=</span> yes
  guest ok <span class="o">=</span> yes
  <span class="nb">read </span>only <span class="o">=</span> no
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>重启。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># 查看配置文件的内容有没有错误，如果有重要的配置丢失，可能是因为缩进不对</span>
-sudo testparm
-sudo service smb restart
-sudo service nmb restart
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看配置文件的内容有没有错误，如果有重要的配置丢失，可能是因为缩进不对</span>
+<span class="nb">sudo </span>testparm
+<span class="nb">sudo </span>service smb restart
+<span class="nb">sudo </span>service nmb restart
+</code></pre></div></div>
 
 <p>在本地获取该共享文件夹</p>
 
@@ -175,27 +171,26 @@ sudo service nmb restart
 
 <p>如果是远程的服务器，安全起见，最好还是能够用帐号和密码登录。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># 创建组</span>
-sudo groupadd smbgrp
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建组</span>
+<span class="nb">sudo </span>groupadd smbgrp
 <span class="c"># 创建用户</span>
-sudo useradd smbuser
+<span class="nb">sudo </span>useradd smbuser
 <span class="c"># 更改用户密码</span>
-sudo passwd smbuser
+<span class="nb">sudo </span>passwd smbuser
 <span class="c"># 用户添加到组</span>
-sudo usermod -a -G smbgrp smbuser
+<span class="nb">sudo </span>usermod <span class="nt">-a</span> <span class="nt">-G</span> smbgrp smbuser
 <span class="c"># 添加 samba 的登录密码</span>
-sudo smbpasswd -a smbuser
+<span class="nb">sudo </span>smbpasswd <span class="nt">-a</span> smbuser
 <span class="c"># 创建要分享的文件夹</span>
 <span class="nb">cd</span> ~
 mkdir secure_share
-sudo chown -R smbuser:smbgrp secure_share
-sudo chmod -R 770 secure_share
-</code></pre>
-</div>
+<span class="nb">sudo </span>chown <span class="nt">-R</span> smbuser:smbgrp secure_share
+<span class="nb">sudo </span>chmod <span class="nt">-R</span> 770 secure_share
+</code></pre></div></div>
 
 <p>编辑配置文件，注意差别，security 从 share 改为 user<sup id="fnref:share_level"><a href="#fn:share_level" class="footnote">1</a></sup>。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
 
 <span class="c">#======================= Global Settings ======================</span>
 <span class="o">[</span>global]
@@ -215,8 +210,7 @@ sudo chmod -R 770 secure_share
  guest ok <span class="o">=</span> no
  writable <span class="o">=</span> yes
  browsable <span class="o">=</span> yes
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>然后检查参数并重启 samba。在本地选择使用注册用户登录 samba。</p>
 
@@ -244,10 +238,10 @@ sudo chmod -R 770 secure_share
 <div class="footnotes">
   <ol>
     <li id="fn:share_level">
-      <p>samba 有多种 <a href="https://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/ServerType.html">share level</a>&nbsp;<a href="#fnref:share_level" class="reversefootnote">&#8617;</a></p>
+      <p>samba 有多种 <a href="https://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/ServerType.html">share level</a> <a href="#fnref:share_level" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:case_sensitivity">
-      <p>参见<a href="http://stackoverflow.com/questions/8904327/case-sensitivity-in-git">讨论</a>&nbsp;<a href="#fnref:case_sensitivity" class="reversefootnote">&#8617;</a></p>
+      <p>参见<a href="http://stackoverflow.com/questions/8904327/case-sensitivity-in-git">讨论</a> <a href="#fnref:case_sensitivity" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

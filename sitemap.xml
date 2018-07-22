@@ -189,7 +189,8 @@
 <lastmod>2017-11-21T22:26:00+08:00</lastmod>
 </url>
 <url>
-<loc>http://wulfric.me/404.html</loc>
+<loc>http://wulfric.me/2018/07/nginx-demo/</loc>
+<lastmod>2018-07-19T19:26:00+08:00</lastmod>
 </url>
 <url>
 <loc>http://wulfric.me/about/</loc>
@@ -697,5 +698,8 @@
 </url>
 <url>
 <loc>http://wulfric.me/tags/builder/</loc>
+</url>
+<url>
+<loc>http://wulfric.me/tags/php-fpm/</loc>
 </url>
 </urlset>

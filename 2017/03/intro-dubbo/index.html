@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="分布式,微服务,dubbo,zookeeper,dubbo-admin,dubbo-monitor,dubbo-demo">
-  <link rel="canonical" href="http://localhost:4000/2017/03/intro-dubbo/">
+  <link rel="canonical" href="http://wulfric.me/2017/03/intro-dubbo/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -83,14 +83,13 @@
 
 <p>如上图所示，简单来说 dubbo 架构包括如下几部分：服务注册和服务发现中心，对外暴露服务的服务提供方和运行该服务的容器，调用远程服务的服务消费方，统计服务调用时间和次数的监控中心（非必需）。其调用关系为：</p>
 
-<div  class="highlighter-rouge"><pre class="highlight"><code>0. 服务方的容器启动服务
+<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0. 服务方的容器启动服务
 1. 服务提供方向注册中心注册自己的地址
 2. 访问消费方向注册中心订阅所需的服务
 3. 注册中心通知服务消费方所订阅服务的变更
 4. 根据获取到的提供方地址列表，服务消费方直接调用服务提供方
 5. 监控中心会监控消费方和提供方的调用时间和次数等信息
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="安装与准备">安装与准备</h2>
 
@@ -115,9 +114,8 @@
 
 <p>clone 下当当的 <a href="https://github.com/dangdangdotcom/dubbox">dubbox 项目</a>，执行：</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>mvn install -Dmaven.test.skip<span class="o">=</span><span class="nb">true</span> <span class="c">#dubbox 的测试 url 无法访问</span>
-</code></pre>
-</div>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mvn install <span class="nt">-Dmaven</span>.test.skip<span class="o">=</span><span class="nb">true</span> <span class="c">#dubbox 的测试 url 无法访问</span>
+</code></pre></div></div>
 
 <p>安装。</p>
 
@@ -129,15 +127,14 @@
 
 <p>进入解压后的 zookeeper 目录，创建 conf/zoo.cfg（可参考同目录下的 sample 文件），其内容如下：</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="nv">tickTime</span><span class="o">=</span>2000
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">tickTime</span><span class="o">=</span>2000
 <span class="nv">initLimit</span><span class="o">=</span>10
 <span class="nv">syncLimit</span><span class="o">=</span>5
 <span class="nv">dataDir</span><span class="o">=</span>/tmp/zookeeper/tmp/data <span class="c"># 自己定义</span>
 <span class="nv">dataLogDir</span><span class="o">=</span>/tmp/zookeeper/tmp/log <span class="c"># 自己定义</span>
 <span class="nv">clientPort</span><span class="o">=</span>2181
 server.1<span class="o">=</span>localhost:2287:3387
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>执行<span class="codespan">bin/zkServer.sh start</span>启动 zookeeper，执行<span class="codespan">bin/zkCli.sh -server 127.0.0.1:2181</span>查看是否启动成功。</p>
 
@@ -156,14 +153,13 @@ server.1<span class="o">=</span>localhost:2287:3387
 
 <p>当 provider 执行后看到</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="o">[</span>01/03/17 06:16:26:026 CST] main  INFO container.Main:  <span class="o">[</span>DUBBO] Dubbo SpringContainer started!, dubbo version: 2.0.0, current host: 127.0.0.1
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>01/03/17 06:16:26:026 CST] main  INFO container.Main:  <span class="o">[</span>DUBBO] Dubbo SpringContainer started!, dubbo version: 2.0.0, current host: 127.0.0.1
 <span class="o">[</span>2017-03-01 18:16:26] Dubbo service server started!
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>consumer 执行后看到</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>Client response filter invoked
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Client response filter invoked
 Reader interceptor invoked
 Dynamic reader interceptor invoked
 <span class="o">[</span>01/03/17 06:18:11:011 CST] main  INFO support.LoggingFilter:  <span class="o">[</span>DUBBO] The contents of request body is: 
@@ -172,8 +168,7 @@ Dynamic reader interceptor invoked
 SUCCESS: got user User <span class="o">(</span><span class="nv">id</span><span class="o">=</span>1, <span class="nv">name</span><span class="o">=</span><span class="s1">'username1'</span><span class="o">)</span>
 <span class="o">[</span>01/03/17 06:18:11:011 CST] main  INFO container.Main:  <span class="o">[</span>DUBBO] Dubbo SpringContainer started!, dubbo version: 2.0.0, current host: 192.168.1.33
 <span class="o">[</span>2017-03-01 18:18:11] Dubbo service server started!
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>说明启动成功了。</p>
 
@@ -181,30 +176,27 @@ SUCCESS: got user User <span class="o">(</span><span class="nv">id</span><span c
 
 <p>在 dubbo-admin 的 target 目录下找到 war 包（没有的话就 mvn package 一下），放到 tomcat 目录下的webapps 下。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
 
-<span class="gp">&gt; </span>ls webapps
+<span class="o">&gt;</span> <span class="nb">ls </span>webapps
 
 ROOT                  docs                  dubbo-admin-2.8.4     dubbo-admin-2.8.4.war examples              host-manager          manager
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>执行<span class="codespan">bin/startup.sh</span>启动 tomcat，打开 localhost:8080，一开始会有点慢，tomcat 要解压 war 文件，解压完毕后 webapps 下出现对应的文件夹（如上面 ls 所示），进入该文件夹，</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
 
-<span class="gp">&gt; </span>vim webapps/dubbo-admin-2.8.4/WEB-INF/dubbo.properties
-</code></pre>
-</div>
+<span class="o">&gt;</span> vim webapps/dubbo-admin-2.8.4/WEB-INF/dubbo.properties
+</code></pre></div></div>
 
 <p>编辑 dubbo-admin 的 zookeeper 配置。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>dubbo.registry.address<span class="o">=</span>zookeeper://127.0.0.1:2181
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.registry.address<span class="o">=</span>zookeeper://127.0.0.1:2181
 <span class="c"># 帐号对应的密码，初次访问的时候需要用到</span>
 dubbo.admin.root.password<span class="o">=</span>root
 dubbo.admin.guest.password<span class="o">=</span>guest
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>重启 tomcat，打开 http://localhost:8080/dubbo-admin-2.8.4，输入帐号密码即可看到 dubbo-admin 的管理页面。上面运行的 provider 和 consumer demo 在服务治理下。</p>
 
@@ -223,7 +215,7 @@ dubbo.admin.guest.password<span class="o">=</span>guest
 
 <p>除了这三者之外，dubbo 还提供了监控面板。在 dubbo-simple/dubbo-monitor-simple 的 target 目录下，解压 .tar.gz 文件，得到 dubbo-monitor-simple-2.8.4 文件夹，编辑其中的 conf/dubbo.properties 文件。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>dubbo.container<span class="o">=</span>log4j,spring,registry,jetty
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.container<span class="o">=</span>log4j,spring,registry,jetty
 dubbo.application.name<span class="o">=</span>simple-monitor
 dubbo.application.owner<span class="o">=</span>
 <span class="c"># 选择 zookeeper 作为注册中心</span>
@@ -239,18 +231,16 @@ dubbo.charts.directory<span class="o">=</span><span class="k">${</span><span cla
 dubbo.statistics.directory<span class="o">=</span><span class="k">${</span><span class="nv">user</span><span class="p">.home</span><span class="k">}</span>/monitor/statistics
 dubbo.log4j.file<span class="o">=</span>logs/dubbo-monitor-simple.log
 dubbo.log4j.level<span class="o">=</span>WARN
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>需要修改的是 registry，端口号和各种文件的保存位置。</p>
 
 <p>执行<span class="codespan">bin/start.sh</span>，当看到</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>Starting the simple-monitor .........................OK!
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting the simple-monitor .........................OK!
 PID: 21032
 STDOUT: logs/stdout.log
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>即执行成功，打开 http://localhost:8083/ 即可看到监控面板。</p>
 
@@ -272,7 +262,7 @@ STDOUT: logs/stdout.log
 <div class="footnotes">
   <ol>
     <li id="fn:dubbo-architecture">
-      <p>见官方<a href="http://dubbo.io/dubbo-architecture.jpg-version=1&amp;modificationDate=1330892870000.jpg">原图</a>&nbsp;<a href="#fnref:dubbo-architecture" class="reversefootnote">&#8617;</a></p>
+      <p>见官方<a href="http://dubbo.io/dubbo-architecture.jpg-version=1&amp;modificationDate=1330892870000.jpg">原图</a> <a href="#fnref:dubbo-architecture" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

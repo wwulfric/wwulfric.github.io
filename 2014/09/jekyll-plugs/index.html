@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="jekyll,compress,highlight,fontawesome,colorscheme,font">
-  <link rel="canonical" href="http://localhost:4000/2014/09/jekyll-plugs/">
+  <link rel="canonical" href="http://wulfric.me/2014/09/jekyll-plugs/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -94,16 +94,15 @@
 
 <p>还有一个插件 <a href="https://github.com/GSI/jekyll_image_encode">jekyll_image_encode</a>，可以将图片转成 base64。其实本质上和把图片下载到本地一样，只是更加自动化。base64 转化后的 img 标签是这样的：</p>
 
-<div  class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"data:image;base64, iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c
+<div  class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"data:image;base64, iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c
 6QAAAAxJREFUCNdj+P//PwAF/gL+3MxZ5wAAAABJRU5ErkJggg== "</span> <span class="nt">/&gt;</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>可见，src 处已经没有 url 了，而只是图片的 base64 格式源码。当你想隐藏你的图床时，比如，七牛云可以加水印，但是如果知道 url 的话，很容易就可以去掉水印，转成 base64 可以防止这种情况。</p>
 
 <p>除此之外，我还利用 minimagick 库自动给图片加了宽度和高度属性<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。即读在线文件，获取尺寸，加到 img 里。对于 R-图片（我给在 rMBP 上制作的图片都加了 R- 前缀），即 retina 图片，width 设为1/2。另外还同时给 img 加上了 figure  wrapper 和 figcaption。代码如下，打开类<span class="codespan">Kramdown::Converter::Html</span>并重写<span class="codespan">convert_img</span>方法。</p>
 
-<div  class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">convert_img</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">convert_img</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span>
   <span class="n">image</span> <span class="o">=</span> <span class="no">MiniMagick</span><span class="o">::</span><span class="no">Image</span><span class="p">.</span><span class="nf">open</span> <span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'src'</span><span class="p">]</span>
   <span class="n">width</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:width</span><span class="p">]</span>
   <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:height</span><span class="p">]</span>
@@ -121,8 +120,7 @@
     &lt;/figcaption&gt;
   &lt;/figure&gt;"</span>
 <span class="k">end</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>对于博客中常用的图标，我是用的是 <a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome</a>。Font Awesome 图标比较多，我们可以<a href="http://www.w3cplus.com/preprocessor/create-font-awesome-font-icons-with-sass.html">按需引用</a>，或者直接<a href="http://fontello.com/">定制</a>需要的图标。前者通用性更好，但实现复杂；对于博客而言，直接定制即可。</p>
 
@@ -169,7 +167,7 @@
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p>http://stackoverflow.com/questions/1247685/should-i-specify-height-and-width-attributes-for-my-imgs-in-html&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>http://stackoverflow.com/questions/1247685/should-i-specify-height-and-width-attributes-for-my-imgs-in-html <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

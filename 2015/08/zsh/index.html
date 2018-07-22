@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="zsh,oh-my-zsh,autojump,proxychains,ag,htop,ccat">
-  <link rel="canonical" href="http://localhost:4000/2015/08/zsh/">
+  <link rel="canonical" href="http://wulfric.me/2015/08/zsh/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -74,10 +74,9 @@
 
 <p>Mac 自带 zsh，不过我们当然要用最新版啦，其他发行版请参照各自的软件安装方法。安装完毕后，重新打开 iTerm2。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>brew install zsh
-chsh -s <span class="sb">`</span>which zsh<span class="sb">`</span>
-</code></pre>
-</div>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>brew install zsh
+chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="sb">`</span>
+</code></pre></div></div>
 
 <h3 id="补全">补全</h3>
 
@@ -105,27 +104,25 @@ chsh -s <span class="sb">`</span>which zsh<span class="sb">`</span>
 
 <p>以前杀进程是<span class="codespan">ps aux | grep xxx</span>查进程的 PID，然后<span class="codespan">kill PID</span>。有了 zsh，直接<span class="codespan">kill xxx</span>然后按下 tab 键即可～</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="nb">kill </span>emacs
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">kill </span>emacs
 <span class="c"># 按下 tab，变成：</span>
 <span class="nb">kill </span>59683
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="别名">别名</h3>
 
 <p>zsh 不仅支持普通 alias，还支持针对文件类型的 alias。我配置的文件类型 alias 如下：</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="nb">alias</span> -s <span class="nv">gz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
-<span class="nb">alias</span> -s <span class="nv">tgz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
-<span class="nb">alias</span> -s <span class="nv">zip</span><span class="o">=</span><span class="s1">'unzip'</span>
-<span class="nb">alias</span> -s <span class="nv">bz2</span><span class="o">=</span><span class="s1">'tar -xjvf'</span>
-<span class="nb">alias</span> -s <span class="nv">php</span><span class="o">=</span>vi
-<span class="nb">alias</span> -s <span class="nv">py</span><span class="o">=</span>vi
-<span class="nb">alias</span> -s <span class="nv">rb</span><span class="o">=</span>vi
-<span class="nb">alias</span> -s <span class="nv">html</span><span class="o">=</span>vi
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">gz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">tgz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">zip</span><span class="o">=</span><span class="s1">'unzip'</span>
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">bz2</span><span class="o">=</span><span class="s1">'tar -xjvf'</span>
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">php</span><span class="o">=</span>vi
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">py</span><span class="o">=</span>vi
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">rb</span><span class="o">=</span>vi
+<span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">html</span><span class="o">=</span>vi
 <span class="nb">alias </span><span class="nv">gcid</span><span class="o">=</span><span class="s2">"git log | head -1 | awk '{print substr(</span><span class="se">\$</span><span class="s2">2,1,7)}' | pbcopy"</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>配置完毕之后，在 zsh 下直接输入<span class="codespan">xxx.rb</span>，将自动用 vi 打开，直接输入<span class="codespan">xxx.tgz</span>，将直接按照<span class="codespan">tar -xzvf</span>解压。最后一个<span class="codespan">gcid</span>将当前 git 项目的第一个 commit 的 id 复制到系统剪切板（<span class="codespan">pbcopy</span>是 Mac 下的复制到系统剪切板命令，linux 请参考相应的发行版更改），在执行 rebase 的时候特别方便。</p>
 
@@ -135,18 +132,17 @@ chsh -s <span class="sb">`</span>which zsh<span class="sb">`</span>
 
 <p>输入<span class="codespan">d</span>，将列出当前 session 访问过的所有目录，再按提示的数字即可进入相应目录。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code>~
-<span class="gp">&gt; </span>d
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~
+<span class="o">&gt;</span> d
 0	~
 1	~/Applications
 2	~/.proxychains
 3	/opt/homebrew-cask/Caskroom
 
 ~
-<span class="gp">&gt; </span>1
+<span class="o">&gt;</span> 1
 ~/Applications
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="历史记录">历史记录</h3>
 
@@ -160,13 +156,12 @@ chsh -s <span class="sb">`</span>which zsh<span class="sb">`</span>
 
 <p><a href="https://github.com/robbyrussell/oh-my-zsh">oh-my-zsh</a> 是最为流行的 zsh 配置文件，提供了大量的主题和插件，极大的拓展了 zsh 的功能，推动了 zsh 的流行，有点类似于 rails 之于 ruby。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># install</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install</span>
 <span class="c"># via curl</span>
-sh -c <span class="s2">"</span><span class="k">$(</span>curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh<span class="k">)</span><span class="s2">"</span>
+sh <span class="nt">-c</span> <span class="s2">"</span><span class="k">$(</span>curl <span class="nt">-fsSL</span> https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh<span class="k">)</span><span class="s2">"</span>
 <span class="c"># via wget </span>
-sh -c <span class="s2">"</span><span class="k">$(</span>wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -<span class="k">)</span><span class="s2">"</span>
-</code></pre>
-</div>
+sh <span class="nt">-c</span> <span class="s2">"</span><span class="k">$(</span>wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh <span class="nt">-O</span> -<span class="k">)</span><span class="s2">"</span>
+</code></pre></div></div>
 
 <p>安装过后，<span class="codespan">source ~/.zshrc</span>使之生效。</p>
 
@@ -174,11 +169,10 @@ sh -c <span class="s2">"</span><span class="k">$(</span>wget https://raw.github.
 
 <p>oh-my-zsh 内置了大量主题，可在<span class="codespan">~/.oh-my-zsh/themes</span>中查看具体的配置。官网提供了一些主题的<a href="https://github.com/robbyrussell/oh-my-zsh/wiki/themes">截图</a>。也可参见我的<a href="http://www.zhihu.com/question/33277508/answer/58979821">知乎回答</a>。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 我用的主题是 avit，可以很好的显示 git 信息</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 我用的主题是 avit，可以很好的显示 git 信息</span>
 /Volumes/Disk Image/cloudoffice  master ✔                                     37m
-<span class="gp">&gt; </span>鼠标在新一行
-</code></pre>
-</div>
+<span class="o">&gt;</span> 鼠标在新一行
+</code></pre></div></div>
 
 <h3 id="插件">插件</h3>
 
@@ -203,7 +197,7 @@ sh -c <span class="s2">"</span><span class="k">$(</span>wget https://raw.github.
   <li><span class="codespan">itunes</span>: 命令行操作 iTunes。</li>
 </ul>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">&gt; </span>itunes
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> itunes
 itunes:shift:2: <span class="nb">shift </span>count must be &lt;<span class="o">=</span> <span class="nv">$#</span>
 Usage: itunes &lt;option&gt;
 option:
@@ -213,8 +207,7 @@ option:
 	shuf|shuffle <span class="o">[</span>on|off|toggle]	Set shuffled playback. Default: toggle. Note: toggle doesn<span class="s1">'t support the MiniPlayer.
 	vol	Set the volume, takes an argument from 0 to 100
 	help	show this message and exit
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>其他命令可查看<a href="https://github.com/robbyrussell/oh-my-zsh/blob/master/plugins/osx/osx.plugin.zsh">插件</a>。</p>
 
@@ -222,12 +215,11 @@ option:
 
 <p>proxychains 是命令行的科学上网工具。安装<span class="codespan">brew install proxychains-ng</span>。如图所示，亚马逊 S3 存储服务和 github 并不稳定，有时候需要科学上网才能访问。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 原命令</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 原命令</span>
 brew cask install xxx
 <span class="c"># 使用 proxychains</span>
 proxychains4 brew cask install xxx
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><figure>
           <picture>
@@ -240,10 +232,9 @@ proxychains4 brew cask install xxx
 
 <p>使用 proxychains 需要本地先开启科学上网的工具，比如 VPN/shadowsocks，然后在配置文件中添加相应的配置，其配置方法和 chrome 下的科学上网插件很相似，可以参考相关文档。</p>
 
-<div  class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c"># 在文件 ~/.proxychains/proxychains.conf 的末尾 ProxyList 部分，参照 ProxyList format Examples 添加，比如我用的是 shadowsocks，则配置是：</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 在文件 ~/.proxychains/proxychains.conf 的末尾 ProxyList 部分，参照 ProxyList format Examples 添加，比如我用的是 shadowsocks，则配置是：</span>
 socks5 	127.0.0.1 1080
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="其他">其他</h2>
 
@@ -299,10 +290,10 @@ socks5 	127.0.0.1 1080
 <div class="footnotes">
   <ol>
     <li id="fn:htop-wiki">
-      <p><a href="https://zh.wikipedia.org/wiki/Htop">Htop - 维基百科，自由的百科全书</a>&nbsp;<a href="#fnref:htop-wiki" class="reversefootnote">&#8617;</a></p>
+      <p><a href="https://zh.wikipedia.org/wiki/Htop">Htop - 维基百科，自由的百科全书</a> <a href="#fnref:htop-wiki" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:htop-lizhenghn">
-      <p><a href="http://www.cnblogs.com/lizhenghn/p/3728610.html">Linux下超级命令htop的学习使用 - lizhenghn - 博客园</a>&nbsp;<a href="#fnref:htop-lizhenghn" class="reversefootnote">&#8617;</a></p>
+      <p><a href="http://www.cnblogs.com/lizhenghn/p/3728610.html">Linux下超级命令htop的学习使用 - lizhenghn - 博客园</a> <a href="#fnref:htop-lizhenghn" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

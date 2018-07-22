@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="git,cherry-pick,diff">
-  <link rel="canonical" href="http://localhost:4000/2017/06/cherry-pick-between-two-distant-branches/">
+  <link rel="canonical" href="http://wulfric.me/2017/06/cherry-pick-between-two-distant-branches/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -70,13 +70,12 @@
   <article class="post-content">
     <p>在刚开始使用 git 作为代码托管工具的时候，我还是一名学生，自己的项目也没啥冲突好解决的，那个时候的 git 感觉就是一个用起来还算方便的轻量级代码同步工具。之所以说它轻量，是因为彼时所需要的所有命令只有 4 个：</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code>git pull <span class="c"># 换电脑的时候同步代码</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git pull <span class="c"># 换电脑的时候同步代码</span>
 
 git add
 git commit
 git push <span class="c"># 推送代码</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>当时还觉得提交代码需要 add+commit+push，很是麻烦。工作之后经历了团队开发，多进度开发，废弃，提前上线等等情况之后，才越来越感受到 git 所谓「分布式版本控制系统」的威力。</p>
 
@@ -105,8 +104,8 @@ git push <span class="c"># 推送代码</span>
 
 <p>下面的命令清单记录了解决冲突要用到的 git 命令。</p>
 
-<div  class="language-shell highlighter-rouge"><pre class="highlight"><code><span class="c"># 查看两个 commit 之间哪些文件有变动</span>
-git diff --name-only SHA1 SHA2
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看两个 commit 之间哪些文件有变动</span>
+git diff <span class="nt">--name-only</span> SHA1 SHA2
 <span class="c"># http://stackoverflow.com/questions/1552340/how-to-list-the-file-names-only-that-changed-between-two-commits</span>
 
 <span class="c"># 显示某个 commit 的某个文件的内容：拷贝内容</span>
@@ -117,16 +116,15 @@ git show SHA1:path/to/file
 git show SHA1 path/to/file
 
 <span class="c"># 查看两个 commit 之间某个文件的 patch</span>
-git diff &lt;SHA1&gt;^..&lt;SHA2&gt; -- &lt;filename&gt;
+git diff &lt;SHA1&gt;^..&lt;SHA2&gt; <span class="nt">--</span> &lt;filename&gt;
 
 <span class="c"># 将该 patch 内容应用到当前分支：因为分支之间差距比较大，往往很难成功 patch</span>
-git diff &lt;SHA1&gt;^..&lt;SHA2&gt; -- &lt;filename&gt; | git apply
+git diff &lt;SHA1&gt;^..&lt;SHA2&gt; <span class="nt">--</span> &lt;filename&gt; | git apply
 <span class="c"># http://stackoverflow.com/questions/16068186/how-to-cherry-pick-only-changes-for-only-one-file-not-the-whole-commit</span>
 
 <span class="c"># 完全使用远程分支的文件：新文件，确定使用另外一个版本</span>
 git checkout feature-branch /path/to/file
-</code></pre>
-</div>
+</code></pre></div></div>
 <p>当然，还是推荐经常 rebase master 的代码，并使用 rebase 和 cherry pick 等「正经」方法😀，参见<a href="2014/03/git-team-cooperate/">此文</a>。</p>
 
   </article>

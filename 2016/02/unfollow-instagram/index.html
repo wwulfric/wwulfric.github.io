@@ -18,7 +18,7 @@
 
 ">
   <meta name="keywords" content="instagram,javascript,unfollowgram">
-  <link rel="canonical" href="http://localhost:4000/2016/02/unfollow-instagram/">
+  <link rel="canonical" href="http://wulfric.me/2016/02/unfollow-instagram/">
   <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
   
 </head>
@@ -76,17 +76,16 @@
 
 <p>进入 unfollowgram 主页，按照要求使用 instagram 的帐号登录之后，选择「who doesn’t follow me back」选项，然后执行如下代码，获取所有的将要 unfollow 的用户的 id。</p>
 
-<div  class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">uids</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="s2">"#thelist li a.unfollow"</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">val</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">uids</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="s2">"#thelist li a.unfollow"</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">val</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">$</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nx">attr</span><span class="p">(</span><span class="s1">'id'</span><span class="p">);</span>
 <span class="p">}).</span><span class="nx">toArray</span><span class="p">()</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>unfollowgram 没有提供批量 unfollow 的功能，接下来就要一个个的 unfollow 这些 users。</p>
 
 <p>注意请求的频率，instagram 对每个 client 的限速是每小时 60 个 relationship 请求，但是 unfollowgram 似乎自己也有限制，每次超过 20 个就会出错，所以我改成每 3 分钟一个请求。代码如下。</p>
 
-<div  class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
   <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
   <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
     <span class="na">type</span><span class="p">:</span> <span class="s1">'POST'</span><span class="p">,</span>
@@ -99,8 +98,7 @@
     <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">180000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
   <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>接下来执行<span class="codespan">unfollow(uids)</span>即可。1000 个请求，每 3 分钟执行一个，没办法，只能放那儿跑了，还得注意 unfollowgram 可能会被登出。</p>
 
@@ -108,7 +106,7 @@
 
 <p>PS: 在 instagram web 端找到了 unfollow 的方法，但是官网也有速度限制，目前来看每分钟一个问题不大，6s 一个经常遇到速度限制。</p>
 
-<div  class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
     <span class="nx">$</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s2">"https://www.instagram.com/web/friendships/"</span> <span class="o">+</span> <span class="nx">uid</span> <span class="o">+</span> <span class="s2">"/unfollow/"</span><span class="p">);</span>
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
@@ -116,8 +114,7 @@
         <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">60000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
   </article>
 

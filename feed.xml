@@ -6,8 +6,8 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 09 Dec 2018 17:01:13 +0800</pubDate>
-    <lastBuildDate>Sun, 09 Dec 2018 17:01:13 +0800</lastBuildDate>
+    <pubDate>Sun, 09 Dec 2018 17:10:36 +0800</pubDate>
+    <lastBuildDate>Sun, 09 Dec 2018 17:10:36 +0800</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2018. All rights reserved.</rights>
     
@@ -1425,7 +1425,7 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
           &lt;picture&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.png&quot; alt=&quot;php data structure 插件结构&quot; width=720 /&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.png&quot; alt=&quot;php data structure 插件结构&quot; width=720 height=783 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;php data structure 插件结构&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1732,7 +1732,7 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://laruence-wordpress.stor.sinaapp.com/uploads/PHP-exception-cycle.png&quot; alt=&quot;&quot; width= /&gt;
+            &lt;img src=&quot;http://laruence-wordpress.stor.sinaapp.com/uploads/PHP-exception-cycle.png&quot; alt=&quot;&quot; width= height= /&gt;
           &lt;/picture&gt;
           
         &lt;/figure&gt;&lt;/p&gt;
@@ -1973,7 +1973,7 @@ git push &lt;span class=&quot;c&quot;&gt;# 推送代码&lt;/span&gt;
           &lt;picture&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; alt=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; title=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; width=347 /&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; alt=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; title=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; width=347 height=506 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -2034,7 +2034,7 @@ git checkout feature-branch /path/to/file
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2011/02/jrebel-dl.png&quot; alt=&quot;jrebel &quot; title=&quot;jrebel&quot; width= /&gt;
+            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2011/02/jrebel-dl.png&quot; alt=&quot;jrebel &quot; title=&quot;jrebel&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jrebel &lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -2049,7 +2049,7 @@ git checkout feature-branch /path/to/file
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2016/11/JR_devcycle_2016_c.png&quot; alt=&quot;skip build, package and deploy&quot; title=&quot;skip build, package and deploy&quot; width= /&gt;
+            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2016/11/JR_devcycle_2016_c.png&quot; alt=&quot;skip build, package and deploy&quot; title=&quot;skip build, package and deploy&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;skip build, package and deploy&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -2070,7 +2070,7 @@ git checkout feature-branch /path/to/file
           &lt;picture&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
             &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; alt=&quot;jrebel preference&quot; title=&quot;jrebel preference&quot; width=720 /&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; alt=&quot;jrebel preference&quot; title=&quot;jrebel preference&quot; width=720 height=494 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jrebel preference&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -2150,7 +2150,7 @@ java &lt;span class=&quot;nt&quot;&gt;-agentpath&lt;/span&gt;:/Users/xxxx/Librar
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;https://manuals.zeroturnaround.com/jrebel/_images/intellij-add-remote-server.png&quot; alt=&quot;添加远程服务器&quot; title=&quot;添加远程服务器&quot; width= /&gt;
+            &lt;img src=&quot;https://manuals.zeroturnaround.com/jrebel/_images/intellij-add-remote-server.png&quot; alt=&quot;添加远程服务器&quot; title=&quot;添加远程服务器&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;添加远程服务器&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;

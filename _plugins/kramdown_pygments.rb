@@ -79,7 +79,7 @@ module Kramdown
 
       def convert_img(el, indent)
         src = el.attr['src']
-        if src['qiniudn']
+        if src['qiniu-wulfric']
           image_info_uri = URI "#{src}?imageInfo"
           image_info = JSON.parse(Net::HTTP.get image_info_uri)
           width = image_info['width']

@@ -6,9 +6,9 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 22 Jul 2018 18:29:11 +0800</pubDate>
-    <lastBuildDate>Sun, 22 Jul 2018 18:29:11 +0800</lastBuildDate>
-    <generator>Jekyll v3.6.2</generator>
+    <pubDate>Sun, 09 Dec 2018 17:01:13 +0800</pubDate>
+    <lastBuildDate>Sun, 09 Dec 2018 17:01:13 +0800</lastBuildDate>
+    <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2018. All rights reserved.</rights>
     
       <item>
@@ -1423,9 +1423,9 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/php/phpds.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/php/phpds.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://wulfric.qiniudn.com/php/phpds.png-article.png&quot; alt=&quot;php data structure 插件结构&quot; width=720 /&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/php/phpds.png-article.png&quot; alt=&quot;php data structure 插件结构&quot; width=720 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;php data structure 插件结构&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1971,9 +1971,9 @@ git push &lt;span class=&quot;c&quot;&gt;# 推送代码&lt;/span&gt;
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/git/R-far-away-branch.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/git/R-far-away-branch.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://wulfric.qiniudn.com/git/R-far-away-branch.png-article.png&quot; alt=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; title=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; width=347 /&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; alt=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; title=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; width=347 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -2068,9 +2068,9 @@ git checkout feature-branch /path/to/file
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/java/jrebel-preference.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
-            &lt;source srcset=&quot;http://wulfric.qiniudn.com/java/jrebel-preference.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://wulfric.qiniudn.com/java/jrebel-preference.png-article.png&quot; alt=&quot;jrebel preference&quot; title=&quot;jrebel preference&quot; width=720 /&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; alt=&quot;jrebel preference&quot; title=&quot;jrebel preference&quot; width=720 /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jrebel preference&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;

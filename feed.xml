@@ -6,10 +6,168 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 09 Dec 2018 17:10:36 +0800</pubDate>
-    <lastBuildDate>Sun, 09 Dec 2018 17:10:36 +0800</lastBuildDate>
+    <pubDate>Sun, 06 Jan 2019 23:34:48 +0800</pubDate>
+    <lastBuildDate>Sun, 06 Jan 2019 23:34:48 +0800</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
-    <rights>wulfric © 2013~2018. All rights reserved.</rights>
+    <rights>wulfric © 2013~2019. All rights reserved.</rights>
+    
+      <item>
+        <title>对敏捷开发实践的思考</title>
+        <description>&lt;p&gt;[TOC]&lt;/p&gt;
+
+&lt;h2 id=&quot;背景&quot;&gt;背景&lt;/h2&gt;
+
+&lt;p&gt;在加入现在的公司之前，我曾经在一家创业公司工作过几年，经历了从4，5人发展到上百人的过程。一开始老板就按照敏捷开发的套路执行项目管理。说是敏捷开发，其实也不算全面，主要是每日站会、看板管理、快速迭代等。之后由于随着人数扩大，但没有相应的调整开发策略，导致敏捷开发渐渐事实上废弃掉了。后面又由于要支持业务快速增长，项目开发质量没有很好的控制住，导致产品体验不够好，系统质量不稳定。为了解决这些问题，敏捷开发又被重新推到台前。&lt;/p&gt;
+
+&lt;p&gt;本文便是我在这段经历中，对敏捷开发的见识和理解。出于安全考虑，我们将业务特定场景转换了通用场景，并给我们的虚拟公司起一个名字：让世界变得更加热闹的上市公司，简称 SOS 公司（好老的梗）。&lt;/p&gt;
+
+&lt;h2 id=&quot;开发模式简介&quot;&gt;开发模式简介&lt;/h2&gt;
+
+&lt;p&gt;我想先介绍一下几种常见的开发模式，如果您不关心，这部分可以跳过。&lt;/p&gt;
+
+&lt;p&gt;在项目开发中，我们常用到下面几种开发模式。&lt;/p&gt;
+
+&lt;h3 id=&quot;瀑布式开发&quot;&gt;瀑布式开发&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.wikiwand.com/en/Waterfall_model&quot;&gt;瀑布式开发&lt;/a&gt;是一种传统的计算机软件开发方法。它强调开发进度像瀑布一样，沿着固定的状态流动。即严格按照预先计划的需求分析、设计、编码、集成、测试、维护的步骤顺序进行。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Waterfall_model.svg/800px-Waterfall_model.svg.png?1546152701225&quot; alt=&quot;瀑布式开发--来自维基百科&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;瀑布式开发--来自维基百科&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;迭代式开发&quot;&gt;迭代式开发&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.wikiwand.com/en/Iterative_and_incremental_development&quot;&gt;迭代式开发&lt;/a&gt;也被称作迭代增量式开发或迭代进化式开发，是一种与传统的瀑布式开发相反的软件开发过程，它弥补了传统开发方式中的一些弱点，具有更高的成功率和生产率。&lt;/p&gt;
+
+&lt;p&gt;在迭代式开发方法中，整个开发工作被组织为一系列的短小的、固定长度（如3周）的小项目，被称为一系列的迭代。每一次迭代都包括了需求分析、设计、实现与测试。采用这种方法，开发工作可以在需求被完整地确定之前启动，并在一次迭代中完成系统的一部分功能或业务逻辑的开发工作。再通过客户的反馈来细化需求，并开始新一轮的迭代。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Iterative_development_model.svg/640px-Iterative_development_model.svg.png?1546154989142&quot; alt=&quot;迭代式开发--来自维基百科&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;迭代式开发--来自维基百科&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;螺旋式开发&quot;&gt;螺旋式开发&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.wikiwand.com/en/Spiral_model&quot;&gt;螺旋模型&lt;/a&gt;是一种演化软件开发过程模型，它兼顾了快速原型的迭代的特征以及瀑布模型的系统化与严格监控。螺旋模型最大的特点在于引入了其他模型不具备的风险分析，使软件在无法排除重大风险时有机会停止，以减小损失。同时，在每个迭代阶段构建原型是螺旋模型用以减小风险的途径。螺旋模型更适合大型的昂贵的系统级的软件应用。&lt;/p&gt;
+
+&lt;p&gt;可以看出，螺旋式开发强调风险评估，同样也是一种迭代，只不过是螺旋式的迭代&lt;sup id=&quot;fnref:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;https://cdn-images-1.medium.com/max/1600/0*xUPmGSQEX-40Z7Ag.png&quot; alt=&quot;螺旋式开发&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;螺旋式开发&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;敏捷开发&quot;&gt;敏捷开发&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.wikiwand.com/en/Agile_software_development&quot;&gt;敏捷软件开发&lt;/a&gt;（英语：Agile software development），又称敏捷开发，是一种从1990年代开始逐渐引起广泛关注的一些新型软件开发方法，是一种应对快速变化的需求的一种软件开发能力。它们的具体名称、理念、过程、术语都不尽相同，相对于“非敏捷”，更强调程序员团队与业务专家之间的紧密协作、面对面的沟通（认为比书面的文档更有效）、频繁交付新的软件版本、紧凑而自我组织型的团队、能够很好地适应需求变化的代码编写和团队组织方法，也更注重软件开发过程中人的作用。&lt;/p&gt;
+
+&lt;p&gt;敏捷开发最着重强调的是价值观而不是具体的形式或流程，这是它和其他开发模式很不一样的地方。也因为这样，在具体的敏捷开发的实践中，瀑布、迭代、螺旋等开发方式都可能会用到，而差别主要在于：敏捷开发往往有更小的迭代规模&lt;sup id=&quot;fnref:2&quot;&gt;&lt;a href=&quot;#fn:2&quot; class=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;；敏捷开发不应过度设计未知的需求&lt;sup id=&quot;fnref:3&quot;&gt;&lt;a href=&quot;#fn:3&quot; class=&quot;footnote&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;。&lt;/p&gt;
+
+&lt;p&gt;从上面的介绍我们可以看出来，其实实际的大多数开发方式都是混搭的。很多公司或团队会声称使用敏捷开发，实际使用中很有可能会退化到其他基本开发方式。这些都是正常的，合适的才是最好的。如果一个好的开发模型实施起来很有难度，要么该模型不适合当前场景，要么使用方法不恰当。这方面后面也会提到。&lt;/p&gt;
+
+&lt;h2 id=&quot;早期敏捷实践&quot;&gt;早期敏捷实践&lt;/h2&gt;
+
+&lt;p&gt;SOS 公司的团队早期人数较少，业务也不是很复杂，主要目的是快速出 MVP，接受市场的评估并及时跟进。所以在初创期就已经施行了一个比较粗糙的敏捷开发。主要内容是：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;每日站会，介绍前一天的工作内容和遇到的问题&lt;/li&gt;
+  &lt;li&gt;快速迭代上线&lt;/li&gt;
+  &lt;li&gt;通过看板管理项目进度，排期计划&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;每日站会的目的就是互通有无，大家能够快速了解小组成员的工作内容，潜在风险等。这个时候每日站会，大家可以快速的了解同事目前在做哪些工作，遇到哪些问题，而这些问题很可能自己这几天刚刚遇到过。基于早期业务发展方向比较单一，内容也比较少，通过每日站会，所有开发者几乎都可以对业务有一个比较清晰的全局认识。&lt;/p&gt;
+
+&lt;p&gt;随着业务发展和壮大，员工数量也开始大量增长，业务需求日益复杂。此时大家渐渐感觉每日站会不是那么有效了。早期还是不过 5，6 个人一起站会，但这时经常是 10 好几个人甚至 20 多人，而且大家的业务内容的差异也越来越大。显而易见，同事们开始听不懂对方站会汇报的内容了，站会上提出的问题也不再关心。同时由于人数太多，站会也渐渐变得冗长。这种情况下，我相信每次开站会的时候很多人都在开小差：这个人说的是啥？那个人遇到的问题感觉和我没多大关系啊？昨天晚上那把飞龙骑脸怎么也输了？午饭吃啥好？&lt;/p&gt;
+
+&lt;p&gt;经过一段时间痛苦的折磨，这种每日站会渐渐就废弃了，仅保留每周周会和勉强及格的迭代速度。同时由于业务差异性，不再强制每个开发都使用看板管理项目，而是分到具体的小组由每个小组自己负责。对于某些不方便拆分任务的业务小组，看板这个工具也渐渐处于事实上的弃用状态。&lt;/p&gt;
+
+&lt;p&gt;SOS 公司的业务仍然在快速发展中，业务需求迫使产品设计和项目开发无法很好的保证质量和可扩展性。在这一过程中，渐渐出现如下几个问题：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;产品质量下降，产品逻辑有不自洽的地方；代码质量下降，bug 增多，用户体验下降&lt;/li&gt;
+  &lt;li&gt;早期建立起来的核心竞争力优势开始下降，竞品已经渐渐追上&lt;/li&gt;
+  &lt;li&gt;粗糙的单体应用架构陈旧，无法承载日益繁多和复杂的业务需求&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;造成这些问题的原因是多种多样的，并非全是产品和技术开发模式的过错，激进的市场计划和营销策略等也会带来一定的影响。但这个问题归根结底是一个技术问题，可以通过技术的手段解决。&lt;/p&gt;
+
+&lt;h2 id=&quot;解决方案&quot;&gt;解决方案&lt;/h2&gt;
+
+&lt;p&gt;定义了存在的问题，并抽象归纳以批量解决问题，SOS 公司决定实施两大战略：增长和重构。&lt;/p&gt;
+
+&lt;p&gt;为了实施这两个战略，需要向运营和市场说明当前问题的紧迫性，赢得他们的支持。事实上，这件事还是挺难的，以至于运营一直以为产品研发团队的当前战略是：改 bug。战略实施者需要当前要做的事情的本质诉求，以及背后的价值和意义。只有运营充分理解这两个战略，才能更好的配合产品和研发的工作（暂缓业务拓展和承接需求）。&lt;/p&gt;
+
+&lt;p&gt;增长战略的工作内容有：重新梳理用户需求，整理出用户故事地图，并建立用户画像，分清客户的行业背景，使用习惯、痛点等的差异。使用敏捷开发，全面优化产品的每个阶段（导流，留存，沉淀等等）。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.png&quot; alt=&quot;AARRR 模型&quot; width=297 height=458 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;AARRR 模型&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;如上图所示，产品团队针对 AARRR 模型开了 5 个小组，分别研究：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;获取用户：增加下载量、激活量，增加新用户数，降低用户获客成本&lt;/li&gt;
+  &lt;li&gt;激发活跃：增加七日回访率，增加登录和使用时长&lt;/li&gt;
+  &lt;li&gt;提高留存：增加次日留存率、七日留存率，降低用户流失率&lt;/li&gt;
+  &lt;li&gt;增加收入：增加复购率、付费率，增加人均付费额&lt;/li&gt;
+  &lt;li&gt;推荐传播：增加转发率，增加二次推荐率，增加搜索引擎收录数&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;在每个小组内部，都会根据用户画像（行业化背景等）梳理对应的方案。我对产品的工作不怎么了解，这里就不多介绍了。落实到技术上就是，产品给出项目计划大图和里程碑目标，并和研发一起拆分需求，设计上要尽量能够支持 2 周即可完成一个迭代。&lt;/p&gt;
+
+&lt;p&gt;另一部分就是重构单体应用。单体应用的重构，或者说服务化拆分，文章、书籍非常多，而针对具体的场景和业务差别也挺大的，就不班门弄斧了，只谈谈我们做了什么。&lt;/p&gt;
+
+&lt;p&gt;服务化拆分最重要的当然就是梳理领域模型，划分限界上下文。但在我们规划中给这部分留的时间太少了。在梳理领域模型的时候，我们要求整理该领域所有的对外提供的业务员接口和内部调用关系，这都需要对业务熟悉的老员工来整理，因此往往是 Blocked 的，而即使是老员工，也几乎没有对该领域所有业务内容都熟悉的，因此这部分工作是延期的；整理抽取出限界上下文之后，需要评估有多少重写的工作量，比如参数校验、权限校验、BO、DO、DTO 等都有可能，但这部分有些轻视，低估了工作量，最终也导致了延期。&lt;/p&gt;
+
+&lt;p&gt;但接口梳理工作做得好的直接好处就是：敏捷迭代的拆分变得极为简单。我们以对外提供服务的接口为粒度分配敏捷开发迭代任务，在业务梳理清楚，基础模块重写工作做完之后，每个接口从请求一直到数据库的工作量的评估就非常容易，而且每个接口背后的工作量都不大。按照我们的应用的规模和实际的经验，每 2 周能重构 15 个左右的接口。在早期磨合&lt;sup id=&quot;fnref:4&quot;&gt;&lt;a href=&quot;#fn:4&quot; class=&quot;footnote&quot;&gt;4&lt;/a&gt;&lt;/sup&gt;完成之后几乎不会因为自身原因延期。同时，我们对每个接口都设置了路由切换，每次迭代的任何接口都可以随时回滚，大大降低了上线风险。&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:1&quot;&gt;
+      &lt;p&gt;https://medium.com/existek/sdlc-models-explained-agile-waterfall-v-shaped-iterative-spiral-e3f012f390c5 &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:2&quot;&gt;
+      &lt;p&gt;https://stackoverflow.com/questions/11842318/difference-between-agile-and-iterative-and-incremental-development &lt;a href=&quot;#fnref:2&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:3&quot;&gt;
+      &lt;p&gt;https://stackoverflow.com/questions/253789/agile-vs-spiral-model-for-sdlc &lt;a href=&quot;#fnref:3&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:4&quot;&gt;
+      &lt;p&gt;为了保障敏捷开发的快速迭代得以实现，我们补上了之前比较欠缺的服务监控、数据库 sql 监控；代码健康分检查（用 sonarqube 检查测试覆盖率，code smell 和 bug 数）；单元测试和服务压测。这部分在早期磨合的时候会造成一定程度的延期。 &lt;a href=&quot;#fnref:4&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Sun, 30 Dec 2018 18:59:00 +0800</pubDate>
+        <link>http://wulfric.me/2018/12/agile-practice/</link>
+        <guid isPermaLink="true">http://wulfric.me/2018/12/agile-practice/</guid>
+        
+        <category>agile</category>
+        
+        <category>敏捷</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
     
       <item>
         <title>nginx 502 和 504 超时演示</title>
@@ -2022,180 +2180,6 @@ git checkout feature-branch /path/to/file
         <category>cherry-pick</category>
         
         <category>diff</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>使用 jrebel 远程部署开发环境的 dubbo 服务</title>
-        <description>&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2011/02/jrebel-dl.png&quot; alt=&quot;jrebel &quot; title=&quot;jrebel&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jrebel &lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;在开发 java 程序的时候，如果改动非常频繁，每次改动都要重新打包、部署，对于很重的应用（比如本文所说的 dubbo provider 服务），这样反复的流程十分消耗精力和热情。我们需要一个工具，当代码作改动之后能够立即看到效果。Java 在 1.4 的时候引入了 HotSwap 技术，允许调试者使用同一个类标识来更新类的字节码。这意味着所有对象都可以引用一个更新后的类，并在它们的方法被调用的时候执行新的代码，这就避免了无论何时只要有类的字节码被修改就要重载容器的这种要求&lt;sup id=&quot;fnref:hotswap-jrebel&quot;&gt;&lt;a href=&quot;#fn:hotswap-jrebel&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。不幸的是，这种重定义仅限于修改方法体—除了方法体之外，它既不能添加方法或域，也不能修改其他任何东西。&lt;/p&gt;
-
-&lt;p&gt;和 PHP 这样的脚本语言不一样，Java 部署是一个令人心烦的问题。一个运行中的 Java 程序相当于一辆在公路上奔跑的汽车，而 HotSwap 技术只能让你更换坐垫，但是当你想要更换轮胎的时候，HotSwap 就帮不上忙了，这个时候你只能停下来，换掉轮胎，再重新启动。而对于 PHP 来说，每个请求都会新开一个进程加载所有的 .php 文件编译和执行，所以不存在这个问题。运行 PHP 程序相当于给静止的汽车拍照，你大可以换完轮胎之后再拍照，这没有任何不良影响。（这个比喻可能不太恰当，却很有趣：在比喻中，静态的语言看起来是运动的，而动态语言看起来是静止的）&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&quot;https://zeroturnaround.com/software/jrebel/&quot;&gt;JRebel&lt;/a&gt; 是 java 的热部署插件，它监控已编译的 .class 文件，只要有变动，就立即更新在部署好的应用上，能够实现实时查看代码变化的功能。&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;https://zeroturnaround.com/wp-content/uploads/2016/11/JR_devcycle_2016_c.png&quot; alt=&quot;skip build, package and deploy&quot; title=&quot;skip build, package and deploy&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;skip build, package and deploy&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;HotSwap 是工作在虚拟机层面上，且依赖于 JVM 的内部运作，JRebel 用到了 JVM 的两个显著的功能特征—抽象的字节码和类加载器。类加载器允许 JRebel 辨别出类被加载的时刻，然后实时地翻译字节码，用以在虚拟机和可执行代码之间创建另一个抽象层&lt;sup id=&quot;fnref:hotswap-jrebel:1&quot;&gt;&lt;a href=&quot;#fn:hotswap-jrebel&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。这种技术也应用在 zeroturnaround 家其他的工具，比如 xrebel。&lt;/p&gt;
-
-&lt;p&gt;如果继续使用上面的比喻，JRebel 相当于在汽车运行过程中，先额外生成一个轮胎，然后以迅雷之势替换掉目标轮胎—汽车不需要停止装载和再启动。&lt;/p&gt;
-
-&lt;h2 id=&quot;安装和使用&quot;&gt;安装和使用&lt;/h2&gt;
-
-&lt;p&gt;JRebel 的安装参照官网即可，我是直接在 Intellij 的插件中心安装的，速度比较慢，插件也比较大，挂了代理才下载完成。下载完毕重启 IDE 即可使用。&lt;/p&gt;
-
-&lt;p&gt;JRebel 是收费插件，第一次打开的时候需要激活，网上有各种神奇教程可以参考。其实这个插件官方提供了免费的激活码，只是需要你注册一个&lt;a href=&quot;https://my.jrebel.com/&quot;&gt;帐号&lt;/a&gt;，并关联一个 twitter 或者 facebook 帐号即可。jrebel 需要这个关联帐号的写权限，会定期发送使用统计到你的 timeline，你可以使用一个小号来关联。&lt;/p&gt;
-
-&lt;p&gt;安装和激活完毕之后，就可以在 IDE 的配置页看到 JRebel 选项了。&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
-            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jrebel-preference.png-article.png&quot; alt=&quot;jrebel preference&quot; title=&quot;jrebel preference&quot; width=720 height=494 /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jrebel preference&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;运行&quot;&gt;运行&lt;/h2&gt;
-
-&lt;p&gt;为了能够比较熟悉该插件的使用，建议按照官方教程，先通过 IDE 本地启动，再通过命令行启动，然后尝试部署到远端服务器。&lt;/p&gt;
-
-&lt;p&gt;当在 console 窗口观察到这些输出之后，说明应用正确启用了 JRebel 插件。&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;2017-04-01 16:27:31 JRebel:  &lt;span class=&quot;c&quot;&gt;#############################################################&lt;/span&gt;
-2017-04-01 16:27:31 JRebel:
-2017-04-01 16:27:31 JRebel:  JRebel Agent 7.0.6 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;201703201213&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-2017-04-01 16:27:31 JRebel:  &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;c&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; Copyright ZeroTurnaround AS, Estonia, Tartu.
-2017-04-01 16:27:31 JRebel:
-2017-04-01 16:27:31 JRebel:  Over the last 2 days JRebel prevented
-2017-04-01 16:27:31 JRebel:  at least 0 redeploys/restarts saving you about 0 hours.
-2017-04-01 16:27:31 JRebel:
-2017-04-01 16:27:31 JRebel:  JRebel started &lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;remote server mode.
-2017-04-01 16:27:31 JRebel:
-2017-04-01 16:27:31 JRebel:
-2017-04-01 16:27:31 JRebel:  &lt;span class=&quot;c&quot;&gt;#############################################################&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h3 id=&quot;ide-运行&quot;&gt;IDE 运行&lt;/h3&gt;
-
-&lt;p&gt;IDE 运行本地应用最简单。参见&lt;a href=&quot;https://zeroturnaround.com/software/jrebel/quickstart/intellij/?run=ide#!/server-configuration&quot;&gt;官方教程&lt;/a&gt;。&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;执行&lt;span class=&quot;codespan&quot;&gt;mvn clean&lt;/span&gt;清空 target 目录；&lt;/li&gt;
-  &lt;li&gt;打开 「View &amp;gt; Tool Windows &amp;gt; JRebel」调出 JRebel Panel 编辑窗，点击「generate rebel.xml」按钮选中需要监控和热部署的模块。因为是本地执行，所以另外一个「generate rebel-remote.xml」 不需要选中；&lt;/li&gt;
-  &lt;li&gt;将以前通过 「Run 'MyApp'」或者「Debug 'MyApp'」来运行的命令改成「Run with JRebel 'MyApp'」或者「Debug with JRebel 'MyApp'」即可；&lt;/li&gt;
-  &lt;li&gt;修改代码，然后在「Build」菜单下选择合适的构建选项（只构建单个文件/构建模块/构建项目）；&lt;/li&gt;
-  &lt;li&gt;访问接口，查看结果是否实时改变。&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h3 id=&quot;命令行运行&quot;&gt;命令行运行&lt;/h3&gt;
-
-&lt;p&gt;在 JRebel 设置页的「Startup」标签中选择「Run locally from command line」， 选择合适的 jvm 和目标环境。我的 dubbo 没有使用 web 容器部署，所以选择了「Standalone application」，给出的启动参数如下。&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# agentpath 是必需的，foo.bar.MyApp 是你要运行的程序&lt;/span&gt;
-java &lt;span class=&quot;nt&quot;&gt;-agentpath&lt;/span&gt;:/Users/xxxx/Library/Application Support/IntelliJIdea2017.1/jr-ide-idea/lib/jrebel6/lib/libjrebel64.dylib foo.bar.MyApp
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;P.S.: 注意上面的「Application Support」需要换成「Application\ Support」。&lt;/p&gt;
-
-&lt;p&gt;dubbo 一般推荐使用 start.sh 脚本来启动应用，我们编辑 start.sh 文件，在启动的具体位置那里，将「-agentpath:…」添加在 java 后面，大致如下。&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;java &lt;span class=&quot;nt&quot;&gt;-agentpath&lt;/span&gt;:... &lt;span class=&quot;nv&quot;&gt;$JAVA_OPTS&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$JAVA_MEM_OPTS&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$JAVA_DEBUG_OPTS&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-classpath&lt;/span&gt; ...
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;各种目标环境的配置方法有着或大或小的区别，请按照自己的目标环境跟着 JRebel 给的配置方案来设置。&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;配置启动参数，如上所述；&lt;/li&gt;
-  &lt;li&gt;选择需要热部署的模块；&lt;/li&gt;
-  &lt;li&gt;执行&lt;span class=&quot;codespan&quot;&gt;start.sh&lt;/span&gt;部署应用；&lt;/li&gt;
-  &lt;li&gt;Run with JRebel 'MyApp'；&lt;/li&gt;
-  &lt;li&gt;修改代码，构建改动的文件；&lt;/li&gt;
-  &lt;li&gt;访问接口，查看结果是否实时改变。&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;从输出结果可以看到，JRebel 接管了 console。&lt;/p&gt;
-
-&lt;h3 id=&quot;远程服务器运行&quot;&gt;远程服务器运行&lt;/h3&gt;
-
-&lt;p&gt;官方&lt;a href=&quot;https://zeroturnaround.com/software/jrebel/quickstart/intellij/?run=remote#!/server-configuration&quot;&gt;教程1&lt;/a&gt;，&lt;a href=&quot;https://manuals.zeroturnaround.com/jrebel/remoteserver/intellij.html&quot;&gt;教程2&lt;/a&gt;更好&lt;sup id=&quot;fnref:jrebel-doc&quot;&gt;&lt;a href=&quot;#fn:jrebel-doc&quot; class=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;。&lt;/p&gt;
-
-&lt;p&gt;同上，在 JRebel 配置页选择「Run on a remote server」，根据给出的建议配置好启动项。&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;java &lt;span class=&quot;nt&quot;&gt;-agentpath&lt;/span&gt;:... &lt;span class=&quot;nt&quot;&gt;-Drebel&lt;/span&gt;.remoting_plugin&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt; ... &lt;span class=&quot;nt&quot;&gt;-jar&lt;/span&gt; ...
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;在 JRebel 配置页添加远程服务器地址，注意要是能够 http 访问的 url 才可以。&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;https://manuals.zeroturnaround.com/jrebel/_images/intellij-add-remote-server.png&quot; alt=&quot;添加远程服务器&quot; title=&quot;添加远程服务器&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;添加远程服务器&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;配置启动参数和添加远程服务器，如上所述；&lt;/li&gt;
-  &lt;li&gt;选择需要热部署的模块，注意这个时候「generate rebel.xml」和「generate rebel-remote.xml」 两个都要选中；&lt;/li&gt;
-  &lt;li&gt;将包含 rebel.xml 和 rebel-remote.xml 的代码部署到远程服务器。本地打包并上传，或者代码上传并在远程服务器打包都可以；&lt;/li&gt;
-  &lt;li&gt;在远程服务器上&lt;span class=&quot;codespan&quot;&gt;start.sh&lt;/span&gt;启动应用；&lt;/li&gt;
-  &lt;li&gt;修改代码，构建改动的文件；&lt;/li&gt;
-  &lt;li&gt;访问接口，查看结果是否实时改变。&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;P.S.: 教程1似乎有些问题，远端启动应用后，本地不需要再「Run with JRebel 'MyApp'」了。&lt;/p&gt;
-
-&lt;p&gt;P.S.: 在官方教程里，「Run with JRebel 'MyApp'」和「generate rebel.xml」checkbox 的图标一模一样，注意区分：有的是让你启动，有的是选中。&lt;/p&gt;
-
-&lt;p&gt;P.S.: JRebel 对 Spring 的 bean 注入默认就有很好的支持，参见 &lt;a href=&quot;https://zeroturnaround.com/software/jrebel/learn/jrebel-spring-integration/&quot;&gt;JRebel Spring&lt;/a&gt;。它可以根据 xml 文件或者注解自动重新装载 bean。还支持动态实时地在 Spring 中添加 bean 和依赖。&lt;/p&gt;
-
-&lt;div class=&quot;footnotes&quot;&gt;
-  &lt;ol&gt;
-    &lt;li id=&quot;fn:hotswap-jrebel&quot;&gt;
-      &lt;p&gt;HotSwap 和 JRebel 原理&lt;a href=&quot;https://dzone.com/articles/reloading-java-classes-401&quot;&gt;原文&lt;/a&gt;，&lt;a href=&quot;http://www.hollischuang.com/archives/598&quot;&gt;译文&lt;/a&gt; &lt;a href=&quot;#fnref:hotswap-jrebel&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:hotswap-jrebel:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:jrebel-doc&quot;&gt;
-      &lt;p&gt;参照官方的&lt;a href=&quot;https://manuals.zeroturnaround.com/jrebel/index.html&quot;&gt;详细使用文档&lt;/a&gt;是更好的选择 &lt;a href=&quot;#fnref:jrebel-doc&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Sat, 01 Apr 2017 16:36:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/04/jrebel/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/04/jrebel/</guid>
-        
-        <category>分布式</category>
-        
-        <category>dubbo</category>
-        
-        <category>jrebel</category>
-        
-        <category>spring</category>
-        
-        <category>remote</category>
-        
-        <category>hotswap</category>
         
         
         <category>技术</category>

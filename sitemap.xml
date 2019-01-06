@@ -193,6 +193,10 @@
 <lastmod>2018-07-19T19:26:00+08:00</lastmod>
 </url>
 <url>
+<loc>http://wulfric.me/2018/12/agile-practice/</loc>
+<lastmod>2018-12-30T18:59:00+08:00</lastmod>
+</url>
+<url>
 <loc>http://wulfric.me/about/</loc>
 </url>
 <url>
@@ -701,5 +705,11 @@
 </url>
 <url>
 <loc>http://wulfric.me/tags/php-fpm/</loc>
+</url>
+<url>
+<loc>http://wulfric.me/tags/agile/</loc>
+</url>
+<url>
+<loc>http://wulfric.me/tags/%E6%95%8F%E6%8D%B7/</loc>
 </url>
 </urlset>

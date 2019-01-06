@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>对敏捷开发实践的思考</title>
+  <meta name="description" content="[TOC]
+
+">
+  <meta name="keywords" content="agile,敏捷">
+  <link rel="canonical" href="http://wulfric.me/2018/12/agile-practice/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>30</div>
+        <div class='month'>DEC</div>
+      </div>
+      <div class='year pull-left'>2018</div>
+    </div>
+    <h1 class="post-title">对敏捷开发实践的思考</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>[TOC]</p>
+
+<h2 id="背景">背景</h2>
+
+<p>在加入现在的公司之前，我曾经在一家创业公司工作过几年，经历了从4，5人发展到上百人的过程。一开始老板就按照敏捷开发的套路执行项目管理。说是敏捷开发，其实也不算全面，主要是每日站会、看板管理、快速迭代等。之后由于随着人数扩大，但没有相应的调整开发策略，导致敏捷开发渐渐事实上废弃掉了。后面又由于要支持业务快速增长，项目开发质量没有很好的控制住，导致产品体验不够好，系统质量不稳定。为了解决这些问题，敏捷开发又被重新推到台前。</p>
+
+<p>本文便是我在这段经历中，对敏捷开发的见识和理解。出于安全考虑，我们将业务特定场景转换了通用场景，并给我们的虚拟公司起一个名字：让世界变得更加热闹的上市公司，简称 SOS 公司（好老的梗）。</p>
+
+<h2 id="开发模式简介">开发模式简介</h2>
+
+<p>我想先介绍一下几种常见的开发模式，如果您不关心，这部分可以跳过。</p>
+
+<p>在项目开发中，我们常用到下面几种开发模式。</p>
+
+<h3 id="瀑布式开发">瀑布式开发</h3>
+
+<p><a href="https://www.wikiwand.com/en/Waterfall_model">瀑布式开发</a>是一种传统的计算机软件开发方法。它强调开发进度像瀑布一样，沿着固定的状态流动。即严格按照预先计划的需求分析、设计、编码、集成、测试、维护的步骤顺序进行。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Waterfall_model.svg/800px-Waterfall_model.svg.png?1546152701225" alt="瀑布式开发--来自维基百科" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>瀑布式开发--来自维基百科</figcaption>
+        </figure></p>
+
+<h3 id="迭代式开发">迭代式开发</h3>
+
+<p><a href="https://www.wikiwand.com/en/Iterative_and_incremental_development">迭代式开发</a>也被称作迭代增量式开发或迭代进化式开发，是一种与传统的瀑布式开发相反的软件开发过程，它弥补了传统开发方式中的一些弱点，具有更高的成功率和生产率。</p>
+
+<p>在迭代式开发方法中，整个开发工作被组织为一系列的短小的、固定长度（如3周）的小项目，被称为一系列的迭代。每一次迭代都包括了需求分析、设计、实现与测试。采用这种方法，开发工作可以在需求被完整地确定之前启动，并在一次迭代中完成系统的一部分功能或业务逻辑的开发工作。再通过客户的反馈来细化需求，并开始新一轮的迭代。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Iterative_development_model.svg/640px-Iterative_development_model.svg.png?1546154989142" alt="迭代式开发--来自维基百科" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>迭代式开发--来自维基百科</figcaption>
+        </figure></p>
+
+<h3 id="螺旋式开发">螺旋式开发</h3>
+
+<p><a href="https://www.wikiwand.com/en/Spiral_model">螺旋模型</a>是一种演化软件开发过程模型，它兼顾了快速原型的迭代的特征以及瀑布模型的系统化与严格监控。螺旋模型最大的特点在于引入了其他模型不具备的风险分析，使软件在无法排除重大风险时有机会停止，以减小损失。同时，在每个迭代阶段构建原型是螺旋模型用以减小风险的途径。螺旋模型更适合大型的昂贵的系统级的软件应用。</p>
+
+<p>可以看出，螺旋式开发强调风险评估，同样也是一种迭代，只不过是螺旋式的迭代<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://cdn-images-1.medium.com/max/1600/0*xUPmGSQEX-40Z7Ag.png" alt="螺旋式开发" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>螺旋式开发</figcaption>
+        </figure></p>
+
+<h3 id="敏捷开发">敏捷开发</h3>
+
+<p><a href="https://www.wikiwand.com/en/Agile_software_development">敏捷软件开发</a>（英语：Agile software development），又称敏捷开发，是一种从1990年代开始逐渐引起广泛关注的一些新型软件开发方法，是一种应对快速变化的需求的一种软件开发能力。它们的具体名称、理念、过程、术语都不尽相同，相对于“非敏捷”，更强调程序员团队与业务专家之间的紧密协作、面对面的沟通（认为比书面的文档更有效）、频繁交付新的软件版本、紧凑而自我组织型的团队、能够很好地适应需求变化的代码编写和团队组织方法，也更注重软件开发过程中人的作用。</p>
+
+<p>敏捷开发最着重强调的是价值观而不是具体的形式或流程，这是它和其他开发模式很不一样的地方。也因为这样，在具体的敏捷开发的实践中，瀑布、迭代、螺旋等开发方式都可能会用到，而差别主要在于：敏捷开发往往有更小的迭代规模<sup id="fnref:2"><a href="#fn:2" class="footnote">2</a></sup>；敏捷开发不应过度设计未知的需求<sup id="fnref:3"><a href="#fn:3" class="footnote">3</a></sup>。</p>
+
+<p>从上面的介绍我们可以看出来，其实实际的大多数开发方式都是混搭的。很多公司或团队会声称使用敏捷开发，实际使用中很有可能会退化到其他基本开发方式。这些都是正常的，合适的才是最好的。如果一个好的开发模型实施起来很有难度，要么该模型不适合当前场景，要么使用方法不恰当。这方面后面也会提到。</p>
+
+<h2 id="早期敏捷实践">早期敏捷实践</h2>
+
+<p>SOS 公司的团队早期人数较少，业务也不是很复杂，主要目的是快速出 MVP，接受市场的评估并及时跟进。所以在初创期就已经施行了一个比较粗糙的敏捷开发。主要内容是：</p>
+
+<ul>
+  <li>每日站会，介绍前一天的工作内容和遇到的问题</li>
+  <li>快速迭代上线</li>
+  <li>通过看板管理项目进度，排期计划</li>
+</ul>
+
+<p>每日站会的目的就是互通有无，大家能够快速了解小组成员的工作内容，潜在风险等。这个时候每日站会，大家可以快速的了解同事目前在做哪些工作，遇到哪些问题，而这些问题很可能自己这几天刚刚遇到过。基于早期业务发展方向比较单一，内容也比较少，通过每日站会，所有开发者几乎都可以对业务有一个比较清晰的全局认识。</p>
+
+<p>随着业务发展和壮大，员工数量也开始大量增长，业务需求日益复杂。此时大家渐渐感觉每日站会不是那么有效了。早期还是不过 5，6 个人一起站会，但这时经常是 10 好几个人甚至 20 多人，而且大家的业务内容的差异也越来越大。显而易见，同事们开始听不懂对方站会汇报的内容了，站会上提出的问题也不再关心。同时由于人数太多，站会也渐渐变得冗长。这种情况下，我相信每次开站会的时候很多人都在开小差：这个人说的是啥？那个人遇到的问题感觉和我没多大关系啊？昨天晚上那把飞龙骑脸怎么也输了？午饭吃啥好？</p>
+
+<p>经过一段时间痛苦的折磨，这种每日站会渐渐就废弃了，仅保留每周周会和勉强及格的迭代速度。同时由于业务差异性，不再强制每个开发都使用看板管理项目，而是分到具体的小组由每个小组自己负责。对于某些不方便拆分任务的业务小组，看板这个工具也渐渐处于事实上的弃用状态。</p>
+
+<p>SOS 公司的业务仍然在快速发展中，业务需求迫使产品设计和项目开发无法很好的保证质量和可扩展性。在这一过程中，渐渐出现如下几个问题：</p>
+
+<ul>
+  <li>产品质量下降，产品逻辑有不自洽的地方；代码质量下降，bug 增多，用户体验下降</li>
+  <li>早期建立起来的核心竞争力优势开始下降，竞品已经渐渐追上</li>
+  <li>粗糙的单体应用架构陈旧，无法承载日益繁多和复杂的业务需求</li>
+</ul>
+
+<p>造成这些问题的原因是多种多样的，并非全是产品和技术开发模式的过错，激进的市场计划和营销策略等也会带来一定的影响。但这个问题归根结底是一个技术问题，可以通过技术的手段解决。</p>
+
+<h2 id="解决方案">解决方案</h2>
+
+<p>定义了存在的问题，并抽象归纳以批量解决问题，SOS 公司决定实施两大战略：增长和重构。</p>
+
+<p>为了实施这两个战略，需要向运营和市场说明当前问题的紧迫性，赢得他们的支持。事实上，这件事还是挺难的，以至于运营一直以为产品研发团队的当前战略是：改 bug。战略实施者需要当前要做的事情的本质诉求，以及背后的价值和意义。只有运营充分理解这两个战略，才能更好的配合产品和研发的工作（暂缓业务拓展和承接需求）。</p>
+
+<p>增长战略的工作内容有：重新梳理用户需求，整理出用户故事地图，并建立用户画像，分清客户的行业背景，使用习惯、痛点等的差异。使用敏捷开发，全面优化产品的每个阶段（导流，留存，沉淀等等）。</p>
+
+<p><figure>
+          <picture>
+            <source srcset="http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.webp" type="image/webp">
+            <source srcset="http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.png" type="image/png">
+            <img src="http://qiniu-wulfric.lufeihaidao.top/R-aarrr-model.png-article.png" alt="AARRR 模型" width=297 height=458 />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>AARRR 模型</figcaption>
+        </figure></p>
+
+<p>如上图所示，产品团队针对 AARRR 模型开了 5 个小组，分别研究：</p>
+
+<ul>
+  <li>获取用户：增加下载量、激活量，增加新用户数，降低用户获客成本</li>
+  <li>激发活跃：增加七日回访率，增加登录和使用时长</li>
+  <li>提高留存：增加次日留存率、七日留存率，降低用户流失率</li>
+  <li>增加收入：增加复购率、付费率，增加人均付费额</li>
+  <li>推荐传播：增加转发率，增加二次推荐率，增加搜索引擎收录数</li>
+</ul>
+
+<p>在每个小组内部，都会根据用户画像（行业化背景等）梳理对应的方案。我对产品的工作不怎么了解，这里就不多介绍了。落实到技术上就是，产品给出项目计划大图和里程碑目标，并和研发一起拆分需求，设计上要尽量能够支持 2 周即可完成一个迭代。</p>
+
+<p>另一部分就是重构单体应用。单体应用的重构，或者说服务化拆分，文章、书籍非常多，而针对具体的场景和业务差别也挺大的，就不班门弄斧了，只谈谈我们做了什么。</p>
+
+<p>服务化拆分最重要的当然就是梳理领域模型，划分限界上下文。但在我们规划中给这部分留的时间太少了。在梳理领域模型的时候，我们要求整理该领域所有的对外提供的业务员接口和内部调用关系，这都需要对业务熟悉的老员工来整理，因此往往是 Blocked 的，而即使是老员工，也几乎没有对该领域所有业务内容都熟悉的，因此这部分工作是延期的；整理抽取出限界上下文之后，需要评估有多少重写的工作量，比如参数校验、权限校验、BO、DO、DTO 等都有可能，但这部分有些轻视，低估了工作量，最终也导致了延期。</p>
+
+<p>但接口梳理工作做得好的直接好处就是：敏捷迭代的拆分变得极为简单。我们以对外提供服务的接口为粒度分配敏捷开发迭代任务，在业务梳理清楚，基础模块重写工作做完之后，每个接口从请求一直到数据库的工作量的评估就非常容易，而且每个接口背后的工作量都不大。按照我们的应用的规模和实际的经验，每 2 周能重构 15 个左右的接口。在早期磨合<sup id="fnref:4"><a href="#fn:4" class="footnote">4</a></sup>完成之后几乎不会因为自身原因延期。同时，我们对每个接口都设置了路由切换，每次迭代的任何接口都可以随时回滚，大大降低了上线风险。</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>https://medium.com/existek/sdlc-models-explained-agile-waterfall-v-shaped-iterative-spiral-e3f012f390c5 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:2">
+      <p>https://stackoverflow.com/questions/11842318/difference-between-agile-and-iterative-and-incremental-development <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:3">
+      <p>https://stackoverflow.com/questions/253789/agile-vs-spiral-model-for-sdlc <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:4">
+      <p>为了保障敏捷开发的快速迭代得以实现，我们补上了之前比较欠缺的服务监控、数据库 sql 监控；代码健康分检查（用 sonarqube 检查测试覆盖率，code smell 和 bug 数）；单元测试和服务压测。这部分在早期磨合的时候会造成一定程度的延期。 <a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- agile, 敏捷 -->
+
+    <a class='tag' href="/tags/agile">
+      agile
+    </a>
+
+    <a class='tag' href="/tags/敏捷">
+      敏捷
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2017. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

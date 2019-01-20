@@ -40,29 +40,6 @@ module Kramdown
         end
       end
 
-      # def convert_codeblock(el, indent)
-      #   attr = el.attr.dup
-      #   lang = extract_code_language!(attr)
-      #   code = pygmentize(el.value, lang)
-      #   code_attr = {}
-      #   code_attr['class'] = "language-#{lang}" if lang
-      #   "#{' '*indent}<div class=\"highlight\"><pre#{html_attributes(attr)}><code#{html_attributes(code_attr)}>#{code}</code></pre></div>\n"
-      # end
-
-      # def convert_codespan(el, indent)
-      #   attr = el.attr.dup
-      #   lang = extract_code_language!(attr)
-      #   code = pygmentize(el.value, lang)
-      #   if lang
-      #     attr['class'] = "highlight"
-      #     if attr.has_key?('class')
-      #       attr['class'] += " language-#{lang}"
-      #     else
-      #       attr['class'] = "language-#{lang}"
-      #     end
-      #   end
-      #   "<span#{html_attributes(attr)} class='codespan'>#{code}</span>"
-      # end
       def convert_codespan(el, indent)
         attr = el.attr.dup
         lang = extract_code_language(attr)
@@ -110,7 +87,7 @@ module Kramdown
           <picture>
             #{webp_source}
             #{png_source}
-            <img#{html_attributes(el.attr)} width=#{width} />
+            <img#{html_attributes(el.attr)} width=#{width} height=#{height} />
           </picture>
           #{figcaption}
         </figure>"

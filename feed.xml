@@ -6,16 +6,233 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 06 Jan 2019 23:34:48 +0800</pubDate>
-    <lastBuildDate>Sun, 06 Jan 2019 23:34:48 +0800</lastBuildDate>
+    <pubDate>Mon, 09 Sep 2019 01:50:15 +0800</pubDate>
+    <lastBuildDate>Mon, 09 Sep 2019 01:50:15 +0800</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2019. All rights reserved.</rights>
     
       <item>
-        <title>对敏捷开发实践的思考</title>
-        <description>&lt;p&gt;[TOC]&lt;/p&gt;
+        <title>JAVA 11 MAC 源码安装与调试</title>
+        <description>&lt;p&gt;JAVA 11 是 JAVA 8 之后的第一个 LTS 版本，为了了解下一代 JAVA 版本更新的内容，也为了能调试到 JAVA 的内部代码，所以笔者决定源码安装试试。&lt;/p&gt;
 
-&lt;h2 id=&quot;背景&quot;&gt;背景&lt;/h2&gt;
+&lt;h2 id=&quot;安装&quot;&gt;安装&lt;/h2&gt;
+
+&lt;p&gt;官方给出的安装教程&lt;sup id=&quot;fnref:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;是这样的：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;下载源码：&lt;span class=&quot;codespan&quot;&gt;hg clone http://hg.openjdk.java.net/jdk/jdk&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;执行configure：&lt;span class=&quot;codespan&quot;&gt;bash configure&lt;/span&gt;。缺失依赖会导致 configure 失败，但错误日志都会给出操作建议，根据建议安装依赖即可&lt;/li&gt;
+  &lt;li&gt;执行 make：&lt;span class=&quot;codespan&quot;&gt;make images&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;验证新构建的 java 可用：&lt;span class=&quot;codespan&quot;&gt;./build/*/images/jdk/bin/java -version&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;测试：&lt;span class=&quot;codespan&quot;&gt;make run-test-tier1&lt;/span&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;这个安装步骤大体上没问题，但是有些差异需要指出，因此我也给出我的安装步骤。&lt;/p&gt;
+
+&lt;h3 id=&quot;安装依赖&quot;&gt;安装依赖&lt;/h3&gt;
+
+&lt;p&gt;安装 jre 11 运行时，这个可以通过 brew 来安装，或者直接下载 &lt;a href=&quot;https://www.oracle.com/technetwork/java/javase/downloads/jdk11-downloads-5066655.html&quot;&gt;oracle&lt;/a&gt; 或 &lt;a href=&quot;https://jdk.java.net/java-se-ri/11&quot;&gt;openjdk&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;因为编译的是比较新的 jdk 11，直接用 xcode 最新版即可（官方推荐的是 9.4，我用的是最新版 10.3 没问题）。&lt;/p&gt;
+
+&lt;p&gt;通过 brew 安装 autoconf 和 freetype。&lt;/p&gt;
+
+&lt;h3 id=&quot;获取源码&quot;&gt;获取源码&lt;/h3&gt;
+
+&lt;p&gt;从 jdk 10 开始，源码不在分散在不同的仓库中，所以只需要 clone 单独的 repository 即可&lt;sup id=&quot;fnref:1:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。我选择是 &lt;a href=&quot;http://hg.openjdk.java.net/jdk-updates/jdk11u&quot;&gt;jdk11u&lt;/a&gt;，而且不是通过 hg clone 的方式(比较慢，经常出错重试)，而是直接下载整个源码包，如下图示。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-download.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-download.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-download.png-article.png&quot; alt=&quot;jdk11 download&quot; title=&quot;jdk11 download&quot; width=720 height=506 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 download&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;编译&quot;&gt;编译&lt;/h3&gt;
+
+&lt;p&gt;执行 configure，为了 debug，需要加上对应的参数。&lt;/p&gt;
+
+&lt;div  class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sh configure &lt;span class=&quot;nt&quot;&gt;--with-target-bits&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;64 &lt;span class=&quot;nt&quot;&gt;--enable-ccache&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--with-jvm-variants&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;server  &lt;span class=&quot;nt&quot;&gt;--with-boot-jdk-jvmargs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;-Xlint:deprecation -Xlint:unchecked&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--disable-warnings-as-errors&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--with-debug-level&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;slowdebug 2&amp;gt;&amp;amp;1 | tee configure_mac_x64.log
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;一般第一次执行总是会遇到些小问题，但编译 jdk 11 的问题比 jdk8，9少多了，根据提示很容易就可以解决。当看到如下返回即表明配置成功。&lt;/p&gt;
+
+&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;====================================================&lt;/span&gt;
+A new configuration has been successfully created &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+/Users/haidao/Downloads/openjdk11/build/macosx-x86_64-normal-server-slowdebug
+using configure arguments &lt;span class=&quot;s1&quot;&gt;'--with-target-bits=64 --enable-ccache --with-jvm-variants=server --with-boot-jdk-jvmargs='&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;-Xlint&lt;/span&gt;:deprecation &lt;span class=&quot;nt&quot;&gt;-Xlint&lt;/span&gt;:unchecked&lt;span class=&quot;s1&quot;&gt;' --disable-warnings-as-errors --with-debug-level=slowdebug'&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;.&lt;/span&gt;
+
+Configuration summary:
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Debug level:    slowdebug
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; HS debug level: debug
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; JVM variants:   server
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; JVM features:   server: &lt;span class=&quot;s1&quot;&gt;'aot cds cmsgc compiler1 compiler2 dtrace epsilongc g1gc graal jfr jni-check jvmci jvmti management nmt parallelgc serialgc services vm-structs'&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; OpenJDK target: OS: macosx, CPU architecture: x86, address length: 64
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Version string: 11-internal+0-adhoc.haidao.openjdk11 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;11-internal&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+Tools summary:
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Boot JDK:       openjdk version &lt;span class=&quot;s2&quot;&gt;&quot;11.0.2&quot;&lt;/span&gt; 2019-01-15 OpenJDK Runtime Environment 18.9 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;build 11.0.2+9&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; OpenJDK 64-Bit Server VM 18.9 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;build 11.0.2+9, mixed mode&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;at /Library/Java/JavaVirtualMachines/openjdk-11.0.2.jdk/Contents/Home&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Toolchain:      clang &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;clang/LLVM from Xcode 10.3&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; C Compiler:     Version 10.0.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;at /usr/bin/clang&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; C++ Compiler:   Version 10.0.1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;at /usr/bin/clang++&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+Build performance summary:
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Cores to use:   4
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; Memory limit:   8192 MB
+&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; ccache status:  Active &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;3.7.2&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;然后执行 make 即可。根据 build 文档&lt;sup id=&quot;fnref:1:2&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;，执行 make 不带任何参数等同于&lt;span class=&quot;codespan&quot;&gt;make default&lt;/span&gt;和&lt;span class=&quot;codespan&quot;&gt;make jdk&lt;/span&gt;，这会 build 出一个较小的编译结果，并提供一个 exploded image。不知道怎么翻译 exploded image，大概意思是，这是一个分解开的镜像，可以直接使用，各个模块都是解压好的，不包含源码。这种设计是为了方便 jdk 的开发者渐进式开发，每次 make 只会 recompile 变化的部分。&lt;/p&gt;
+
+&lt;p&gt;其他 make 的常用 target 如下：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;hotspot&lt;/span&gt; - Build all of hotspot (but only hotspot)&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;hotspot-&amp;lt;variant&amp;gt;&lt;/span&gt; - Build just the specified jvm variant&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;images&lt;/span&gt; or &lt;span class=&quot;codespan&quot;&gt;product-images&lt;/span&gt; - Build the JDK image&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;docs&lt;/span&gt; or &lt;span class=&quot;codespan&quot;&gt;docs-image&lt;/span&gt; - Build the documentation image&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;test-image&lt;/span&gt; - Build the test image&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;all&lt;/span&gt; or &lt;span class=&quot;codespan&quot;&gt;all-images&lt;/span&gt; - Build all images (product, docs and test)&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;bootcycle-images&lt;/span&gt; - Build images twice, second time with newly built JDK (good for testing)&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;clean&lt;/span&gt; - Remove all files generated by make, but not those generated by configure&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;dist-clean&lt;/span&gt; - Remove all files, including configuration&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;构建结果目录如下&lt;sup id=&quot;fnref:1:3&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;jdk&lt;/span&gt;: 这就是之前所说的 exploded image 的目录。执行&lt;span class=&quot;codespan&quot;&gt;make jdk&lt;/span&gt;之后，你可以通过运行&lt;span class=&quot;codespan&quot;&gt;$BUILD/jdk/bin/java&lt;/span&gt;直接启动新构建的 JDK。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;images&lt;/span&gt;: 这个目录是 make *-image 的输出位置。例如，&lt;span class=&quot;codespan&quot;&gt;make jdk-image&lt;/span&gt; 会构建出 jdk image， 目录是&lt;span class=&quot;codespan&quot;&gt;images/jdk&lt;/span&gt;。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;test-results&lt;/span&gt;: 测试结果目录。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;support&lt;/span&gt;:  这个目录保存的是 build 过程中的中间文件，比如源码，对象文件，类文件等。&lt;span class=&quot;codespan&quot;&gt;support&lt;/span&gt;中比较重要的是&lt;span class=&quot;codespan&quot;&gt;gensrc&lt;/span&gt;，它包含生成的源码；&lt;span class=&quot;codespan&quot;&gt;modules_*&lt;/span&gt; 包含了按模块层级分布的文件，它会在之后合并到 jdk 目录下。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;由于我们执行的是最简构建，我们主要看下 $BUILD/jdk 和 $BUILD/images/jdk 的差异：&lt;/p&gt;
+
+&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$BUILD&lt;/span&gt;/images/jdk         &lt;span class=&quot;nv&quot;&gt;$BUILD&lt;/span&gt;/jdk
+├── bin                   ├── _packages_attribute.done
+├── conf                  ├── bin
+├── demo                  ├── conf
+├── include               ├── include
+├── jmods                 ├── lib
+├── legal                 ├── modules
+├── lib                   └── release
+├── man
+└── release
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;和 $BUILD/jdk 不一样，$BUILD/images/jdk 这个目录下没有解压好的 modules 目录，而是以压缩包的形式放在 jmods 下。这是自 JAVA 9 引入的模块化打包设计，旨在减小 JAVA 应用的包体积，使得部署更加轻量。&lt;/p&gt;
+
+&lt;p&gt;$BUILD/jdk 下的 lib 目录是动态库文件和调试信息文件，不包含源码。而 $BUILD/images/jdk 下的 lib 目录下的动态库文件没有可执行权限，但包含源码 src.zip。&lt;/p&gt;
+
+&lt;p&gt;$BUILD/jdk 作为 exploded image，不像 product-image 那样需要包含法律文件和 demo。&lt;/p&gt;
+
+&lt;p&gt;除了这些区别之外，二者在使用上没啥差别。&lt;/p&gt;
+
+&lt;p&gt;现在，可以直接通过 $BUILD/jdk/bin/java 来使用编译出来的 JAVA11。你也可以配置 jenv：&lt;span class=&quot;codespan&quot;&gt;jenv add $BUILD/jdk&lt;/span&gt;。关于 jenv 的使用请参看 &lt;a href=&quot;/2017/03/macos-jenv/&quot;&gt;Mac OS 使用 jenv 管理 java 版本&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h2 id=&quot;配置-idea&quot;&gt;配置 IDEA&lt;/h2&gt;
+
+&lt;p&gt;增加 SDK，配置 classpath 和 sourcepath。配置好 sourcepath 便可以正常查看代码了。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-classpath.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-classpath.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-classpath.png-article.png&quot; alt=&quot;jdk11 classpath&quot; title=&quot;jdk11 classpath&quot; width=720 height=489 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 classpath&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;如果使用的是 $BUILD/images/jdk，直接将该目录加入到 classpath 即可，IDE 会自动识别 src.zip 并放在 sourcepath 中；&lt;/p&gt;
+
+&lt;p&gt;如果使用的是 $BUILD/jdk，由于这是 exploded image jdk，不包含源码，所以需要分别加入 classpath 和 sourcepath，sourcepath 即下载的 openjdk 下的 src 目录。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-sourcepath.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-sourcepath.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-sourcepath.png-article.png&quot; alt=&quot;jdk11 sourcepath&quot; title=&quot;jdk11 sourcepath&quot; width=720 height=489 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 sourcepath&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;其他需要修改的配置不在赘述，如下图示。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-ide-conf.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-ide-conf.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-ide-conf.png-article.png&quot; alt=&quot;jdk11 ide conf&quot; title=&quot;jdk11 ide conf&quot; width=720 height=512 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 ide conf&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;配置调试&quot;&gt;配置调试&lt;/h2&gt;
+
+&lt;p&gt;在 IDE sdk 中配置好 jdk 11 之后便可以正常调试 JAVA 代码了。如果我们想调试 jdk/jvm 源码的 C 代码怎么办呢？我们已经 build 一个可以 debug 的 java11 运行环境，下面就是配置 IDE 来 debug。&lt;/p&gt;
+
+&lt;h3 id=&quot;clion-调试-jvm-代码&quot;&gt;clion 调试 jvm 代码&lt;/h3&gt;
+
+&lt;p&gt;首先导入源码。使用 New Cmake Project from Sources，这样可以自动创建 CMakeLists.txt 文件。然后按照引导即可导入源码。你可以导入 src/hotspot，也可以整个导入 src。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/clion-debug-jvm.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/clion-debug-jvm.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/clion-debug-jvm.png-article.png&quot; alt=&quot;clion debug jvm&quot; title=&quot;clion debug jvm&quot; width=720 height=318 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;clion debug jvm&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;导入之后，具体的 cpp 文件会报错，但是不影响调试，可以暂时忽略。&lt;/p&gt;
+
+&lt;p&gt;导入成功，reload CMakeLists.txt 之后，会自动生成一个 debug configuration。下面配置 debug configuration。如图所示，将 executable 改为你的 java 二进制文件，然后在 program arguments 里设置程序参数。我们先设置为 -version。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug1.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug1.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug1.png-article.png&quot; alt=&quot;jdk11 debug1&quot; title=&quot;jdk11 debug1&quot; width=720 height=477 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug1&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;此时我们在&lt;span class=&quot;codespan&quot;&gt;share/prims/jni.cpp&lt;/span&gt;文件上打一个断点，然后执行 debug，就可以看到效果了。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug2.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
+            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug2.png-article.png&quot; type=&quot;image/png&quot;&gt;
+            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/java/jdk11-debug2.png-article.png&quot; alt=&quot;jdk11 debug2&quot; title=&quot;jdk11 debug2&quot; width=720 height=459 /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug2&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:1&quot;&gt;
+      &lt;p&gt;每个下载的 jdk 中都有一个 build 文档，一般在 doc 目录下。这是编译安装该 jdk 的最权威的参考文档。jdk11 的在线 build 文档是：&lt;a href=&quot;https://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html&quot;&gt;Building the JDK 11&lt;/a&gt; &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:1:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt; &lt;a href=&quot;#fnref:1:2&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;sup&gt;3&lt;/sup&gt;&lt;/a&gt; &lt;a href=&quot;#fnref:1:3&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;sup&gt;4&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Mon, 02 Sep 2019 23:32:00 +0800</pubDate>
+        <link>http://wulfric.me/2019/09/java11-install-debug/</link>
+        <guid isPermaLink="true">http://wulfric.me/2019/09/java11-install-debug/</guid>
+        
+        <category>java</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
+    
+      <item>
+        <title>对敏捷开发实践的思考</title>
+        <description>&lt;h2 id=&quot;背景&quot;&gt;背景&lt;/h2&gt;
 
 &lt;p&gt;在加入现在的公司之前，我曾经在一家创业公司工作过几年，经历了从4，5人发展到上百人的过程。一开始老板就按照敏捷开发的套路执行项目管理。说是敏捷开发，其实也不算全面，主要是每日站会、看板管理、快速迭代等。之后由于随着人数扩大，但没有相应的调整开发策略，导致敏捷开发渐渐事实上废弃掉了。后面又由于要支持业务快速增长，项目开发质量没有很好的控制住，导致产品体验不够好，系统质量不稳定。为了解决这些问题，敏捷开发又被重新推到台前。&lt;/p&gt;
 
@@ -2104,82 +2321,6 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
         <category>exception</category>
         
         <category>throwable</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>遥远分支的手动 cherry-pick 方法</title>
-        <description>&lt;p&gt;在刚开始使用 git 作为代码托管工具的时候，我还是一名学生，自己的项目也没啥冲突好解决的，那个时候的 git 感觉就是一个用起来还算方便的轻量级代码同步工具。之所以说它轻量，是因为彼时所需要的所有命令只有 4 个：&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;git pull &lt;span class=&quot;c&quot;&gt;# 换电脑的时候同步代码&lt;/span&gt;
-
-git add
-git commit
-git push &lt;span class=&quot;c&quot;&gt;# 推送代码&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;当时还觉得提交代码需要 add+commit+push，很是麻烦。工作之后经历了团队开发，多进度开发，废弃，提前上线等等情况之后，才越来越感受到 git 所谓「分布式版本控制系统」的威力。&lt;/p&gt;
-
-&lt;p&gt;然而随着使用的更加频繁，渐渐的感觉到 git 也有一些不那么如人意的地方，比如时间久的大项目，占用空间大，不小心 commit 进去了大文件，就再也拿不出来了；checkout 分支的动作越来越重等。&lt;/p&gt;
-
-&lt;p&gt;这次遇到的就是一个较为棘手的合并问题。如下图所示，当开发一个feature 分支的时候，突然有需求要将该 feature 分支的 B commit 放到 master 分支上。而此时，由于疏忽，feature 分支已经远远落后于 master 分支了，且该分支也提交了大量的 commit，可想而知合并将产生大量的冲突。（当然，feature 分支应该尽量频繁的 rebase master）&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.webp&quot; type=&quot;image/webp&quot;&gt;
-            &lt;source srcset=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; type=&quot;image/png&quot;&gt;
-            &lt;img src=&quot;http://qiniu-wulfric.lufeihaidao.top/git/R-far-away-branch.png-article.png&quot; alt=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; title=&quot;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&quot; width=347 height=506 /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;两个分道扬镳的分支之间的 cherry pick 手动 git 修复&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;面对这种冲突一点办法都没有，如果直接 cherry pick，大量的难以理解的冲突将令人无所是从，解决这些冲突也会消耗大量的精力，即使有些文件的冲突你很明白并不需要，只是两个 commit git diff 的结果而已。我们可以通过一些原始的手段手动减少一些冲突和打一部分补丁，以下是常用的方法：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;查看两个 commit 之间的文件变动， 明确需要那些更改（这种情况下显示变动的文件可能会很多，但一般你需要的并不多，接下来就针对你需要的文件查看和 patch）&lt;/li&gt;
-  &lt;li&gt;查看某个 commit 的某个文件的 diff （上面已经知道需要修改哪些文件了，查看下该文件的 diff）&lt;/li&gt;
-  &lt;li&gt;查看两个 commit 之间的某个文件的 patch，并将该 patch 应用到当前分支（如果 diff 简单而明确，可以尝试直接 patch 过来）&lt;/li&gt;
-  &lt;li&gt;查看某个 commit 的某个文件的内容，拷贝需要的部分到当前（patch 有可能会失败，用原始的方法查看，然后拷贝需要的部分）&lt;/li&gt;
-  &lt;li&gt;如果确认当前分支可以使用其他分支的某个文件的最新版本，可以 checkout 到该 commit 的那个文件，这样就不需要费劲的解决冲突了&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;下面的命令清单记录了解决冲突要用到的 git 命令。&lt;/p&gt;
-
-&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# 查看两个 commit 之间哪些文件有变动&lt;/span&gt;
-git diff &lt;span class=&quot;nt&quot;&gt;--name-only&lt;/span&gt; SHA1 SHA2
-&lt;span class=&quot;c&quot;&gt;# http://stackoverflow.com/questions/1552340/how-to-list-the-file-names-only-that-changed-between-two-commits&lt;/span&gt;
-
-&lt;span class=&quot;c&quot;&gt;# 显示某个 commit 的某个文件的内容：拷贝内容&lt;/span&gt;
-git show SHA1:path/to/file
-&lt;span class=&quot;c&quot;&gt;# http://stackoverflow.com/questions/338436/is-there-a-quick-git-command-to-see-an-old-version-of-a-file&lt;/span&gt;
-
-&lt;span class=&quot;c&quot;&gt;# 显示某个 commit 的某个文件的 diff&lt;/span&gt;
-git show SHA1 path/to/file
-
-&lt;span class=&quot;c&quot;&gt;# 查看两个 commit 之间某个文件的 patch&lt;/span&gt;
-git diff &amp;lt;SHA1&amp;gt;^..&amp;lt;SHA2&amp;gt; &lt;span class=&quot;nt&quot;&gt;--&lt;/span&gt; &amp;lt;filename&amp;gt;
-
-&lt;span class=&quot;c&quot;&gt;# 将该 patch 内容应用到当前分支：因为分支之间差距比较大，往往很难成功 patch&lt;/span&gt;
-git diff &amp;lt;SHA1&amp;gt;^..&amp;lt;SHA2&amp;gt; &lt;span class=&quot;nt&quot;&gt;--&lt;/span&gt; &amp;lt;filename&amp;gt; | git apply
-&lt;span class=&quot;c&quot;&gt;# http://stackoverflow.com/questions/16068186/how-to-cherry-pick-only-changes-for-only-one-file-not-the-whole-commit&lt;/span&gt;
-
-&lt;span class=&quot;c&quot;&gt;# 完全使用远程分支的文件：新文件，确定使用另外一个版本&lt;/span&gt;
-git checkout feature-branch /path/to/file
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;当然，还是推荐经常 rebase master 的代码，并使用 rebase 和 cherry pick 等「正经」方法😀，参见&lt;a href=&quot;2014/03/git-team-cooperate/&quot;&gt;此文&lt;/a&gt;。&lt;/p&gt;
-</description>
-        <pubDate>Mon, 05 Jun 2017 20:07:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/06/cherry-pick-between-two-distant-branches/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/06/cherry-pick-between-two-distant-branches/</guid>
-        
-        <category>git</category>
-        
-        <category>cherry-pick</category>
-        
-        <category>diff</category>
         
         
         <category>技术</category>

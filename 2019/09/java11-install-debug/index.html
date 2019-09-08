@@ -94,7 +94,7 @@
 
 <h3 id="获取源码">获取源码</h3>
 
-<p>从 jdk 10 开始，源码不在分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1"><a href="#fn:1" class="footnote">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错重试)，而是直接下载整个源码包，如下图示。</p>
+<p>从 jdk 10 开始，源码不再分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1"><a href="#fn:1" class="footnote">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错需要重试)，而是直接下载整个源码包，如下图示。</p>
 
 <p><figure>
           <picture>
@@ -155,7 +155,7 @@ Build performance summary:
   <li><span class="codespan">dist-clean</span> - Remove all files, including configuration</li>
 </ul>
 
-<p>构建结果目录如下<sup id="fnref:1:3"><a href="#fn:1" class="footnote">1</a></sup>：</p>
+<p>我们以 $BUILD 表示构建结果目录<sup id="fnref:2"><a href="#fn:2" class="footnote">2</a></sup>，构建结果目录如下<sup id="fnref:1:3"><a href="#fn:1" class="footnote">1</a></sup>：</p>
 
 <ul>
   <li><span class="codespan">jdk</span>: 这就是之前所说的 exploded image 的目录。执行<span class="codespan">make jdk</span>之后，你可以通过运行<span class="codespan">$BUILD/jdk/bin/java</span>直接启动新构建的 JDK。</li>
@@ -270,6 +270,9 @@ Build performance summary:
   <ol>
     <li id="fn:1">
       <p>每个下载的 jdk 中都有一个 build 文档，一般在 doc 目录下。这是编译安装该 jdk 的最权威的参考文档。jdk11 的在线 build 文档是：<a href="https://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html">Building the JDK 11</a> <a href="#fnref:1" class="reversefootnote">&#8617;</a> <a href="#fnref:1:1" class="reversefootnote">&#8617;<sup>2</sup></a> <a href="#fnref:1:2" class="reversefootnote">&#8617;<sup>3</sup></a> <a href="#fnref:1:3" class="reversefootnote">&#8617;<sup>4</sup></a></p>
+    </li>
+    <li id="fn:2">
+      <p>$BUILD 表示你构建出来的结果的目录，一般是你下载的 openjdk11 下的 build/xxx，xxx 是一个动态的名称，和你的开发机类型、编译参数有关，在我的机器上是 ./openjdk11/build/macosx-x86_64-normal-server-slowdebug。 <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

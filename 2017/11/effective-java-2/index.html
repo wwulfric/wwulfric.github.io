@@ -135,7 +135,7 @@
 
 <ul>
   <li>代码长，每个参数都需要提供 setter 方法；setter 方法通常返回值是 void，这意味着客户端代码只能一行一行 set，不能链式调用；</li>
-  <li>JavaBean 便无法实现不可变对象，因为随时可以执行 setter 方法，对象的状态不可控。JavaBean 极有可能出现不一致的情况，对客户端来说，它并不知道这个 JavaBean 是否已经完成构建（你并不知道某个 setter 是尚未执行还是不需要执行），这导致该对象是线程不安全的。</li>
+  <li>JavaBean 无法实现不可变对象，因为随时可以执行 setter 方法，对象的状态不可控。JavaBean 极有可能出现不一致的情况，对客户端来说，它并不知道这个 JavaBean 是否已经完成构建（你并不知道某个 setter 是尚未执行还是不需要执行），这导致该对象是线程不安全的。</li>
 </ul>
 
 <p>Builder 模式可以很好的兼顾安全和代码可读性。Builder 是目标类的静态成员类，在 Builder 类中处理实际参数的设置。客户端通过 Builder 类设置参数，然后由无参的 build 方法获取所需的不可变对象。</p>
@@ -216,7 +216,7 @@
 
 <ul>
   <li>创建 Builder 导致的潜在的性能问题，一般来说几乎可以忽略不计，但在某些性能敏感的场合就必须考虑到这种损耗；</li>
-  <li>写起来稍微有点麻烦，因此只适用于参数很多，定制化很强的场景（要考虑到未来的情况，一个类很有可能有简单变得复杂）。</li>
+  <li>写起来稍微有点麻烦，因此只适用于参数很多，定制化很强的场景（要考虑到未来的情况，一个类很有可能由简单变得复杂）。</li>
 </ul>
 
 <p>随着代码的积累可能既有构造器也有 Builder，这使得代码显得混乱不易控制，因此推荐优先使用 Builder。</p>
@@ -235,7 +235,7 @@
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Elvis</span> <span class="o">{</span>
     <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Elvis</span> <span class="n">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Elvis</span><span class="o">();</span>
     <span class="kd">private</span> <span class="nf">Elvis</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-	<span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaveTheBuilding</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaveTheBuilding</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -248,7 +248,7 @@
     <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Elvis</span> <span class="n">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Elvis</span><span class="o">();</span>
     <span class="kd">private</span> <span class="nf">Elvis</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
     <span class="kd">public</span> <span class="kd">static</span> <span class="n">Elvis</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="n">INSTANCE</span> <span class="o">}</span>
-	<span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaveTheBuilding</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaveTheBuilding</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -399,7 +399,7 @@
       </div>
 
       <footer>
-  wulfric © 2013~2019. All rights reserved.
+  wulfric © 2013~2023. All rights reserved.
 </footer>
 
 

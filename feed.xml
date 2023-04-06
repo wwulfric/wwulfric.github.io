@@ -4,10 +4,10 @@
     <title>Storm Spirit</title>
     <description>这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。
 </description>
-    <link>http://wulfric.me/</link>
-    <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Thu, 06 Apr 2023 23:31:57 +0800</pubDate>
-    <lastBuildDate>Thu, 06 Apr 2023 23:31:57 +0800</lastBuildDate>
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Thu, 06 Apr 2023 23:57:45 +0800</pubDate>
+    <lastBuildDate>Thu, 06 Apr 2023 23:57:45 +0800</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2023. All rights reserved.</rights>
     
@@ -50,8 +50,8 @@
 &lt;p&gt;当一个大型语言模型在一个足够庞大且多样的数据集上进行训练时，它能在众多领域和数据集中表现出色。GPT-2在8个经过测试的语言建模数据集中的7个上实现了零样本的顶尖性能。模型在零样本设置下能够完成的任务类型之多样，暗示着通过训练高容量模型来最大化足够多样化的文本语料库的似然性，开始学会执行大量令人惊叹的任务，而无需显式监督。&lt;/p&gt;
 </description>
         <pubDate>Thu, 06 Apr 2023 22:48:00 +0800</pubDate>
-        <link>http://wulfric.me/2023/04/gpt2-ch/</link>
-        <guid isPermaLink="true">http://wulfric.me/2023/04/gpt2-ch/</guid>
+        <link>http://localhost:4000/2023/04/gpt2-ch/</link>
+        <guid isPermaLink="true">http://localhost:4000/2023/04/gpt2-ch/</guid>
         
         <category>ai</category>
         
@@ -96,8 +96,9 @@
 &lt;h2 id=&quot;3-框架&quot;&gt;3. 框架&lt;/h2&gt;
 &lt;p&gt;我们的训练过程包含2个阶段。第一阶段是在大型文本语料上学习高容量的语言模型。接下来是微调阶段。在这个阶段，我们借助标注数据，调整模型以适应一个判别任务。&lt;/p&gt;
 
-&lt;p&gt;无监督预训练：给定一个无监督的token语料库$U = {u_1, . . . , u_n}$，我们使用标准的语言建模目标来最大化以下似然：
-&lt;script type=&quot;math/tex&quot;&gt;L_1(U) = \Sigma_ilogP(u_i|u_{i−k},...,u_{i−1};\Theta)&lt;/script&gt;&lt;/p&gt;
+&lt;p&gt;无监督预训练：给定一个无监督的token语料库$U = {u_1, . . . , u_n}$，我们使用标准的语言建模目标来最大化以下似然：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_1(U) = \Sigma_ilogP(u_i|u_{i−k},...,u_{i−1};\Theta)&lt;/script&gt;
 
 &lt;p&gt;其中k是上下文窗口的大小，条件概率P使用具有参数$\Theta$的神经网络进行建模。这些参数使用随机梯度下降[51]进行训练。&lt;/p&gt;
 
@@ -106,33 +107,38 @@
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
 \begin{aligned} &amp;h_0 = UW_e + W_p \\ &amp;h_l = transformer\_block(h_{l−1})\forall_i \in [1, n] \\  &amp;P(u) = softmax(h_n W_e^T ) \end{aligned} %]]&gt;&lt;/script&gt;
 
-&lt;p&gt;其中$U = (u_{−k}, . . . , u_{−1})$是 token的上下文向量，n是层数，$W_e$是token嵌入矩阵，$W_p$是位置嵌入矩阵。
-(l是层数，h 是什么？每层神经网络的？）&lt;/p&gt;
+&lt;p&gt;其中$U = (u_{−k}, . . . , u_{−1})$是 token的上下文向量，n是层数，$W_e$是token嵌入矩阵，$W_p$是位置嵌入矩阵。l 是神经网络的层数。&lt;/p&gt;
 
-&lt;p&gt;在使用等式1中的目标训练模型之后，我们将参数调整以适应有监督目标任务。我们假设一个带标签的数据集$C$，其中每个实例包括一系列输入 token $x^1, . . . , x^m$，以及一个标签y。该输入数据传输通过我们的预训练模型，以获得最终的Transformer block的激活器$h^m_l$ ，然后将其输入到新添加的线性输出层（参数为$W_y$）中以预测y：
-&lt;script type=&quot;math/tex&quot;&gt;P(y|x^1,...,x^m) = softmax(h^m_l W_y)&lt;/script&gt;
-这给我们提供了最大化的目标：
-&lt;script type=&quot;math/tex&quot;&gt;L_2(C) = \Sigma_{(x,y)} logP(y|x^1,...,x^m)&lt;/script&gt;
-我们还发现，在微调过程中将语言建模作为辅助目标有助于学习，原因是：（a）改善监督模型的泛化能力；（b）加速收敛。这与之前的工作[50, 43]一致，他们也观察到了使用这样一个辅助目标可以提高性能。具体来说，我们优化以下目标（权重λ）：
-&lt;script type=&quot;math/tex&quot;&gt;L_3(C) = L_2(C) + \lambda * L_1(C)&lt;/script&gt;
-总的来说，在微调过程中，我们仅需要额外的参数$W_y$以及分隔符token的嵌入（在第3.3节中描述）。&lt;/p&gt;
+&lt;p&gt;在使用等式1中的目标训练模型之后，我们将参数调整以适应有监督目标任务。我们假设一个带标签的数据集$C$，其中每个实例包括一系列输入 token $x^1, . . . , x^m$，以及一个标签y。该输入数据传输通过我们的预训练模型，以获得最终的Transformer block的激活器$h^m_l$ ，然后将其输入到新添加的线性输出层（参数为$W_y$）中以预测y：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;P(y|x^1,...,x^m) = softmax(h^m_l W_y)&lt;/script&gt;
+
+&lt;p&gt;这给我们提供了最大化的目标：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_2(C) = \Sigma_{(x,y)} logP(y|x^1,...,x^m)&lt;/script&gt;
+
+&lt;p&gt;我们还发现，在微调过程中将语言建模作为辅助目标有助于学习，原因是：（a）改善监督模型的泛化能力；（b）加速收敛。这与之前的工作[50, 43]一致，他们也观察到了使用这样一个辅助目标可以提高性能。具体来说，我们优化以下目标（权重λ）：&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L_3(C) = L_2(C) + \lambda * L_1(C)&lt;/script&gt;
+
+&lt;p&gt;总的来说，在微调过程中，我们仅需要额外的参数$W_y$以及分隔符token的嵌入（在第3.3节中描述）。&lt;/p&gt;
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1.jpg&quot; alt=&quot;Figure1&quot; width= height= /&gt;
+            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1.jpg&quot; alt=&quot;图1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的token序列，然后在最后添加一层线性+softmax层&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;Figure1&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的token序列，然后在最后添加一层线性+softmax层&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;图1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的token序列，然后在最后添加一层线性+softmax层。&lt;/p&gt;
 
 &lt;p&gt;对于某些任务，如文本分类，我们可以直接按照上述方法微调我们的模型。某些其他任务，如问题回答或文本蕴含，具有结构化输入，如有序句子对或文档、问题和答案的三元组。由于我们的预训练模型是在连续文本序列上进行训练的，因此我们需要对其进行一些修改才能将其应用于这些任务。之前的工作提出了在转移表示之上学习特定任务的架构[44]。这种方法重新引入了大量任务特定的定制，并且没有为这些额外的架构组件使用迁移学习。相反，我们使用遍历式方法[52]，将结构化输入转换为我们的预训练模型可以处理的有序序列。这些输入转换使我们能够避免在任务之间对架构进行大量更改。我们在下面简要描述了这些输入转换，图1提供了一个视觉示例。所有转换都包括添加随机初始化的开始和结束标记（⟨s⟩, ⟨e⟩）。&lt;/p&gt;
 
-&lt;p&gt;文本蕴含：对于蕴含任务，我们将前提p和假设h的令牌序列连接在一起，中间用分隔符标记($)隔开。
-相似性：对于相似性任务，比较的两个句子之间没有固有的顺序。为了反映这一点，我们修改输入序列以包含两种可能的句子顺序（中间有分隔符），并分别处理它们以生成两个序列表示 $h^m_l$，这些表示在输入到线性输出层之前按元素相加。
-问题回答和常识推理：对于这些任务，我们给定一个上下文文档z，一个问题q和一组可能的答案${a_k}$。我们将文档上下文和问题与每个可能的答案连接在一起，在中间添加一个分隔符标记，得到$[z;q;$;a_k]$。使用我们的模型独立处理这些序列，然后通过softmax层进行归一化，以生成可能答案的分布。&lt;/p&gt;
+&lt;p&gt;文本蕴含：对于蕴含任务，我们将前提p和假设h的令牌序列连接在一起，中间用分隔符标记($)隔开。&lt;/p&gt;
+
+&lt;p&gt;相似性：对于相似性任务，比较的两个句子之间没有固有的顺序。为了反映这一点，我们修改输入序列以包含两种可能的句子顺序（中间有分隔符），并分别处理它们以生成两个序列表示 $h^m_l$，这些表示在输入到线性输出层之前按元素相加。&lt;/p&gt;
+
+&lt;p&gt;问题回答和常识推理：对于这些任务，我们给定一个上下文文档z，一个问题q和一组可能的答案${a_k}$。我们将文档上下文和问题与每个可能的答案连接在一起，在中间添加一个分隔符标记，得到$[z;q;$;a_k]$。使用我们的模型独立处理这些序列，然后通过softmax层进行归一化，以生成可能答案的分布。&lt;/p&gt;
 
 &lt;h2 id=&quot;4-试验&quot;&gt;4. 试验&lt;/h2&gt;
 
@@ -185,12 +191,10 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table2.jpg&quot; alt=&quot;Table2&quot; width= height= /&gt;
+            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table2.jpg&quot; alt=&quot;表2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x表示5个模型的集成。所有数据集都使用准确率作为评估指标&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;Table2&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x表示5个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;表2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x表示5个模型的集成。所有数据集都使用准确率作为评估指标。&lt;/p&gt;
 
 &lt;p&gt;答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的RACE数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与CNN [19] 或SQuaD [47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了Story Cloze Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在Story Cloze上最高提高了8.9%，在RACE上整体提高了5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。&lt;/p&gt;
 
@@ -198,12 +202,10 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table3.jpg&quot; alt=&quot;Table2&quot; width= height= /&gt;
+            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table3.jpg&quot; alt=&quot;表3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x表示9个模型的集成&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;Table2&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x表示9个模型的集成&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;表3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x表示9个模型的集成。&lt;/p&gt;
 
 &lt;p&gt;语义相似度：语义相似度（或释义检测）任务包括预测两个句子在语义上是否等价。挑战在于识别概念的重新表述，理解否定语句以及处理句法歧义。我们在这个任务中使用了三个数据集——Microsoft Paraphrase语料库（MRPC）[14]（来源于新闻报道），Quora问题对（QQP）数据集[9]，以及语义文本相似度基准（STS-B）[6]。我们在三个语义相似度任务的两个任务中取得了最佳成绩（表4），在STS-B上的绝对增益达到1分。在QQP上的性能差距显著，与单任务BiLSTM + ELMo + Attn相比，绝对提高了4.2%。&lt;/p&gt;
 
@@ -213,12 +215,10 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table4.jpg&quot; alt=&quot;Table2&quot; width= height= /&gt;
+            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table4.jpg&quot; alt=&quot;表4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用GLUE基准测试进行。（mc= Mathews相关系数，acc=准确率，pc=Pearson相关系数）&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;Table2&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用GLUE基准测试进行。（mc= Mathews相关系数，acc=准确率，pc=Pearson相关系数）&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;表4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用GLUE基准测试进行。（mc= Mathews相关系数，acc=准确率，pc=Pearson相关系数）&lt;/p&gt;
 
 &lt;p&gt;总体来说，我们的方法在12个评估数据集中的9个上取得了新的最佳成绩，很多情况下超过了集成模型。我们的结果还表明，我们的方法在不同规模的数据集上都表现良好，从较小的数据集如STS-B（约5.7k训练样本）到最大的数据集SNLI（约550k训练样本）。&lt;/p&gt;
 
@@ -230,12 +230,10 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1-2.jpg&quot; alt=&quot;Figure2&quot; width= height= /&gt;
+            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1-2.jpg&quot; alt=&quot;图2：（左）将从预训练语言模型迁移的层数逐渐增加对RACE和MultiNLI的影响。（右）图表显示了LM预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;Figure2&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图2：（左）将从预训练语言模型迁移的层数逐渐增加对RACE和MultiNLI的影响。（右）图表显示了LM预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;图2：（左）将从预训练语言模型迁移的层数逐渐增加对RACE和MultiNLI的影响。（右）图表显示了LM预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化。&lt;/p&gt;
 
 &lt;p&gt;零样本表现：我们希望更好地了解为什么对Transformer进行语言模型预训练是有效的。一个假设是底层生成模型为了提高其语言建模能力，学会了我们用于评估的许多任务，而Transformer相比LSTM的更结构化的注意力记忆有助于更好地迁移。我们设计了一系列启发式解决方案，使用底层生成模型在无监督微调的情况下执行任务。我们在图2（右）中显示了在生成预训练过程中这些启发式解决方案的有效性。我们观察到这些启发式方法的性能在训练过程中稳定且稳步提高，表明生成预训练支持学习各种与任务相关的功能。我们还观察到LSTM在零样本性能方面波动较大，表明Transformer架构的归纳偏差有助于迁移。&lt;/p&gt;
 
@@ -326,8 +324,8 @@
       &lt;table&gt;
         &lt;tbody&gt;
           &lt;tr&gt;
-            &lt;td&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 P(Y&lt;/td&gt;
-            &lt;td&gt;X)，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;/td&gt;
+            &lt;td&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 $$P(Y&lt;/td&gt;
+            &lt;td&gt;X)$$，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;/td&gt;
           &lt;/tr&gt;
         &lt;/tbody&gt;
       &lt;/table&gt;
@@ -337,8 +335,8 @@
 &lt;/div&gt;
 </description>
         <pubDate>Wed, 05 Apr 2023 23:32:00 +0800</pubDate>
-        <link>http://wulfric.me/2023/04/gpt1-ch/</link>
-        <guid isPermaLink="true">http://wulfric.me/2023/04/gpt1-ch/</guid>
+        <link>http://localhost:4000/2023/04/gpt1-ch/</link>
+        <guid isPermaLink="true">http://localhost:4000/2023/04/gpt1-ch/</guid>
         
         <category>ai</category>
         
@@ -561,8 +559,8 @@ Build performance summary:
 &lt;/div&gt;
 </description>
         <pubDate>Mon, 02 Sep 2019 23:32:00 +0800</pubDate>
-        <link>http://wulfric.me/2019/09/java11-install-debug/</link>
-        <guid isPermaLink="true">http://wulfric.me/2019/09/java11-install-debug/</guid>
+        <link>http://localhost:4000/2019/09/java11-install-debug/</link>
+        <guid isPermaLink="true">http://localhost:4000/2019/09/java11-install-debug/</guid>
         
         <category>java</category>
         
@@ -715,8 +713,8 @@ Build performance summary:
 &lt;/div&gt;
 </description>
         <pubDate>Sun, 30 Dec 2018 18:59:00 +0800</pubDate>
-        <link>http://wulfric.me/2018/12/agile-practice/</link>
-        <guid isPermaLink="true">http://wulfric.me/2018/12/agile-practice/</guid>
+        <link>http://localhost:4000/2018/12/agile-practice/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/12/agile-practice/</guid>
         
         <category>agile</category>
         
@@ -983,8 +981,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Thu, 19 Jul 2018 19:26:00 +0800</pubDate>
-        <link>http://wulfric.me/2018/07/nginx-demo/</link>
-        <guid isPermaLink="true">http://wulfric.me/2018/07/nginx-demo/</guid>
+        <link>http://localhost:4000/2018/07/nginx-demo/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/07/nginx-demo/</guid>
         
         <category>nginx</category>
         
@@ -1176,8 +1174,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Tue, 21 Nov 2017 22:26:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/11/builder-validate-fields/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/11/builder-validate-fields/</guid>
+        <link>http://localhost:4000/2017/11/builder-validate-fields/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/11/builder-validate-fields/</guid>
         
         <category>java</category>
         
@@ -1308,8 +1306,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Sun, 19 Nov 2017 15:26:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/11/what-is-invariant/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/11/what-is-invariant/</guid>
+        <link>http://localhost:4000/2017/11/what-is-invariant/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/11/what-is-invariant/</guid>
         
         <category>java</category>
         
@@ -1606,8 +1604,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;p&gt;finalizer 也有可以使用的场合，但都比较偏门，还是不要用了，真正需要的时候自然会想起来有这个东西的。&lt;/p&gt;
 </description>
         <pubDate>Mon, 13 Nov 2017 20:08:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/11/effective-java-2/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/11/effective-java-2/</guid>
+        <link>http://localhost:4000/2017/11/effective-java-2/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/11/effective-java-2/</guid>
         
         <category>java</category>
         
@@ -1804,8 +1802,8 @@ output_buffering &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; 3
 &lt;/div&gt;
 </description>
         <pubDate>Fri, 22 Sep 2017 18:48:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/09/php-headers-already-sent/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/09/php-headers-already-sent/</guid>
+        <link>http://localhost:4000/2017/09/php-headers-already-sent/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/09/php-headers-already-sent/</guid>
         
         <category>php</category>
         
@@ -2056,8 +2054,8 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
 &lt;/div&gt;
 </description>
         <pubDate>Tue, 08 Aug 2017 10:51:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/08/php7-xhprof/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/08/php7-xhprof/</guid>
+        <link>http://localhost:4000/2017/08/php7-xhprof/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/08/php7-xhprof/</guid>
         
         <category>php7</category>
         

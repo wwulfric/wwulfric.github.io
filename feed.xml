@@ -4,10 +4,10 @@
     <title>Storm Spirit</title>
     <description>这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。
 </description>
-    <link>http://localhost:4000/</link>
-    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Thu, 06 Apr 2023 23:57:45 +0800</pubDate>
-    <lastBuildDate>Thu, 06 Apr 2023 23:57:45 +0800</lastBuildDate>
+    <link>http://wulfric.me/</link>
+    <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Fri, 07 Apr 2023 00:33:47 +0800</pubDate>
+    <lastBuildDate>Fri, 07 Apr 2023 00:33:47 +0800</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2023. All rights reserved.</rights>
     
@@ -50,8 +50,8 @@
 &lt;p&gt;当一个大型语言模型在一个足够庞大且多样的数据集上进行训练时，它能在众多领域和数据集中表现出色。GPT-2在8个经过测试的语言建模数据集中的7个上实现了零样本的顶尖性能。模型在零样本设置下能够完成的任务类型之多样，暗示着通过训练高容量模型来最大化足够多样化的文本语料库的似然性，开始学会执行大量令人惊叹的任务，而无需显式监督。&lt;/p&gt;
 </description>
         <pubDate>Thu, 06 Apr 2023 22:48:00 +0800</pubDate>
-        <link>http://localhost:4000/2023/04/gpt2-ch/</link>
-        <guid isPermaLink="true">http://localhost:4000/2023/04/gpt2-ch/</guid>
+        <link>http://wulfric.me/2023/04/gpt2-ch/</link>
+        <guid isPermaLink="true">http://wulfric.me/2023/04/gpt2-ch/</guid>
         
         <category>ai</category>
         
@@ -196,7 +196,7 @@
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x表示5个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
 
-&lt;p&gt;答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的RACE数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与CNN [19] 或SQuaD [47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了Story Cloze Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在Story Cloze上最高提高了8.9%，在RACE上整体提高了5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。&lt;/p&gt;
+&lt;p&gt;问题回答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的RACE数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与CNN [19] 或SQuaD [47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了Story Cloze Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在Story Cloze上最高提高了8.9%，在RACE上整体提高了5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。&lt;/p&gt;
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
@@ -324,8 +324,8 @@
       &lt;table&gt;
         &lt;tbody&gt;
           &lt;tr&gt;
-            &lt;td&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 $$P(Y&lt;/td&gt;
-            &lt;td&gt;X)$$，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;/td&gt;
+            &lt;td&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 $P(Y&lt;/td&gt;
+            &lt;td&gt;X)$，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;/td&gt;
           &lt;/tr&gt;
         &lt;/tbody&gt;
       &lt;/table&gt;
@@ -335,8 +335,8 @@
 &lt;/div&gt;
 </description>
         <pubDate>Wed, 05 Apr 2023 23:32:00 +0800</pubDate>
-        <link>http://localhost:4000/2023/04/gpt1-ch/</link>
-        <guid isPermaLink="true">http://localhost:4000/2023/04/gpt1-ch/</guid>
+        <link>http://wulfric.me/2023/04/gpt1-ch/</link>
+        <guid isPermaLink="true">http://wulfric.me/2023/04/gpt1-ch/</guid>
         
         <category>ai</category>
         
@@ -559,8 +559,8 @@ Build performance summary:
 &lt;/div&gt;
 </description>
         <pubDate>Mon, 02 Sep 2019 23:32:00 +0800</pubDate>
-        <link>http://localhost:4000/2019/09/java11-install-debug/</link>
-        <guid isPermaLink="true">http://localhost:4000/2019/09/java11-install-debug/</guid>
+        <link>http://wulfric.me/2019/09/java11-install-debug/</link>
+        <guid isPermaLink="true">http://wulfric.me/2019/09/java11-install-debug/</guid>
         
         <category>java</category>
         
@@ -713,8 +713,8 @@ Build performance summary:
 &lt;/div&gt;
 </description>
         <pubDate>Sun, 30 Dec 2018 18:59:00 +0800</pubDate>
-        <link>http://localhost:4000/2018/12/agile-practice/</link>
-        <guid isPermaLink="true">http://localhost:4000/2018/12/agile-practice/</guid>
+        <link>http://wulfric.me/2018/12/agile-practice/</link>
+        <guid isPermaLink="true">http://wulfric.me/2018/12/agile-practice/</guid>
         
         <category>agile</category>
         
@@ -981,8 +981,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Thu, 19 Jul 2018 19:26:00 +0800</pubDate>
-        <link>http://localhost:4000/2018/07/nginx-demo/</link>
-        <guid isPermaLink="true">http://localhost:4000/2018/07/nginx-demo/</guid>
+        <link>http://wulfric.me/2018/07/nginx-demo/</link>
+        <guid isPermaLink="true">http://wulfric.me/2018/07/nginx-demo/</guid>
         
         <category>nginx</category>
         
@@ -1174,8 +1174,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Tue, 21 Nov 2017 22:26:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/11/builder-validate-fields/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/11/builder-validate-fields/</guid>
+        <link>http://wulfric.me/2017/11/builder-validate-fields/</link>
+        <guid isPermaLink="true">http://wulfric.me/2017/11/builder-validate-fields/</guid>
         
         <category>java</category>
         
@@ -1306,8 +1306,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;/div&gt;
 </description>
         <pubDate>Sun, 19 Nov 2017 15:26:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/11/what-is-invariant/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/11/what-is-invariant/</guid>
+        <link>http://wulfric.me/2017/11/what-is-invariant/</link>
+        <guid isPermaLink="true">http://wulfric.me/2017/11/what-is-invariant/</guid>
         
         <category>java</category>
         
@@ -1604,8 +1604,8 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 &lt;p&gt;finalizer 也有可以使用的场合，但都比较偏门，还是不要用了，真正需要的时候自然会想起来有这个东西的。&lt;/p&gt;
 </description>
         <pubDate>Mon, 13 Nov 2017 20:08:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/11/effective-java-2/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/11/effective-java-2/</guid>
+        <link>http://wulfric.me/2017/11/effective-java-2/</link>
+        <guid isPermaLink="true">http://wulfric.me/2017/11/effective-java-2/</guid>
         
         <category>java</category>
         
@@ -1802,8 +1802,8 @@ output_buffering &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; 3
 &lt;/div&gt;
 </description>
         <pubDate>Fri, 22 Sep 2017 18:48:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/09/php-headers-already-sent/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/09/php-headers-already-sent/</guid>
+        <link>http://wulfric.me/2017/09/php-headers-already-sent/</link>
+        <guid isPermaLink="true">http://wulfric.me/2017/09/php-headers-already-sent/</guid>
         
         <category>php</category>
         
@@ -2054,8 +2054,8 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
 &lt;/div&gt;
 </description>
         <pubDate>Tue, 08 Aug 2017 10:51:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/08/php7-xhprof/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/08/php7-xhprof/</guid>
+        <link>http://wulfric.me/2017/08/php7-xhprof/</link>
+        <guid isPermaLink="true">http://wulfric.me/2017/08/php7-xhprof/</guid>
         
         <category>php7</category>
         

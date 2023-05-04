@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>GPT3 论文翻译：Language Models are Few-Shot Learners</title>
+  <meta name="description" content="语言模型是少样本学习者。
+
+">
+  <meta name="keywords" content="ai,chatgpt">
+  <link rel="canonical" href="http://wulfric.me/2023/04/gpt3-ch/">
+  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  
+    <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    TeX: {
+      equationNumbers: { autoNumber: "AMS" },
+      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
+    },
+    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script>
+
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
+</script>
+
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>27</div>
+        <div class='month'>APR</div>
+      </div>
+      <div class='year pull-left'>2023</div>
+    </div>
+    <h1 class="post-title">GPT3 论文翻译：Language Models are Few-Shot Learners</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>语言模型是少样本学习者。</p>
+
+<h2 id="摘要">摘要</h2>
+
+<p>近期的研究表明，在大型文本语料库上进行预训练，然后针对特定任务进行微调，可以在许多NLP任务和基准测试中取得显著成果。尽管这种方法在架构上通常不针对特定任务，但它仍然需要由数千或数万个样本组成的任务特定微调数据集。相比之下，人类通常只需几个示例或简单的指令就能完成新的语言任务，然而当前的NLP系统在很大程度上仍难以实现这一目标。在这里，我们展示了通过扩大语言模型规模可以极大地提高任务通用的少样本性能，有时甚至能达到与先前最先进的微调方法相媲美的水平。具体来说，我们训练了GPT-3，一种具有1750亿参数的自回归语言模型，比以前任何非稀疏语言模型多10倍，并在少样本设置中测试其性能。对于所有任务，GPT-3均无需进行任何梯度更新或微调，任务和少样本演示仅通过与模型的文本交互进行指定。GPT-3在许多NLP数据集上表现优异，包括翻译、问答和填空任务，以及一些需要实时推理或领域自适应<sup id="fnref:dat"><a href="#fn:dat" class="footnote">1</a></sup>的任务，如还原打乱的单词、在句子中使用新词或进行3位数算术运算。同时，我们还发现了，GPT-3在一些数据集上的少样本学习仍然存在困难，同时在一些大型网络语料库数据集的训练中遇到了一些方法论问题。最后，我们发现GPT-3可以生成新闻文章样本，人类评估者很难将其与人类撰写的文章区分开来。我们讨论了这一发现以及GPT-3总体产生的更广泛的社会影响。</p>
+
+<h2 id="1-导言">1. 导言</h2>
+
+<p>近年来，NLP系统中出现了一个趋势，即使用越来越灵活、任务无关的方式应用预训练的「语言表示」来进行下游迁移。首先，利用词向量来学习单层表示[MCCD13, PSM14]并输入到任务特定的架构中，然后使用具有多层表示和上下文状态的RNN形成更强大的表示[DL15, MBXS17, PNZtY18]（尽管仍应用于任务特定的架构），最近则直接微调预训练的循环或Transformer语言模型[VSP+17]，完全消除了任务特定架构的需求[RNSS18, DCLT18, HR18]。</p>
+
+<p>最后这种范式在许多具有挑战性的NLP任务上取得了实质性进展，如阅读理解、问答、文本蕴涵等，并在新的架构和算法的基础上不断发展[RSR+19, LOG+19, YDY+19, LCG+19]。然而，这种方法的一个主要局限性在于，尽管架构是任务通用的，但仍然需要任务特定的数据集和任务特定的微调：要在期望的任务上取得优异表现，通常需要在针对该任务的数千到数十万个示例的数据集上进行微调。消除这种局限性是可取的，原因有以下几点。</p>
+
+<p>首先，从实践角度来看，每个新任务都需要大量已标注样本的数据集限制了语言模型的应用范围。有非常多的有用的语言任务，包括纠正语法、生成抽象概念示例、评论短篇小说等等。对于这些任务中的很多来说，收集大量监督训练数据集极具挑战，尤其是当这个过程需要为每个新任务重复进行的时候。</p>
+
+<p>其次，随着模型表达能力愈发强大和训练数据分布愈发狭窄，挖掘训练数据中的非实质性关联的潜力也随之增加。这给预训练加微调范式带来了问题，在这个范式中，模型被设计成庞大的，以便在预训练阶段吸收信息，但随后会在非常狭窄的任务分布上进行微调。例如，有研究发现，大模型并不一定在分布之外具有更好的泛化能力。有证据表明，在这种范式下所实现的泛化性能可能较差，因为模型过于依赖训练分布，在其之外泛化能力不足。因此，在特定基准测试上微调模型的性能，即使名义上达到人类水平，也可能高估了其在实际任务中的表现。</p>
+
+<p>第三，人类在学习大部分语言任务时，并不需要大量的有监督数据集。一条简短的自然语言指令（例如，“请告诉我这句话描述的是快乐还是悲伤”）或者仅有的几个示例（例如，“这里有两个勇敢行为的例子；请给出第三个勇敢的例子”）通常就足以让人类具备至少一定程度的能力来执行新任务。除了揭示我们目前的NLP技术在概念上的局限性之外，这种适应能力还具有实际优势——它使人类能够在许多任务和技能之间无缝地混合或切换，如在漫长的对话过程中进行加法运算。为了使NLP系统更具实用性，我们期望未来的NLP系统能够拥有与人类相同的灵活性和通用性。</p>
+
+<h2 id="8结论">8结论</h2>
+
+<p>我们展示了一个拥有1750亿参数的语言模型，在零样本、单样本和少样本设置下，该模型在许多NLP任务和基准测试中表现出强大的性能。在某些情况下，它几乎能匹敌顶尖的微调系统的性能，同时能够生成高质量的样本，以及在即时定义的任务中表现出优秀的定性性能。我们记录了在不使用微调的情况下，性能在规模方面的大致可预测趋势。我们还讨论了这类模型的社会影响。尽管存在许多局限性和弱点，但这些结果表明，非常大的语言模型可能是可适应、通用语言系统发展中的重要组成部分。</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:dat">
+      <p>在自然语言处理（NLP）中，领域自适应任务（domain adaptation task）主要指的是将在一个领域（源领域）训练的模型调整为适应另一个领域（目标领域）的任务。由于不同领域的数据分布可能存在差异，直接将源领域的模型应用于目标领域可能会导致性能下降。因此，领域自适应的目标是通过利用目标领域的数据，使模型更好地适应和处理目标领域的任务。领域自适应的挑战在于，在许多情况下，目标领域的标注数据是有限的或者根本不存在。为了解决这个问题，研究人员采用了多种方法，包括：特征选择或变换，无监督或半监督领域自适应，自监督学习 <a href="#fnref:dat" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- ai, chatgpt -->
+
+    <a class='tag' href="/tags/ai">
+      ai
+    </a>
+
+    <a class='tag' href="/tags/chatgpt">
+      chatgpt
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2023. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

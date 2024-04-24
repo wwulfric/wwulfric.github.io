@@ -17,7 +17,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0'  # 根据你的 Jekyll 项目选择 Ruby 版本
+        ruby-version: '2.6'  # 根据你的 Jekyll 项目选择 Ruby 版本
 
     - name: Install dependencies
       run: |

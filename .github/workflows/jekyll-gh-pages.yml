@@ -1,0 +1,36 @@
+name: Build and Deploy Jekyll to GitHub Pages
+
+on:
+  push:
+    branches:
+      - source  # 监控 source 分支的 push 事件
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'source'  # 确保从 source 分支检出代码
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0'  # 根据你的 Jekyll 项目选择 Ruby 版本
+
+    - name: Install dependencies
+      run: |
+        gem install bundler
+        bundle install
+
+    - name: Build Jekyll site
+      run: bundle exec jekyll build
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./_site
+        publish_branch: master  # 将生成的页面推送到 master 分支
+        keep_files: true  # 保留 master 分支中现有的文件

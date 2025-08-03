@@ -38,6 +38,11 @@ defaults:
       author: "wulfric"
       comments: true
       analytics: true
+  -
+    scope:
+      path: "images"
+    values:
+      image: true
 analytics:
   provider: google
   google:

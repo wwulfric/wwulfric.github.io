@@ -1,16 +1,14 @@
 name: Build and Deploy Jekyll to GitHub Pages
 
 on:
-  push:
-    branches:
-      - source  # 监控 source 分支的 push 事件
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         ref: 'source'  # 确保从 source 分支检出代码
 

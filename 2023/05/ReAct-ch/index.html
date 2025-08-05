@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>ReAct 论文翻译：Synergizing Reasoning and Acting in Language Models</title>
+  <meta name="description" content="在语言模型中协同推理和行动的研究。
+
+">
+  <meta name="keywords" content="ai,chatgpt">
+  <link rel="canonical" href="http://wulfric.me/2023/05/ReAct-ch/">
+  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  
+    <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    TeX: {
+      equationNumbers: { autoNumber: "AMS" },
+      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
+    },
+    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script>
+
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
+</script>
+
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>04</div>
+        <div class='month'>MAY</div>
+      </div>
+      <div class='year pull-left'>2023</div>
+    </div>
+    <h1 class="post-title">ReAct 论文翻译：Synergizing Reasoning and Acting in Language Models</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>在语言模型中协同推理和行动的研究。</p>
+
+<h2 id="摘要">摘要</h2>
+
+<p>虽然大型语言模型（LLM）在语言理解和交互决策任务中展示出了令人印象深刻的性能，但它们在推理（例如思维链提示）和行动（例如行动计划生成）方面的能力主要被作为分离的主题进行研究。在本文中，我们探索了LLM在交替生成推理跟踪和任务特定行动方面的应用，从而允许两者之间更大的协同效应：推理跟踪帮助模型诱导、跟踪和更新行动计划以及处理异常，而行动则允许它与外部源（如知识库或环境）进行交互并收集额外信息。我们将我们的方法命名为ReAct，并将其应用于各种语言和决策任务中，展示了其在超越最先进基线的同时，提高了人类的可解释性和可信度。具体而言，在问题回答（HotpotQA）和事实验证（Fever）方面，ReAct通过与简单的维基百科API交互，克服了思维链推理中的幻觉和错误传播等普遍问题，并生成了更易解释的人类任务解决轨迹，相比没有推理跟踪的基线有了显著提高。此外，在两个交互式决策基准（ALFWorld和WebShop）上，ReAct的绝对成功率分别超过了模仿学习和强化学习方法34%和10%，并且只提示了一个或两个上下文示例。</p>
+
+<h2 id="1-intro">1. intro</h2>
+
+<p>人类智能的一个独特特征是能够无缝地将以任务为导向的行动与语言推理（或内部语言，Alderson-Day＆Fernyhough，2015）结合起来，这被理论上认为在人类认知中具有重要作用，以启用自我调节或策略化（Vygotsky，1987; Luria，1965; Fernyhough，2010）并维持工作记忆（Baddeley，1992）。考虑在厨房中做一道菜的例子。在任何两个具体的行动之间，我们可能会用语言进行推理以追踪进度（“现在一切都切好了，我应该把锅里的水烧开”），处理异常或根据情况调整计划（“我没有盐，所以我用酱油和胡椒代替”），以及意识到需要外部信息（“如何准备面团？让我在互联网上搜索一下”）。我们还可以行动（打开菜谱阅读食谱，打开冰箱，检查配料）以支持推理并回答问题（“我现在能做什么菜？”）。这种“行动”和“推理”之间的紧密协同使人类能够快速学习新任务，并进行强健的决策或推理，即使在以前未见过的情况下或面临信息不确定性时也能如此。</p>
+
+<p>最近的研究结果提示了将语言推理与交互决策制定相结合的自主系统的可能性。一方面，经过适当提示的大型语言模型（LLMs）已经展示出具有新兴能力，可以在算术、常识和符号推理任务中执行几个推理步骤，从问题中推导出答案（Wei等，2022）。然而，这种“思维链”推理是一个静态的黑盒子，因为模型使用自己的内部表示来生成思维，而没有与外部世界联系，这限制了其反应性推理或更新知识的能力。这可能会导致像事实幻觉和推理过程中的错误传播等问题（图1（1b））。另一方面，最近的研究探索了预训练语言模型在交互环境中规划和行动的应用（Ahn等，2022; Nakano等，2021; Yao等，2020; Huang等，2022a），重点是通过语言先验来预测行动。这些方法通常将多模态观察转换为文本，使用语言模型生成特定领域的行动或计划，然后使用控制器选择或执行它们。然而，它们没有利用语言模型对高层次目标进行抽象推理或维护工作记忆以支持行动，除了Huang等人（2022b）在当前状态下执行有限形式的语言推理以重申空间事实。除了这种简单的与几个块交互的具体任务外，还没有研究如何以协同的方式将推理和行动结合起来进行一般任务解决，以及这种组合是否与单独推理或行动相比带来系统性的优势。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="images/chatgpt/ReAct-figure1.png" alt="图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。</figcaption>
+        </figure></p>
+
+<p>在这项工作中，我们提出了ReAct，这是一种将语言模型与推理和行动相结合的通用范例，用于解决各种语言推理和决策任务（图1）。ReAct提示LLMs以交替方式生成与任务相关的语言推理轨迹和行动，这使得模型能够执行动态推理，创建、维护和调整高级计划以进行行动（推理到行动），同时与外部环境（例如维基百科）交互，将额外信息纳入推理（行动到推理）。</p>
+
+<p>我们对ReAct和现有最先进的基准模型在四个不同的基准测试中进行了实证评估：问答（HotPotQA，Yang等，2018），事实验证（Fever，Thorne等，2018），基于文本的游戏（ALFWorld，Shridhar等，2020b）和网页导航（WebShop，Yao等，2022）。对于HotPotQA和Fever，由于可以访问模型可以与之交互的维基百科API，ReAct在表现上优于纯行动生成模型，同时与思维链（CoT）（Wei等，2022）的表现相当。总体而言，最佳方法是ReAct和CoT的组合，允许在推理过程中同时使用内部知识和外部获取的信息。在ALFWorld和WebShop上，使用两个甚至一个ReAct提示就能够优于使用103~105个任务实例进行训练的模仿或强化学习方法，成功率分别提高了34%和10%。我们还通过与仅有行动的对照基线的比较，展示了在决策制定中稀疏且多功能推理的重要性。除了具有广泛的适用性和性能提升之外，推理和行动的组合还有助于模型的可解释性、可信度和可诊断性，在所有领域中，人类可以轻松区分模型内部知识和外部环境中的信息，并检查推理过程以了解模型行动的决策基础。</p>
+
+<p>综上所述，我们的主要贡献如下：（1）我们引入了ReAct，一种新颖的基于提示的范例，用于将推理和行动在语言模型中协同解决一般任务；（2）我们在各种基准测试中进行了广泛的实验，展示了ReAct在少样本学习设置下相对于之前单独执行推理或行动生成的方法的优势；（3）我们进行了系统的去除实验和分析，以了解在推理任务中行动的重要性以及在交互任务中推理的重要性；（4）我们分析了ReAct在提示设置下的限制（即对推理和行动行为的有限支持），并进行了初始的微调实验，展示了ReAct利用额外训练数据改善性能的潜力。将ReAct扩展到更多任务的训练和操作，并将其与强化学习等互补的范例相结合，可以进一步释放大型语言模型的潜力。</p>
+
+<h2 id="2-协同推理和行动">2. 协同推理和行动</h2>
+
+<table>
+  <tbody>
+    <tr>
+      <td>考虑一个代理与环境互动以解决任务的一般设置。在时间步骤t，代理从环境接收观察值ot∈O，并根据某个策略π(at</td>
+      <td>ct)采取行动at∈A，其中ct=(o1, a1, · · · , ot−1, at−1, ot)是代理的上下文。当映射ct 7→ at非常隐式且需要大量计算时，学习策略面临挑战。例如，图1（1c）中的代理无法生成正确的最终行动（Act 4）以完成问答任务，因为它需要对轨迹上下文（问题、行动1-3、观察1-3）进行复杂的推理。同样，图1（2a）中的代理未能从上下文中理解到水槽1不含有胡椒瓶1，因此不断产生幻觉行动。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>ReAct的想法很简单：我们将代理的行动空间增加到Aˆ = A ∪ L，其中L是语言空间。语言空间中的行动aˆt∈L，我们将其称为思考或推理轨迹，不会影响外部环境，因此不会产生观察反馈。相反，思考aˆt旨在通过对当前上下文ct进行推理来组合有用的信息，并更新上下文ct+1 = (ct, aˆt)以支持未来的推理或行动。如图1所示，可以有各种类型的有用的思考，例如分解任务目标并创建行动计划（2b，Act 1；1d，Thought 1），注入与任务解决相关的常识知识（2b，Act 1），从观察中提取重要部分（1d，Thought2，4），跟踪进度并转移行动计划（2b，Act 8），处理异常情况并调整行动计划（1d，Thought 3），等等。</p>
+
+<p>然而，由于语言空间L是无限的，学习这个增强的行动空间是困难的，需要强大的语言先验知识。在本文中，我们主要关注的是这样的设置：使用冻结的大型语言模型PaLM-540B（Chowdhery等，2022）1，通过少量的上下文示例来提示生成特定领域的行动和自由形式的语言思考以解决任务（图1（1d），（2b））。每个上下文示例都是一种人类轨迹，包含了一系列行动、思考和环境观察，用于解决一个任务实例（详见附录C）。对于需要推理的主要任务（图1（1）），我们交替生成思考和行动，使任务解决轨迹由多个思考-行动-观察步骤组成。相反，对于可能涉及大量行动的决策制定任务（图1（2）），思考只需要在轨迹的最相关位置稀疏出现，因此我们让语言模型自行决定思考和行动的异步发生。</p>
+
+<p>由于决策制定和推理能力整合到了大型语言模型中，ReAct具有几个独特的特点：A）直观易用的设计：设计ReAct提示很简单，因为人类注释者只需在其采取的行动之上用语言记录下他们的思考过程。本文中没有使用特定的格式选择、思考设计或示例选择。我们在第3和第4节详细介绍了每个任务的提示设计。B）通用灵活的：由于思考空间和思考-行动发生的灵活性，ReAct适用于具有不同行动空间和推理需求的各种任务，包括但不限于问答、事实验证、文本游戏和Web导航。C）性能优越且健壮：ReAct在仅使用一个到六个上下文示例进行学习的情况下，对新任务实例具有很强的泛化性能，始终优于仅在不同领域进行推理或行动的基线。我们还在第3节展示了启用微调时的额外好处，以及在第4节中展示了ReAct在提示选择方面的健壮性。D）与人类对齐且可控：ReAct承诺提供一个可解释的顺序决策制定和推理过程，人类可以轻松检查推理和事实正确性。此外，如第4节中的图5所示，人类还可以通过思考编辑来控制或更正代理行为。</p>
+
+<h2 id="3-基于知识的推理任务">3. 基于知识的推理任务</h2>
+
+<p>我们从基于知识的推理任务开始，例如多跳问答和事实验证。如图1（1d）所示，通过与维基百科API交互，ReAct能够检索支持推理的信息，同时利用推理来确定下一步要检索什么，展示了推理和行动的协同作用。</p>
+
+<h3 id="31-设置">3.1 设置</h3>
+
+<p>域：我们考虑两个具有挑战性的知识检索和推理数据集：（1）Hot-PotQA（Yang等，2018），一个需要在两个或多个维基百科段落上进行推理的多跳问答基准测试，和（2）FEVER（Thorne等，2018），一个事实验证基准测试，其中每个声明基于是否存在维基百科段落来进行支持、反驳或不足够信息的注释。在本文中，我们对这两个任务都采用仅有问题的设置，模型仅接收问题/声明作为输入，没有访问支持段落的权限，并且必须依靠其内部知识或通过与外部环境交互来检索知识以支持推理。</p>
+
+<p>行动空间：我们设计了一个简单的维基百科Web API，支持交互式信息检索，包括三种类型的行动：（1）搜索[实体]，如果存在，则返回相应实体维基页面的前5句话，否则建议维基百科搜索引擎的前5个相似实体；（2）查找[字符串]，它会返回包含字符串的页面中的下一句话，模拟浏览器上Ctrl+F的功能；（3）完成[答案]，它会使用答案结束当前任务。我们注意到，这个行动空间主要只能基于精确段落名称检索到段落的一小部分，远远不如最先进的词汇或神经检索器。目的是模拟人类如何与维基百科交互，并通过明确的语言推理强制模型检索信息。</p>
+
+<h3 id="32-方法">3.2 方法</h3>
+
+<p>ReAct Prompting: 对于HotpotQA和FEVER，我们从训练集中随机选择了6个和3个案例，并手动编写了ReAct格式的轨迹，用作提示中的少量样本。与图1（d）类似，每个轨迹由多个思考-行动-观察步骤（即密集思考）组成，其中自由形式的思考用于各种目的。具体而言，我们使用一些思考来分解问题（“我需要搜索x，找到y，然后找到z”），从维基百科观察中提取信息（“x始于1844年”，“该段落没有提到x”），进行常识（“x不是y，所以z必须是…”）或算术推理（“1844 &lt; 1989”），指导搜索重构（“也许我可以搜索/查找x”），并综合最终答案（“…所以答案是x”）。更多详细信息请参见附录C。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="images/chatgpt/ReAct-table1.png" alt="表1：PaLM-540B在HotpotQA和FEVER上的提示结果" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>表1：PaLM-540B在HotpotQA和FEVER上的提示结果</figcaption>
+        </figure></p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="images/chatgpt/ReAct-figure2.png" alt="图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果</figcaption>
+        </figure></p>
+
+<p>基线: 我们系统地删除ReAct轨迹以构建用于多个基线的提示（格式如图1（1a-1c））：（a）标准提示（Standard），它删除了ReAct轨迹中的所有思考、行动和观察。 （b）思考链提示（CoT）（Wei等，2022），它删除了行动和观察，并作为仅基于推理的基线。我们还通过在推理过程中使用解码温度0.7对21个CoT轨迹进行采样并采用多数答案来构建自一致性基线（CoT-SC）（Wang等，2022a;b），发现它始终提高了CoT的性能。 （c）仅执行提示（Act），它删除了ReAct轨迹中的思考，略微类似于WebGPT（Nakano等，2021）如何与互联网交互以回答问题，尽管它针对不同的任务和行动空间，并使用模仿和强化学习而不是提示。</p>
+
+<p>连接内部的和外部的知识：正如将在第3.3节中详细介绍的那样，我们观察到ReAct展示的问题解决过程更加事实和基础，而CoT在制定推理结构方面更加准确，但很容易受到虚构的事实或思考的影响。因此，我们建议将ReAct和CoT-SC结合起来，并让模型根据以下启发式决定何时切换到另一种方法：A）ReAct→CoT-SC：当ReAct在给定的步骤内未能返回答案时，回退到CoT-SC。我们为HotpotQA和FEVER设置了7和5个步骤，因为我们发现更多的步骤不会改善ReAct的性能3。B）CoT-SC→ReAct：当n个CoT-SC样本中的多数答案出现不到n/2次时（即内部知识可能不够自信地支持任务），回退到ReAct。</p>
+
+<p>微调：由于在大规模手动注释推理轨迹和行动方面存在挑战，我们考虑采用类似于Zelikman等人（2022）的引导方法，使用由ReAct（以及其他基线）生成的带有正确答案的3,000个轨迹来微调较小的语言模型（PaLM-8/62B）以解码轨迹（所有思考、行动、观察），并以输入问题/声明为条件。更多细节请参见附录B.1。</p>
+
+<h2 id="6-结论">6 结论</h2>
+
+<p>我们提出了ReAct—一种简单而有效的方法，用于在大型语言模型中协同推理和行动。通过多种多跳问答、事实检查和交互决策任务的实验，我们展示了ReAct可以实现卓越性能和可解释的决策追踪。尽管我们的方法简单，但大型行动空间的复杂任务需要更多的演示来学习，这很不幸可能会超出上下文学习的输入长度限制。我们探索了在HotpotQA上的微调方法，并取得了初步的有希望的结果，但是从更多高质量的人类注释中学习将是进一步提高性能的必要条件。通过多任务训练扩展ReAct并将其与强化学习等补充范例相结合，可能会产生更强大的代理程序，进一步释放LLM在更多应用中的潜力。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- ai, chatgpt -->
+
+    <a class='tag' href="/tags/ai">
+      ai
+    </a>
+
+    <a class='tag' href="/tags/chatgpt">
+      chatgpt
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2025. All rights reserved.
+</footer>
+
+
+    </div>
+    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
+    <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+
+  </body>
+
+</html>

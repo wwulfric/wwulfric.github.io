@@ -6,10 +6,111 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Thu, 04 May 2023 21:32:18 +0800</pubDate>
-    <lastBuildDate>Thu, 04 May 2023 21:32:18 +0800</lastBuildDate>
+    <pubDate>Tue, 05 Aug 2025 09:49:28 -0500</pubDate>
+    <lastBuildDate>Tue, 05 Aug 2025 09:49:28 -0500</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
-    <rights>wulfric © 2013~2023. All rights reserved.</rights>
+    <rights>wulfric © 2013~2025. All rights reserved.</rights>
+    
+      <item>
+        <title>ReAct 论文翻译：Synergizing Reasoning and Acting in Language Models</title>
+        <description>&lt;p&gt;在语言模型中协同推理和行动的研究。&lt;/p&gt;
+
+&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
+
+&lt;p&gt;虽然大型语言模型（LLM）在语言理解和交互决策任务中展示出了令人印象深刻的性能，但它们在推理（例如思维链提示）和行动（例如行动计划生成）方面的能力主要被作为分离的主题进行研究。在本文中，我们探索了LLM在交替生成推理跟踪和任务特定行动方面的应用，从而允许两者之间更大的协同效应：推理跟踪帮助模型诱导、跟踪和更新行动计划以及处理异常，而行动则允许它与外部源（如知识库或环境）进行交互并收集额外信息。我们将我们的方法命名为ReAct，并将其应用于各种语言和决策任务中，展示了其在超越最先进基线的同时，提高了人类的可解释性和可信度。具体而言，在问题回答（HotpotQA）和事实验证（Fever）方面，ReAct通过与简单的维基百科API交互，克服了思维链推理中的幻觉和错误传播等普遍问题，并生成了更易解释的人类任务解决轨迹，相比没有推理跟踪的基线有了显著提高。此外，在两个交互式决策基准（ALFWorld和WebShop）上，ReAct的绝对成功率分别超过了模仿学习和强化学习方法34%和10%，并且只提示了一个或两个上下文示例。&lt;/p&gt;
+
+&lt;h2 id=&quot;1-intro&quot;&gt;1. intro&lt;/h2&gt;
+
+&lt;p&gt;人类智能的一个独特特征是能够无缝地将以任务为导向的行动与语言推理（或内部语言，Alderson-Day＆Fernyhough，2015）结合起来，这被理论上认为在人类认知中具有重要作用，以启用自我调节或策略化（Vygotsky，1987; Luria，1965; Fernyhough，2010）并维持工作记忆（Baddeley，1992）。考虑在厨房中做一道菜的例子。在任何两个具体的行动之间，我们可能会用语言进行推理以追踪进度（“现在一切都切好了，我应该把锅里的水烧开”），处理异常或根据情况调整计划（“我没有盐，所以我用酱油和胡椒代替”），以及意识到需要外部信息（“如何准备面团？让我在互联网上搜索一下”）。我们还可以行动（打开菜谱阅读食谱，打开冰箱，检查配料）以支持推理并回答问题（“我现在能做什么菜？”）。这种“行动”和“推理”之间的紧密协同使人类能够快速学习新任务，并进行强健的决策或推理，即使在以前未见过的情况下或面临信息不确定性时也能如此。&lt;/p&gt;
+
+&lt;p&gt;最近的研究结果提示了将语言推理与交互决策制定相结合的自主系统的可能性。一方面，经过适当提示的大型语言模型（LLMs）已经展示出具有新兴能力，可以在算术、常识和符号推理任务中执行几个推理步骤，从问题中推导出答案（Wei等，2022）。然而，这种“思维链”推理是一个静态的黑盒子，因为模型使用自己的内部表示来生成思维，而没有与外部世界联系，这限制了其反应性推理或更新知识的能力。这可能会导致像事实幻觉和推理过程中的错误传播等问题（图1（1b））。另一方面，最近的研究探索了预训练语言模型在交互环境中规划和行动的应用（Ahn等，2022; Nakano等，2021; Yao等，2020; Huang等，2022a），重点是通过语言先验来预测行动。这些方法通常将多模态观察转换为文本，使用语言模型生成特定领域的行动或计划，然后使用控制器选择或执行它们。然而，它们没有利用语言模型对高层次目标进行抽象推理或维护工作记忆以支持行动，除了Huang等人（2022b）在当前状态下执行有限形式的语言推理以重申空间事实。除了这种简单的与几个块交互的具体任务外，还没有研究如何以协同的方式将推理和行动结合起来进行一般任务解决，以及这种组合是否与单独推理或行动相比带来系统性的优势。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;images/chatgpt/ReAct-figure1.png&quot; alt=&quot;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;在这项工作中，我们提出了ReAct，这是一种将语言模型与推理和行动相结合的通用范例，用于解决各种语言推理和决策任务（图1）。ReAct提示LLMs以交替方式生成与任务相关的语言推理轨迹和行动，这使得模型能够执行动态推理，创建、维护和调整高级计划以进行行动（推理到行动），同时与外部环境（例如维基百科）交互，将额外信息纳入推理（行动到推理）。&lt;/p&gt;
+
+&lt;p&gt;我们对ReAct和现有最先进的基准模型在四个不同的基准测试中进行了实证评估：问答（HotPotQA，Yang等，2018），事实验证（Fever，Thorne等，2018），基于文本的游戏（ALFWorld，Shridhar等，2020b）和网页导航（WebShop，Yao等，2022）。对于HotPotQA和Fever，由于可以访问模型可以与之交互的维基百科API，ReAct在表现上优于纯行动生成模型，同时与思维链（CoT）（Wei等，2022）的表现相当。总体而言，最佳方法是ReAct和CoT的组合，允许在推理过程中同时使用内部知识和外部获取的信息。在ALFWorld和WebShop上，使用两个甚至一个ReAct提示就能够优于使用103~105个任务实例进行训练的模仿或强化学习方法，成功率分别提高了34%和10%。我们还通过与仅有行动的对照基线的比较，展示了在决策制定中稀疏且多功能推理的重要性。除了具有广泛的适用性和性能提升之外，推理和行动的组合还有助于模型的可解释性、可信度和可诊断性，在所有领域中，人类可以轻松区分模型内部知识和外部环境中的信息，并检查推理过程以了解模型行动的决策基础。&lt;/p&gt;
+
+&lt;p&gt;综上所述，我们的主要贡献如下：（1）我们引入了ReAct，一种新颖的基于提示的范例，用于将推理和行动在语言模型中协同解决一般任务；（2）我们在各种基准测试中进行了广泛的实验，展示了ReAct在少样本学习设置下相对于之前单独执行推理或行动生成的方法的优势；（3）我们进行了系统的去除实验和分析，以了解在推理任务中行动的重要性以及在交互任务中推理的重要性；（4）我们分析了ReAct在提示设置下的限制（即对推理和行动行为的有限支持），并进行了初始的微调实验，展示了ReAct利用额外训练数据改善性能的潜力。将ReAct扩展到更多任务的训练和操作，并将其与强化学习等互补的范例相结合，可以进一步释放大型语言模型的潜力。&lt;/p&gt;
+
+&lt;h2 id=&quot;2-协同推理和行动&quot;&gt;2. 协同推理和行动&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;考虑一个代理与环境互动以解决任务的一般设置。在时间步骤t，代理从环境接收观察值ot∈O，并根据某个策略π(at&lt;/td&gt;
+      &lt;td&gt;ct)采取行动at∈A，其中ct=(o1, a1, · · · , ot−1, at−1, ot)是代理的上下文。当映射ct 7→ at非常隐式且需要大量计算时，学习策略面临挑战。例如，图1（1c）中的代理无法生成正确的最终行动（Act 4）以完成问答任务，因为它需要对轨迹上下文（问题、行动1-3、观察1-3）进行复杂的推理。同样，图1（2a）中的代理未能从上下文中理解到水槽1不含有胡椒瓶1，因此不断产生幻觉行动。&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;ReAct的想法很简单：我们将代理的行动空间增加到Aˆ = A ∪ L，其中L是语言空间。语言空间中的行动aˆt∈L，我们将其称为思考或推理轨迹，不会影响外部环境，因此不会产生观察反馈。相反，思考aˆt旨在通过对当前上下文ct进行推理来组合有用的信息，并更新上下文ct+1 = (ct, aˆt)以支持未来的推理或行动。如图1所示，可以有各种类型的有用的思考，例如分解任务目标并创建行动计划（2b，Act 1；1d，Thought 1），注入与任务解决相关的常识知识（2b，Act 1），从观察中提取重要部分（1d，Thought2，4），跟踪进度并转移行动计划（2b，Act 8），处理异常情况并调整行动计划（1d，Thought 3），等等。&lt;/p&gt;
+
+&lt;p&gt;然而，由于语言空间L是无限的，学习这个增强的行动空间是困难的，需要强大的语言先验知识。在本文中，我们主要关注的是这样的设置：使用冻结的大型语言模型PaLM-540B（Chowdhery等，2022）1，通过少量的上下文示例来提示生成特定领域的行动和自由形式的语言思考以解决任务（图1（1d），（2b））。每个上下文示例都是一种人类轨迹，包含了一系列行动、思考和环境观察，用于解决一个任务实例（详见附录C）。对于需要推理的主要任务（图1（1）），我们交替生成思考和行动，使任务解决轨迹由多个思考-行动-观察步骤组成。相反，对于可能涉及大量行动的决策制定任务（图1（2）），思考只需要在轨迹的最相关位置稀疏出现，因此我们让语言模型自行决定思考和行动的异步发生。&lt;/p&gt;
+
+&lt;p&gt;由于决策制定和推理能力整合到了大型语言模型中，ReAct具有几个独特的特点：A）直观易用的设计：设计ReAct提示很简单，因为人类注释者只需在其采取的行动之上用语言记录下他们的思考过程。本文中没有使用特定的格式选择、思考设计或示例选择。我们在第3和第4节详细介绍了每个任务的提示设计。B）通用灵活的：由于思考空间和思考-行动发生的灵活性，ReAct适用于具有不同行动空间和推理需求的各种任务，包括但不限于问答、事实验证、文本游戏和Web导航。C）性能优越且健壮：ReAct在仅使用一个到六个上下文示例进行学习的情况下，对新任务实例具有很强的泛化性能，始终优于仅在不同领域进行推理或行动的基线。我们还在第3节展示了启用微调时的额外好处，以及在第4节中展示了ReAct在提示选择方面的健壮性。D）与人类对齐且可控：ReAct承诺提供一个可解释的顺序决策制定和推理过程，人类可以轻松检查推理和事实正确性。此外，如第4节中的图5所示，人类还可以通过思考编辑来控制或更正代理行为。&lt;/p&gt;
+
+&lt;h2 id=&quot;3-基于知识的推理任务&quot;&gt;3. 基于知识的推理任务&lt;/h2&gt;
+
+&lt;p&gt;我们从基于知识的推理任务开始，例如多跳问答和事实验证。如图1（1d）所示，通过与维基百科API交互，ReAct能够检索支持推理的信息，同时利用推理来确定下一步要检索什么，展示了推理和行动的协同作用。&lt;/p&gt;
+
+&lt;h3 id=&quot;31-设置&quot;&gt;3.1 设置&lt;/h3&gt;
+
+&lt;p&gt;域：我们考虑两个具有挑战性的知识检索和推理数据集：（1）Hot-PotQA（Yang等，2018），一个需要在两个或多个维基百科段落上进行推理的多跳问答基准测试，和（2）FEVER（Thorne等，2018），一个事实验证基准测试，其中每个声明基于是否存在维基百科段落来进行支持、反驳或不足够信息的注释。在本文中，我们对这两个任务都采用仅有问题的设置，模型仅接收问题/声明作为输入，没有访问支持段落的权限，并且必须依靠其内部知识或通过与外部环境交互来检索知识以支持推理。&lt;/p&gt;
+
+&lt;p&gt;行动空间：我们设计了一个简单的维基百科Web API，支持交互式信息检索，包括三种类型的行动：（1）搜索[实体]，如果存在，则返回相应实体维基页面的前5句话，否则建议维基百科搜索引擎的前5个相似实体；（2）查找[字符串]，它会返回包含字符串的页面中的下一句话，模拟浏览器上Ctrl+F的功能；（3）完成[答案]，它会使用答案结束当前任务。我们注意到，这个行动空间主要只能基于精确段落名称检索到段落的一小部分，远远不如最先进的词汇或神经检索器。目的是模拟人类如何与维基百科交互，并通过明确的语言推理强制模型检索信息。&lt;/p&gt;
+
+&lt;h3 id=&quot;32-方法&quot;&gt;3.2 方法&lt;/h3&gt;
+
+&lt;p&gt;ReAct Prompting: 对于HotpotQA和FEVER，我们从训练集中随机选择了6个和3个案例，并手动编写了ReAct格式的轨迹，用作提示中的少量样本。与图1（d）类似，每个轨迹由多个思考-行动-观察步骤（即密集思考）组成，其中自由形式的思考用于各种目的。具体而言，我们使用一些思考来分解问题（“我需要搜索x，找到y，然后找到z”），从维基百科观察中提取信息（“x始于1844年”，“该段落没有提到x”），进行常识（“x不是y，所以z必须是…”）或算术推理（“1844 &amp;lt; 1989”），指导搜索重构（“也许我可以搜索/查找x”），并综合最终答案（“…所以答案是x”）。更多详细信息请参见附录C。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;images/chatgpt/ReAct-table1.png&quot; alt=&quot;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;images/chatgpt/ReAct-figure2.png&quot; alt=&quot;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;基线: 我们系统地删除ReAct轨迹以构建用于多个基线的提示（格式如图1（1a-1c））：（a）标准提示（Standard），它删除了ReAct轨迹中的所有思考、行动和观察。 （b）思考链提示（CoT）（Wei等，2022），它删除了行动和观察，并作为仅基于推理的基线。我们还通过在推理过程中使用解码温度0.7对21个CoT轨迹进行采样并采用多数答案来构建自一致性基线（CoT-SC）（Wang等，2022a;b），发现它始终提高了CoT的性能。 （c）仅执行提示（Act），它删除了ReAct轨迹中的思考，略微类似于WebGPT（Nakano等，2021）如何与互联网交互以回答问题，尽管它针对不同的任务和行动空间，并使用模仿和强化学习而不是提示。&lt;/p&gt;
+
+&lt;p&gt;连接内部的和外部的知识：正如将在第3.3节中详细介绍的那样，我们观察到ReAct展示的问题解决过程更加事实和基础，而CoT在制定推理结构方面更加准确，但很容易受到虚构的事实或思考的影响。因此，我们建议将ReAct和CoT-SC结合起来，并让模型根据以下启发式决定何时切换到另一种方法：A）ReAct→CoT-SC：当ReAct在给定的步骤内未能返回答案时，回退到CoT-SC。我们为HotpotQA和FEVER设置了7和5个步骤，因为我们发现更多的步骤不会改善ReAct的性能3。B）CoT-SC→ReAct：当n个CoT-SC样本中的多数答案出现不到n/2次时（即内部知识可能不够自信地支持任务），回退到ReAct。&lt;/p&gt;
+
+&lt;p&gt;微调：由于在大规模手动注释推理轨迹和行动方面存在挑战，我们考虑采用类似于Zelikman等人（2022）的引导方法，使用由ReAct（以及其他基线）生成的带有正确答案的3,000个轨迹来微调较小的语言模型（PaLM-8/62B）以解码轨迹（所有思考、行动、观察），并以输入问题/声明为条件。更多细节请参见附录B.1。&lt;/p&gt;
+
+&lt;h2 id=&quot;6-结论&quot;&gt;6 结论&lt;/h2&gt;
+
+&lt;p&gt;我们提出了ReAct—一种简单而有效的方法，用于在大型语言模型中协同推理和行动。通过多种多跳问答、事实检查和交互决策任务的实验，我们展示了ReAct可以实现卓越性能和可解释的决策追踪。尽管我们的方法简单，但大型行动空间的复杂任务需要更多的演示来学习，这很不幸可能会超出上下文学习的输入长度限制。我们探索了在HotpotQA上的微调方法，并取得了初步的有希望的结果，但是从更多高质量的人类注释中学习将是进一步提高性能的必要条件。通过多任务训练扩展ReAct并将其与强化学习等补充范例相结合，可能会产生更强大的代理程序，进一步释放LLM在更多应用中的潜力。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 04 May 2023 22:48:00 -0500</pubDate>
+        <link>http://wulfric.me/2023/05/ReAct-ch/</link>
+        <guid isPermaLink="true">http://wulfric.me/2023/05/ReAct-ch/</guid>
+        
+        <category>ai</category>
+        
+        <category>chatgpt</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
     
       <item>
         <title>Transformer 论文翻译：Attention is All you Need</title>
@@ -47,7 +148,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/Transformer-encoder-decoder.png&quot; alt=&quot;图1：Transformer 模型架构&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/Transformer-encoder-decoder.png&quot; alt=&quot;图1：Transformer 模型架构&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图1：Transformer 模型架构&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -68,7 +169,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/Transformer-attention2.png&quot; alt=&quot;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/Transformer-attention2.png&quot; alt=&quot;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -83,7 +184,7 @@
 
 &lt;p&gt;两种最常用的注意力函数是加性注意力[2]和点积（乘法）注意力。点积注意力与我们的算法相同，除了缩放因子 $\frac{1}{d_k}$。加性注意力使用具有单个隐藏层的前馈网络计算兼容性函数。虽然两者在理论复杂度上相似，但在实践中，点积注意力速度更快，空间效率更高，因为它可以使用高度优化的矩阵乘法代码实现。&lt;/p&gt;
 
-&lt;p&gt;虽然在dk的值较小的情况下，这两种机制的表现相似，但对于较大的dk值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的dk值，点积变得很大，将softmax函数推入具有极小梯度的区域&lt;sup id=&quot;fnref:4&quot;&gt;&lt;a href=&quot;#fn:4&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。为了抵消这种效应，我们通过 $\frac{1}{d_k}$ 对点积进行缩放。&lt;/p&gt;
+&lt;p&gt;虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域&lt;sup id=&quot;fnref:4&quot;&gt;&lt;a href=&quot;#fn:4&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。为了抵消这种效应，我们通过 $\frac{1}{d_k}$ 对点积进行缩放。&lt;/p&gt;
 
 &lt;h4 id=&quot;322-多头注意力&quot;&gt;3.2.2 多头注意力&lt;/h4&gt;
 
@@ -94,7 +195,9 @@
 &lt;script type=&quot;math/tex; mode=display&quot;&gt;MultiHead(Q,K,V)=Concat(head_1,...,head_h)W^O \\
 where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)&lt;/script&gt;
 
-&lt;p&gt;这里的线性映射就是参数矩阵 $W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}$。&lt;/p&gt;
+&lt;p&gt;这里的线性映射就是参数矩阵&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}&lt;/script&gt;
 
 &lt;p&gt;在本文中，我们使用了h = 8个平行的注意力层或头。对于每个头，我们使用dk = dv = dmodel/h = 64。由于每个头的维度降低，总的计算成本类似于全维度的单头注意力。&lt;/p&gt;
 
@@ -128,7 +231,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/Transformer-table1.png&quot; alt=&quot;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/Transformer-table1.png&quot; alt=&quot;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -177,7 +280,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Fri, 28 Apr 2023 22:48:00 +0800</pubDate>
+        <pubDate>Fri, 28 Apr 2023 22:48:00 -0500</pubDate>
         <link>http://wulfric.me/2023/04/Transformer-ch/</link>
         <guid isPermaLink="true">http://wulfric.me/2023/04/Transformer-ch/</guid>
         
@@ -222,7 +325,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Thu, 27 Apr 2023 22:48:00 +0800</pubDate>
+        <pubDate>Thu, 27 Apr 2023 22:48:00 -0500</pubDate>
         <link>http://wulfric.me/2023/04/gpt3-ch/</link>
         <guid isPermaLink="true">http://wulfric.me/2023/04/gpt3-ch/</guid>
         
@@ -273,7 +376,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
 
 &lt;p&gt;当一个大型语言模型在一个足够庞大且多样的数据集上进行训练时，它能在众多领域和数据集中表现出色。GPT-2在8个经过测试的语言建模数据集中的7个上实现了零样本的顶尖性能。模型在零样本设置下能够完成的任务类型之多样，暗示着通过训练高容量模型来最大化足够多样化的文本语料库的似然性，开始学会执行大量令人惊叹的任务，而无需显式监督。&lt;/p&gt;
 </description>
-        <pubDate>Thu, 06 Apr 2023 22:48:00 +0800</pubDate>
+        <pubDate>Thu, 06 Apr 2023 22:48:00 -0500</pubDate>
         <link>http://wulfric.me/2023/04/gpt2-ch/</link>
         <guid isPermaLink="true">http://wulfric.me/2023/04/gpt2-ch/</guid>
         
@@ -351,7 +454,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1.jpg&quot; alt=&quot;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/gpt1.jpg&quot; alt=&quot;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -415,7 +518,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table2.jpg&quot; alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/GPT1-table2.jpg&quot; alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -426,7 +529,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table3.jpg&quot; alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/GPT1-table3.jpg&quot; alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -439,7 +542,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table4.jpg&quot; alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/GPT1-table4.jpg&quot; alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -454,7 +557,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1-2.jpg&quot; alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; width= height= /&gt;
+            &lt;img src=&quot;images/chatgpt/gpt1-2.jpg&quot; alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -558,7 +661,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Wed, 05 Apr 2023 23:32:00 +0800</pubDate>
+        <pubDate>Wed, 05 Apr 2023 23:32:00 -0500</pubDate>
         <link>http://wulfric.me/2023/04/gpt1-ch/</link>
         <guid isPermaLink="true">http://wulfric.me/2023/04/gpt1-ch/</guid>
         
@@ -568,6 +671,444 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
         
         
         <category>技术</category>
+        
+      </item>
+    
+      <item>
+        <title>Gpt1 Ch</title>
+        <description>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;
+&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Strict//EN&quot;
+	&quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd&quot;&gt;
+
+&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+
+&lt;head&gt;
+&lt;title&gt;2023-04-05-gpt1-ch.html&lt;/title&gt;
+&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html;charset=utf-8&quot;/&gt;
+
+&lt;/head&gt;
+
+&lt;body&gt;
+
+[WARNING] Could not convert TeX math  \begin{aligned} &amp;h_0 = UW_e + W_p \\ &amp;h_l = transformer\_block(h_{l−1})\forall_i \in [1, n] \\  &amp;P(u) = softmax(h_n W_e^T ) \end{aligned}, rendering as TeX
+&lt;p&gt;通过生成式预训练提高语言模型的理解能力。&lt;/p&gt;
+&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
+&lt;p&gt;「自然语言理解」包括了文本蕴涵、问答、语义相似性评估和文档分类等多种不同的任务。尽管大型无标注文本语料库是很丰富的，但用于学习这些特定任务的标注数据却比较稀缺，这使得以判别方式训练的模型难以表现良好。我们证明，在多样化的无标注文本语料库上对语言模型进行「生成式预训练」（即
+GPT），然后对每个特定任务进行「判别式微调」，可以在这些任务上实现大幅能力提升。与以前的方法不同，我们在微调过程中使用任务感知输入变换，在不需要对模型架构进行大量更改的情况下实现有效的迁移。我们在一系列自然语言理解基准任务上展示了我们方法的有效性。我们的通用任务不可知模型优于使用专门为每个任务定制的架构的判别式训练模型，在
+12 个研究任务中有 9
+个任务上显著改善了最先进水平。例如，我们在常识推理（Stories Cloze
+Test）上实现了 8.9% 的绝对提升，在问答（RACE）上实现了 5.7%
+的提升，在文本蕴涵（MultiNLI）上实现了 1.5% 的提升。&lt;/p&gt;
+&lt;h2 id=&quot;导言&quot;&gt;1. 导言&lt;/h2&gt;
+&lt;p&gt;学会有效地从原始文本中学习对于减轻自然语言处理（NLP）中对监督学习的依赖至关重要。大多数深度学习方法需要大量手动标注的数据，这限制了它们在许多缺乏注释资源的领域中的适用性[61]。在这些情况下，能够利用未标注数据中的语言信息的模型提供了一种收集更多注释的有价值的替代方案，而收集这些注释可能是耗时且昂贵的。此外，即使在监督较多（considerable
+supervision）的情况下，以无监督的方式学习良好的表示（good
+representations）也可以带来显著的性能提升。迄今为止最引人注目的证据是广泛使用预训练词嵌入[10,
+39, 42]来提高一系列 NLP 任务性能[8, 11, 26, 45]。&lt;/p&gt;
+&lt;p&gt;然而，从未标注文本中提取比词级信息（word-level
+information）更多的信息具有挑战性。原因有两个：首先，不清楚哪种类型的优化目标（optimization
+objectives）在学习对于迁移有用的文本表示&lt;a href=&quot;#fn1&quot;
+class=&quot;footnote-ref&quot; id=&quot;fnref1&quot;
+role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;1&lt;/sup&gt;&lt;/a&gt;（text
+representations）方面最有效。近期研究已经考察了各种目标，如语言建模[44]、机器翻译[38]和话语连贯性[22]，在不同任务上，每种方法的表现也不同（在
+A 任务上方法 1 优于方法 2；在 B
+任务上可能相反）。其次，关于如何最有效地将这些学到的表示迁移到目标任务上，尚无共识。现有技术涉及对模型架构进行针对特定任务的更改[43,
+44]、使用复杂的学习方案[21]以及添加辅助学习目标[50]。这些不确定性使得开发用于语言处理的有效半监督学习方法变得困难。&lt;/p&gt;
+&lt;p&gt;在本文中，我们探讨了一种使用无监督预训练和监督微调相结合的半监督方法来进行语言理解任务。我们的目标是学习一种通用表示，可以在很少的调整下适应各种任务。我们假设有大量未标记文本的语料库和几个带有手动注释训练示例的数据集（目标任务）。我们的设置不要求这些目标任务与未标记语料库在同一领域。我们采用两阶段训练过程。首先，我们在未标记数据上使用语言建模目标来学习神经网络模型的初始参数。随后，我们使用相应的监督目标将这些参数调整以适应目标任务。&lt;/p&gt;
+&lt;p&gt;对于我们的模型架构，我们采用了 Transformer
+模型[62]，它已被证明在各种任务上表现出色，如机器翻译[62]、文档生成[34]和句法解析[29]。与循环网络等替代方案相比，选择的这种模型为我们提供了一个更加结构化的记忆，用于处理文本中的长距离依赖关系，从而在各种不同任务中实现了稳健的迁移性能。在迁移过程中，我们利用遍历式方法[52]，针对特定任务对输入进行调整，该方法将结构化文本输入作为一个连续的
+token
+序列进行处理。正如我们在实验中所展示的，这些调整使我们能够在对预训练模型的架构进行最小改动的情况下进行有效的微调&lt;a
+href=&quot;#fn2&quot; class=&quot;footnote-ref&quot; id=&quot;fnref2&quot;
+role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;我们在四种类型的语言理解任务上评估我们的方法，包括自然语言推理、问题回答、语义相似性和文本分类。我们的通用任务无关模型胜过了采用针对每个任务专门设计的架构的判别式训练模型&lt;a
+href=&quot;#fn3&quot; class=&quot;footnote-ref&quot; id=&quot;fnref3&quot;
+role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;3&lt;/sup&gt;&lt;/a&gt;，在研究的 12 个任务中有 9
+个任务显著提高了技术水平。例如，我们在常识推理（Stories Cloze
+Test）[40]上实现了 8.9% 的绝对改进，在问题回答（RACE）[30]上实现了 5.7%
+的改进，在文本蕴含（MultiNLI）[66]上实现了 1.5% 的改进，以及在最近引入的
+GLUE 多任务基准[64]上实现了 5.5%
+的改进。我们还分析了预训练模型在四种不同设置下的零样本行为，并证明它获取了对下游任务有用的语言知识。&lt;/p&gt;
+&lt;h2 id=&quot;相关工作&quot;&gt;2. 相关工作&lt;/h2&gt;
+&lt;p&gt;NLP
+的半监督学习：我们的工作大致属于自然语言半监督学习的范畴。这一范式引起了广泛关注，应用于诸如序列标记[24,
+33, 57]或文本分类[41,
+70]等任务。最早的方法使用未标注数据计算单词级或短语级统计信息，然后将其用作监督模型中的特征[33]。在过去的几年里，研究人员已经证明了使用词嵌入[11,
+39,
+42]的好处，这些词嵌入在未标注的语料库上进行训练，以提高各种任务的性能[8,
+11, 26,
+45]。然而，这些方法主要迁移单词级信息，而我们的目标是捕捉更高级别的语义。&lt;/p&gt;
+&lt;p&gt;最近的方法研究了从未标注数据中学习和利用超过单词级语义的方法。可以使用未标注语料库训练的短语级或句子级嵌入已被用于将文本编码为适合各种目标任务的向量表示[28,
+32, 1, 36, 22, 12, 56, 31]。&lt;/p&gt;
+&lt;p&gt;无监督预训练：无监督预训练是半监督学习的一个特例，其目标是寻找一个好的初始化点，而不是修改监督学习目标。早期的工作探讨了这种技术在图像分类[20,
+49,
+63]和回归任务[3]中的应用。随后的研究[15]表明，预训练作为一种正则化方案，能够在深度神经网络中实现更好的泛化。在最近的工作中，该方法已经被用于帮助训练各种任务的深度神经网络，如图像分类[69]、语音识别[68]、实体消歧[17]和机器翻译[48]。&lt;/p&gt;
+&lt;p&gt;与我们的工作最接近的一条研究路线是使用语言建模目标预训练神经网络，然后在有监督的目标任务上对其进行微调。Dai
+等人[13]和 Howard 和
+Ruder[21]遵循这种方法来改进文本分类。然而，尽管预训练阶段有助于捕捉一些语言信息，但他们使用
+LSTM
+模型，这一模型将其预测能力限制在一个比较小的范围内。相反，我们选择的
+transformer
+网络允许我们捕捉更长的语言结构，如我们的实验中所示。此外，我们还展示了我们的模型在更广泛的任务范围内的有效性，包括自然语言推理、释义检测和故事补全。其他方法[43,
+44,
+38]在训练目标任务的监督模型时，使用预训练语言或机器翻译模型的隐藏表示（hidden
+representations）作为辅助特征。这涉及到为每个独立的目标任务引入大量新的参数，而在迁移过程中，我们对模型架构的改变最小。&lt;/p&gt;
+&lt;p&gt;辅助训练目标：添加辅助无监督训练目标是半监督学习的另一种形式。Collobert
+和 Weston[10]的早期工作使用了各种辅助 NLP
+任务，如词性标注、分块、命名实体识别和语言建模来改进语义角色标注。最近，Rei[50]在他们的目标任务目标中添加了辅助语言建模目标，并在序列标注任务上获得了性能提升。我们的实验也使用辅助目标，但如我们所示，无监督预训练已经学会了与目标任务相关的多种语言方面。&lt;/p&gt;
+&lt;h2 id=&quot;框架&quot;&gt;3. 框架&lt;/h2&gt;
+&lt;p&gt;我们的训练过程包含 2
+个阶段。第一阶段是在大型文本语料上学习高容量的语言模型。接下来是微调阶段。在这个阶段，我们借助标注数据，调整模型以适应一个判别任务。&lt;/p&gt;
+&lt;p&gt;无监督预训练：给定一个无监督的 token 语料库&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;U&lt;/em&gt; = {&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;, ..., &lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;n&lt;/em&gt;&lt;/sub&gt;}&lt;/span&gt;，我们使用标准的语言建模目标来最大化以下似然：&lt;/p&gt;
+&lt;p&gt;&lt;span
+class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;(&lt;em&gt;U&lt;/em&gt;) = &lt;em&gt;Σ&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt;&lt;/sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;g&lt;/em&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt;&lt;/sub&gt;|&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt; − &lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;,...,&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt; − 1&lt;/sub&gt;;&lt;em&gt;Θ&lt;/em&gt;)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;其中 k 是上下文窗口的大小，条件概率 P 使用具有参数&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;Θ&lt;/em&gt;&lt;/span&gt;的神经网络进行建模。这些参数使用随机梯度下降[51]进行训练。&lt;/p&gt;
+&lt;p&gt;在我们的实验中，我们使用多层 Transformer decoder
+[34]作为语言模型，这是 Transformer[62]的一个变种。该模型在输入上下文
+token 上应用多头自注意力操作，然后通过逐位置前馈层来产生目标 token
+上的输出分布：&lt;/p&gt;
+&lt;p&gt;&lt;span class=&quot;math display&quot;&gt;$$ \begin{aligned} &amp;amp;h_0 = UW_e + W_p
+\\ &amp;amp;h_l = transformer\_block(h_{l−1})\forall_i \in [1, n]
+\\  &amp;amp;P(u) = softmax(h_n W_e^T ) \end{aligned}$$&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;其中&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;U&lt;/em&gt; = (&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;−&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;,...,&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;−1&lt;/sub&gt;)&lt;/span&gt;是
+token 的上下文向量，n 是层数，&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;e&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;是 token
+嵌入矩阵，&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;p&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;是位置嵌入矩阵。l
+是神经网络的层数。&lt;/p&gt;
+&lt;p&gt;在使用等式 1
+中的目标训练模型之后，我们将参数调整以适应有监督目标任务。我们假设一个带标签的数据集&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;C&lt;/em&gt;&lt;/span&gt;，其中每个实例包括一系列输入 token
+&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;, ..., &lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;，以及一个标签
+y。该输入数据传输通过我们的预训练模型，以获得最终的 Transformer block
+的激活器&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;
+，然后将其输入到新添加的线性输出层（参数为&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;）中以预测
+y：&lt;/p&gt;
+&lt;p&gt;&lt;span
+class=&quot;math display&quot;&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;y&lt;/em&gt;|&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;,...,&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;) = &lt;em&gt;s&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;f&lt;/em&gt;&lt;em&gt;t&lt;/em&gt;&lt;em&gt;m&lt;/em&gt;&lt;em&gt;a&lt;/em&gt;&lt;em&gt;x&lt;/em&gt;(&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;这给我们提供了最大化的目标：&lt;/p&gt;
+&lt;p&gt;&lt;span
+class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;2&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) = &lt;em&gt;Σ&lt;/em&gt;&lt;sub&gt;(&lt;em&gt;x&lt;/em&gt;,&lt;em&gt;y&lt;/em&gt;)&lt;/sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;g&lt;/em&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;y&lt;/em&gt;|&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;,...,&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;我们还发现，在微调过程中将语言建模作为辅助目标有助于学习，原因是：（a）改善监督模型的泛化能力；（b）加速收敛。这与之前的工作[50,
+43]一致，他们也观察到了使用这样一个辅助目标可以提高性能。具体来说，我们优化以下目标（权重λ）：&lt;/p&gt;
+&lt;p&gt;&lt;span
+class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;3&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) = &lt;em&gt;L&lt;/em&gt;&lt;sub&gt;2&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) + &lt;em&gt;λ&lt;/em&gt; * &lt;em&gt;L&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;总的来说，在微调过程中，我们仅需要额外的参数&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;以及分隔符
+token 的嵌入（在第 3.3 节中描述）。&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1.jpg&quot;
+alt=&quot;图 1: (左侧) 这项工作中用到的 transformer 结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; /&gt;
+&lt;figcaption aria-hidden=&quot;true&quot;&gt;图 1: (左侧) 这项工作中用到的 transformer
+结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的
+token 序列，然后在最后添加一层线性+softmax 层&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;对于某些任务，如文本分类，我们可以直接按照上述方法微调我们的模型。某些其他任务，如问题回答或文本蕴含，具有结构化输入，如有序句子对或文档、问题和答案的三元组。由于我们的预训练模型是在连续文本序列上进行训练的，因此我们需要对其进行一些修改才能将其应用于这些任务。之前的工作提出了在转移表示之上学习特定任务的架构[44]。这种方法重新引入了大量任务特定的定制，并且没有为这些额外的架构组件使用迁移学习。相反，我们使用遍历式方法[52]，将结构化输入转换为我们的预训练模型可以处理的有序序列。这些输入转换使我们能够避免在任务之间对架构进行大量更改。我们在下面简要描述了这些输入转换，图
+1 提供了一个视觉示例。所有转换都包括添加随机初始化的开始和结束标记（⟨s⟩,
+⟨e⟩）。&lt;/p&gt;
+&lt;p&gt;文本蕴含：对于蕴含任务，我们将前提 p 和假设 h
+的令牌序列连接在一起，中间用分隔符标记 ($) 隔开。&lt;/p&gt;
+&lt;p&gt;相似性：对于相似性任务，比较的两个句子之间没有固有的顺序。为了反映这一点，我们修改输入序列以包含两种可能的句子顺序（中间有分隔符），并分别处理它们以生成两个序列表示
+&lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;，这些表示在输入到线性输出层之前按元素相加。&lt;/p&gt;
+&lt;p&gt;问题回答和常识推理：对于这些任务，我们给定一个上下文文档 z，一个问题
+q 和一组可能的答案&lt;span
+class=&quot;math inline&quot;&gt;{&lt;em&gt;a&lt;/em&gt;&lt;sub&gt;&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;}&lt;/span&gt;。我们将文档上下文和问题与每个可能的答案连接在一起，在中间添加一个分隔符标记，得到&lt;span
+class=&quot;math inline&quot;&gt;[&lt;em&gt;z&lt;/em&gt;;&lt;em&gt;q&lt;/em&gt;;$;&lt;em&gt;a&lt;/em&gt;&lt;sub&gt;&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;]&lt;/span&gt;。使用我们的模型独立处理这些序列，然后通过
+softmax 层进行归一化，以生成可能答案的分布。&lt;/p&gt;
+&lt;h2 id=&quot;试验&quot;&gt;4. 试验&lt;/h2&gt;
+&lt;h3 id=&quot;设置&quot;&gt;4.1 设置&lt;/h3&gt;
+&lt;p&gt;无监督预训练：我们使用 BooksCorpus
+数据集[71]来训练语言模型。该数据集包含超过 7,000
+本不同的未发表书籍，涵盖了冒险、奇幻和浪漫等多种类型。关键在于，它包含了长篇连续的文本，这使得生成模型能够学会根据长距离的上下文信息进行条件化建模。另一个可替代的数据集是
+1B Word Benchmark，它被类似的方法
+ELMo[44]所使用，虽然数据集规模大致相同，但在句子层面进行了打乱处理，从而破坏了长距离的结构。在这个语料库上，我们的语言模型取得了非常低的
+token 级别困惑度，达到了 18.4。&lt;/p&gt;
+&lt;table&gt;
+&lt;colgroup&gt;
+&lt;col style=&quot;width: 30%&quot; /&gt;
+&lt;col style=&quot;width: 69%&quot; /&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;
+&lt;tr class=&quot;header&quot;&gt;
+&lt;th&gt;Task&lt;/th&gt;
+&lt;th&gt;Datasets&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr class=&quot;odd&quot;&gt;
+&lt;td&gt;Natural language inference&lt;/td&gt;
+&lt;td&gt;SNLI [5], MultiNLI [66], Question NLI [64], RTE [4], SciTail
+[25]&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;even&quot;&gt;
+&lt;td&gt;Question Answering&lt;/td&gt;
+&lt;td&gt;RACE [30], Story Cloze [40]&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;odd&quot;&gt;
+&lt;td&gt;Sentence similarity&lt;/td&gt;
+&lt;td&gt;MSR Paraphrase Corpus [14], Quora Question Pairs [9], STS Benchmark
+[6]&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;even&quot;&gt;
+&lt;td&gt;Classification&lt;/td&gt;
+&lt;td&gt;Stanford Sentiment Treebank-2 [54], CoLA [65]&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;表 1: 本次试验中用到的任务和数据集&lt;/p&gt;
+&lt;p&gt;模型规格：我们的模型主要依据原始 Transformer 架构[62]。我们训练了一个
+12 层的 decoder-only Transformer，具有遮蔽式自注意力机制（768 维状态和
+12 个注意力头）。对于逐位置前馈网络，我们使用了 3072
+维的内部状态。我们使用了 Adam 优化方案[27]，最大学习率为
+2.5e-4。学习率在前 2000 次更新中从零线性增加，然后使用余弦调度退火至
+0。我们在 64 个随机抽样的连续序列（每个序列包含 512 个标记）上进行 100
+个周期的小批量训练。由于
+LayerNorm[2]在整个模型中被广泛使用，简单的权重初始化 N(0,0.02)
+就足够了。我们使用了包含 40,000
+次合并[53]的字节对编码（BPE）词汇表，以及具有 0.1
+正则化率的残差、嵌入和注意力
+dropout。我们还采用了[37]中提出的一种修改版的 L2
+正则化，对所有非偏置或增益权重
+w=0.01。对于激活函数，我们使用高斯误差线性单元（GELU）[18]。我们使用学习位置嵌入替代了原始工作中提出的正弦版本。我们使用
+ftfy 库来清理 BooksCorpus 中的原始文本，标准化一些标点符号和空白，并使用
+spaCy 分词器。&lt;/p&gt;
+&lt;p&gt;微调细节：除非特别指定，我们会沿用无监督预训练的超参数设置。我们在分类器中添加
+0.1 的 dropout 率。对于大多数任务，我们采用 6.25e-5 的学习率和 32
+的批次大小。我们的模型能够快速进行微调，在大多数情况下，训练 3
+个周期就足够了。我们采用线性学习率衰减调度策略，训练的前 0.2%
+阶段进行预热。λ设置为 0.5。&lt;/p&gt;
+&lt;h3 id=&quot;有监督微调&quot;&gt;4.2 有监督微调&lt;/h3&gt;
+&lt;p&gt;我们在多种有监督任务上进行实验，包括自然语言推理、问答、语义相似度和文本分类。其中一些任务包含在近期发布的
+GLUE 多任务基准测试[64]中，我们也对其进行了使用。图 1
+对所有任务和数据集进行了概述。&lt;/p&gt;
+&lt;p&gt;自然语言推理（NLI）任务，也称为识别文本蕴涵，涉及阅读一对句子并从蕴涵、矛盾或中立关系中判断它们之间的关系。尽管最近已经引起了很多关注[58,
+35,
+44]，但由于存在多种现象，如词汇蕴涵、共指、词汇和句法歧义等，这个任务仍然具有挑战性。我们在五个数据集上进行评估，这些数据集来源丰富，包括图像标题（SNLI）、转录语音、通俗小说和政府报告（MNLI）、维基百科文章（QNLI）、科学考试（SciTail）或新闻文章（RTE）。&lt;/p&gt;
+&lt;p&gt;表 2 详细展示了我们的模型在不同 NLI
+任务中与之前最先进方法的各种对比结果。在五个数据集中的四个上，我们的方法明显优于基准线，相较于之前的最佳结果，在
+MNLI 上绝对提升达到 1.5%，在 SciTail 上绝对提升达到 5%，在 QNLI
+上绝对提升达到 5.8%，在 SNLI 上绝对提升达到
+0.6%。这证明了我们的模型在处理多句子推理和应对语言歧义方面的优势。在
+RTE（一个较小的数据集，包含 2490 个示例）上，我们取得了 56%
+的准确率，低于多任务双向 LSTM 模型报告的 61.7%。鉴于我们的方法在更大的
+NLI
+数据集上的强大性能，很可能我们的模型也将从多任务训练中受益，但我们目前尚未探讨这一点。&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table2.jpg&quot;
+alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; /&gt;
+&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
+2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x
+表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;问题回答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的
+RACE
+数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与 CNN
+[19] 或 SQuaD
+[47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了
+Story Cloze
+Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在
+Story Cloze 上最高提高了 8.9%，在 RACE 上整体提高了
+5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table3.jpg&quot;
+alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; /&gt;
+&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
+3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x
+表示 9 个模型的集成&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;语义相似度：语义相似度（或释义检测）任务包括预测两个句子在语义上是否等价。挑战在于识别概念的重新表述，理解否定语句以及处理句法歧义。我们在这个任务中使用了三个数据集——Microsoft
+Paraphrase 语料库（MRPC）[14]（来源于新闻报道），Quora
+问题对（QQP）数据集[9]，以及语义文本相似度基准（STS-B）[6]。我们在三个语义相似度任务的两个任务中取得了最佳成绩（表
+4），在 STS-B 上的绝对增益达到 1 分。在 QQP 上的性能差距显著，与单任务
+BiLSTM + ELMo + Attn 相比，绝对提高了 4.2%。&lt;/p&gt;
+&lt;p&gt;最后，我们在两个不同的文本分类任务上进行评估。语言可接受性语料库（CoLA）[65]
+包含了关于句子是否符合语法规则的专家评判，用以测试训练模型的固有语言偏差。另一方面，斯坦福情感树库（SST-2）[54]
+是一个标准的二分类任务。我们的模型在 CoLA 上获得了 45.4
+分，这比先前最好的结果 35.0
+有显著提高，展示了我们模型所学到的固有语言偏差。在 SST-2
+上，模型也取得了 91.3% 的准确率，与最佳结果相当。我们在 GLUE
+基准测试上也获得了 72.8 的总分，明显优于先前最好的 68.9。&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table4.jpg&quot;
+alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; /&gt;
+&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
+4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用
+GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson
+相关系数）&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;总体来说，我们的方法在 12 个评估数据集中的 9
+个上取得了新的最佳成绩，很多情况下超过了集成模型。我们的结果还表明，我们的方法在不同规模的数据集上都表现良好，从较小的数据集如
+STS-B（约 5.7k 训练样本）到最大的数据集 SNLI（约 550k 训练样本）。&lt;/p&gt;
+&lt;h2 id=&quot;分析&quot;&gt;5. 分析&lt;/h2&gt;
+&lt;p&gt;迁移层数的影响：我们观察了从无监督预训练向有监督目标任务迁移不同数量层数的影响。图
+2（左）描绘了我们在 MultiNLI 和 RACE
+上的方法性能，作为迁移层数量的函数。我们观察到标准结果，即迁移嵌入可以提高性能，每个
+Transformer 层都能进一步带来好处，对于 MultiNLI 的完全转移，可以提高
+9%。这表明预训练模型中的每一层都包含解决目标任务的有用功能。&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1-2.jpg&quot;
+alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; /&gt;
+&lt;figcaption aria-hidden=&quot;true&quot;&gt;图
+2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI
+的影响。（右）图表显示了 LM
+预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;p&gt;零样本表现：我们希望更好地了解为什么对 Transformer
+进行语言模型预训练是有效的。一个假设是底层生成模型为了提高其语言建模能力，学会了我们用于评估的许多任务，而
+Transformer 相比 LSTM
+的更结构化的注意力记忆有助于更好地迁移。我们设计了一系列启发式解决方案，使用底层生成模型在无监督微调的情况下执行任务。我们在图
+2（右）中显示了在生成预训练过程中这些启发式解决方案的有效性。我们观察到这些启发式方法的性能在训练过程中稳定且稳步提高，表明生成预训练支持学习各种与任务相关的功能。我们还观察到
+LSTM 在零样本性能方面波动较大，表明 Transformer
+架构的归纳偏差有助于迁移。&lt;/p&gt;
+&lt;p&gt;对于 CoLA（语言可接受性），将示例按照生成模型分配的平均 token
+对数概率进行评分，并通过阈值进行预测。对于 SST-2（情感分析），我们将
+very 这个 token 添加到每个示例后面，并将语言模型的输出分布仅限于单词
+positive 和 negative，认定被分配到的更高概率的 token 作为预测结果。对于
+RACE（问答），我们选择在给定文档和问题的条件下，生成模型分配的具有最高平均
+token 对数概率的答案。对于 DPRD [46]（Winograd
+模式），我们用两个可能的指代物替换定指代词（确定的指代词），并预测生成模型在替换后的序列其余部分分配较高平均
+token 对数概率的解析。&lt;/p&gt;
+&lt;table&gt;
+&lt;colgroup&gt;
+&lt;col style=&quot;width: 26%&quot; /&gt;
+&lt;col style=&quot;width: 9%&quot; /&gt;
+&lt;col style=&quot;width: 8%&quot; /&gt;
+&lt;col style=&quot;width: 8%&quot; /&gt;
+&lt;col style=&quot;width: 7%&quot; /&gt;
+&lt;col style=&quot;width: 7%&quot; /&gt;
+&lt;col style=&quot;width: 6%&quot; /&gt;
+&lt;col style=&quot;width: 8%&quot; /&gt;
+&lt;col style=&quot;width: 8%&quot; /&gt;
+&lt;col style=&quot;width: 7%&quot; /&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;
+&lt;tr class=&quot;header&quot;&gt;
+&lt;th&gt;Method&lt;/th&gt;
+&lt;th&gt;Avg. Score&lt;/th&gt;
+&lt;th&gt;CoLA (mc)&lt;/th&gt;
+&lt;th&gt;SST2(acc)&lt;/th&gt;
+&lt;th&gt;MRPC(F1)&lt;/th&gt;
+&lt;th&gt;STSB(pc)&lt;/th&gt;
+&lt;th&gt;QQP(F1)&lt;/th&gt;
+&lt;th&gt;MNLI(acc)&lt;/th&gt;
+&lt;th&gt;QNLI(acc)&lt;/th&gt;
+&lt;th&gt;RTE(acc)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr class=&quot;odd&quot;&gt;
+&lt;td&gt;Transformer w/ aux LM (full)&lt;/td&gt;
+&lt;td&gt;74.7&lt;/td&gt;
+&lt;td&gt;45.4&lt;/td&gt;
+&lt;td&gt;91.3&lt;/td&gt;
+&lt;td&gt;82.3&lt;/td&gt;
+&lt;td&gt;82.0&lt;/td&gt;
+&lt;td&gt;70.3&lt;/td&gt;
+&lt;td&gt;81.8&lt;/td&gt;
+&lt;td&gt;88.1&lt;/td&gt;
+&lt;td&gt;56.0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;even&quot;&gt;
+&lt;td&gt;Transformer w/o pre-training&lt;/td&gt;
+&lt;td&gt;59.9&lt;/td&gt;
+&lt;td&gt;18.9&lt;/td&gt;
+&lt;td&gt;84.0&lt;/td&gt;
+&lt;td&gt;79.4&lt;/td&gt;
+&lt;td&gt;30.9&lt;/td&gt;
+&lt;td&gt;65.5&lt;/td&gt;
+&lt;td&gt;75.7&lt;/td&gt;
+&lt;td&gt;71.2&lt;/td&gt;
+&lt;td&gt;53.8&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;odd&quot;&gt;
+&lt;td&gt;Transformer w/o aux LM&lt;/td&gt;
+&lt;td&gt;75.0&lt;/td&gt;
+&lt;td&gt;47.9&lt;/td&gt;
+&lt;td&gt;92.0&lt;/td&gt;
+&lt;td&gt;84.9&lt;/td&gt;
+&lt;td&gt;83.2&lt;/td&gt;
+&lt;td&gt;69.8&lt;/td&gt;
+&lt;td&gt;81.1&lt;/td&gt;
+&lt;td&gt;86.9&lt;/td&gt;
+&lt;td&gt;54.4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr class=&quot;even&quot;&gt;
+&lt;td&gt;LSTM w/ aux LM&lt;/td&gt;
+&lt;td&gt;69.1&lt;/td&gt;
+&lt;td&gt;30.3&lt;/td&gt;
+&lt;td&gt;90.5&lt;/td&gt;
+&lt;td&gt;83.2&lt;/td&gt;
+&lt;td&gt;71.8&lt;/td&gt;
+&lt;td&gt;68.1&lt;/td&gt;
+&lt;td&gt;73.7&lt;/td&gt;
+&lt;td&gt;81.1&lt;/td&gt;
+&lt;td&gt;54.6&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;消融研究：我们进行了三种不同的消融研究（表
+5）。首先，我们在微调过程中检查没有辅助 LM
+目标的方法性能。我们观察到，辅助目标在 NLI 任务和 QQP
+上有所帮助。总体趋势表明，较大的数据集从辅助目标中受益，而较小的数据集则没有。其次，我们通过将
+Transformer 与使用相同框架的单层 2048 单元 LSTM 进行比较，分析了
+Transformer 的效果。我们观察到，在使用 LSTM 代替 Transformer
+时，平均分数下降了 5.6 分。LSTM 仅在一个数据集上胜过 Transformer ——
+MRPC。最后，我们还将直接在监督目标任务上训练的 Transformer
+架构与没有预训练的情况进行比较。我们观察到，缺乏预训练会影响所有任务的性能，与我们的完整模型相比，下降了
+14.8%。&lt;/p&gt;
+&lt;h2 id=&quot;结论&quot;&gt;6. 结论&lt;/h2&gt;
+&lt;p&gt;我们提出了一个框架，通过生成式预训练和判别式微调，让单一的任务无关模型具备强大的自然语言理解能力。通过在包含长篇连续文本的多样化语料库上进行预训练，我们的模型学会了丰富的世界知识和处理长距离依赖关系的能力。然后，将这些知识和能力成功地应用于解决判别性任务，例如问答、语义相似度评估、蕴含关系判断和文本分类，从而在我们研究的
+12 个数据集中，提高了其中 9
+个的最高技术水平。在机器学习研究中，利用无监督（预）训练来提高判别任务性能一直是一个重要的目标。我们的工作表明，确实可以实现显著的性能提升，并为哪些模型（如
+Transformer）和数据集（具有长距离依赖关系的文本）最适合这种方法提供了参考。我们希望这将有助于推动新的无监督学习研究，无论是在自然语言理解还是其他领域，进一步提高我们对无监督学习如何以及何时发挥作用的理解。&lt;/p&gt;
+&lt;aside id=&quot;footnotes&quot; class=&quot;footnotes footnotes-end-of-document&quot;
+role=&quot;doc-endnotes&quot;&gt;
+&lt;hr /&gt;
+&lt;ol&gt;
+&lt;li id=&quot;fn1&quot;&gt;&lt;p&gt;在自然语言处理（NLP）中，text
+representations（文本表示）是将文本转换为计算机可以处理的形式的过程。文本表示是
+NLP
+中的一个重要问题，因为计算机无法直接处理自然语言。因此，研究人员需要将文本转换为计算机可以理解的形式，以便进行下一步的处理，如分类、聚类、信息检索等。文本表示的目标是将文本转换为向量或矩阵的形式，使得计算机可以对其进行数学运算和统计分析。常用的文本表示方法包括以下几种：1)
+One-hot
+representation（独热表示）：将每个单词表示为一个向量，其中只有一个元素是
+1，其余元素均为
+0。该方法不考虑单词之间的语义和上下文信息，因此效果有限。2) Bag-of-words
+representation（词袋表示）：将文本表示为一个单词的集合，并统计每个单词出现的次数。该方法考虑了单词的出现频率，但忽略了单词之间的顺序和语义信息。3)
+Word
+embedding（词嵌入）：将每个单词表示为一个低维向量，使得单词之间的距离反映了它们之间的语义关系。Word
+embedding 通常使用神经网络模型进行训练，例如 Word2Vec 和 GloVe 等。4)
+Transformer-based representation（基于 Transformer
+的表示）：最近的文本表示方法中，基于 Transformer
+的表示方法已经成为主流。Transformer
+是一种使用自注意力机制的神经网络，可以将文本转换为一系列向量，每个向量代表一个单词或短语的语义信息。BERT、GPT
+等是基于 Transformer 的表示方法的代表。&lt;a href=&quot;#fnref1&quot;
+class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li id=&quot;fn2&quot;&gt;&lt;p&gt;fine-tune 翻译成微调；adaption
+翻译成调整，有些翻译成适应性、适应，个人感觉在这里是调整的意思。后文也提到了，对于特定的任务，会把输入的词句做一些简单的调整（比如添加分隔符等）。&lt;a
+href=&quot;#fnref2&quot; class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li id=&quot;fn3&quot;&gt;&lt;p&gt;在机器学习中，discriminatively trained
+model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布
+P(X,Y)，而是直接建模条件分布 &lt;span
+class=&quot;math inline&quot;&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;Y&lt;/em&gt;|&lt;em&gt;X&lt;/em&gt;)&lt;/span&gt;，也就是在给定输入
+X 的情况下预测输出
+Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;a
+href=&quot;#fnref3&quot; class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/aside&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</description>
+        <pubDate>Wed, 05 Apr 2023 00:00:00 -0500</pubDate>
+        <link>http://wulfric.me/2023/04/gpt1-ch/</link>
+        <guid isPermaLink="true">http://wulfric.me/2023/04/gpt1-ch/</guid>
+        
         
       </item>
     
@@ -605,7 +1146,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-download.png&quot; alt=&quot;jdk11 download&quot; title=&quot;jdk11 download&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-download.png&quot; alt=&quot;jdk11 download&quot; title=&quot;jdk11 download&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 download&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -701,7 +1242,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-classpath.png&quot; alt=&quot;jdk11 classpath&quot; title=&quot;jdk11 classpath&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-classpath.png&quot; alt=&quot;jdk11 classpath&quot; title=&quot;jdk11 classpath&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 classpath&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -714,7 +1255,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-sourcepath.png&quot; alt=&quot;jdk11 sourcepath&quot; title=&quot;jdk11 sourcepath&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-sourcepath.png&quot; alt=&quot;jdk11 sourcepath&quot; title=&quot;jdk11 sourcepath&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 sourcepath&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -725,7 +1266,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-ide-conf.png&quot; alt=&quot;jdk11 ide conf&quot; title=&quot;jdk11 ide conf&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-ide-conf.png&quot; alt=&quot;jdk11 ide conf&quot; title=&quot;jdk11 ide conf&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 ide conf&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -742,7 +1283,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/clion-debug-jvm.png&quot; alt=&quot;clion debug jvm&quot; title=&quot;clion debug jvm&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/clion-debug-jvm.png&quot; alt=&quot;clion debug jvm&quot; title=&quot;clion debug jvm&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;clion debug jvm&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -755,7 +1296,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-debug1.png&quot; alt=&quot;jdk11 debug1&quot; title=&quot;jdk11 debug1&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-debug1.png&quot; alt=&quot;jdk11 debug1&quot; title=&quot;jdk11 debug1&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug1&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -766,7 +1307,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/java/jdk11-debug2.png&quot; alt=&quot;jdk11 debug2&quot; title=&quot;jdk11 debug2&quot; width= height= /&gt;
+            &lt;img src=&quot;images/java/jdk11-debug2.png&quot; alt=&quot;jdk11 debug2&quot; title=&quot;jdk11 debug2&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug2&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -782,7 +1323,7 @@ Build performance summary:
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Mon, 02 Sep 2019 23:32:00 +0800</pubDate>
+        <pubDate>Mon, 02 Sep 2019 23:32:00 -0500</pubDate>
         <link>http://wulfric.me/2019/09/java11-install-debug/</link>
         <guid isPermaLink="true">http://wulfric.me/2019/09/java11-install-debug/</guid>
         
@@ -896,7 +1437,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;http://static.wulfric.me/R-aarrr-model.png&quot; alt=&quot;AARRR 模型&quot; width= height= /&gt;
+            &lt;img src=&quot;images/R-aarrr-model.png&quot; alt=&quot;AARRR 模型&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;AARRR 模型&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -936,7 +1477,7 @@ Build performance summary:
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Sun, 30 Dec 2018 18:59:00 +0800</pubDate>
+        <pubDate>Sun, 30 Dec 2018 18:59:00 -0600</pubDate>
         <link>http://wulfric.me/2018/12/agile-practice/</link>
         <guid isPermaLink="true">http://wulfric.me/2018/12/agile-practice/</guid>
         
@@ -1204,7 +1745,7 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Thu, 19 Jul 2018 19:26:00 +0800</pubDate>
+        <pubDate>Thu, 19 Jul 2018 19:26:00 -0500</pubDate>
         <link>http://wulfric.me/2018/07/nginx-demo/</link>
         <guid isPermaLink="true">http://wulfric.me/2018/07/nginx-demo/</guid>
         
@@ -1397,7 +1938,7 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
   &lt;/ol&gt;
 &lt;/div&gt;
 </description>
-        <pubDate>Tue, 21 Nov 2017 22:26:00 +0800</pubDate>
+        <pubDate>Tue, 21 Nov 2017 22:26:00 -0600</pubDate>
         <link>http://wulfric.me/2017/11/builder-validate-fields/</link>
         <guid isPermaLink="true">http://wulfric.me/2017/11/builder-validate-fields/</guid>
         
@@ -1406,434 +1947,6 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
         <category>effective java</category>
         
         <category>builder</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>invariant 释义</title>
-        <description>&lt;p&gt;Effective Java 的 &lt;a href=&quot;/2017/11/effetive-java-2#Item2&quot;&gt;item 2&lt;/a&gt; 的 Builder 模式可以在 Builder 的 build 中检查参数是否符合约束条件，原文和中文版译文是这样的：&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;Like a constructor, a builder can impose invariants on its parameters. The build method can check these invariants.&lt;/p&gt;
-
-  &lt;p&gt;builder 像构造器一样，可以对其参数强加约束条件。build 方法可以检验这些约束条件。&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;在看这一段的时候并不明白 invariant 的具体含义。&lt;/p&gt;
-
-&lt;p&gt;invariant 在词典里的字面意思是&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;&lt;em&gt;n.&lt;/em&gt; 不变式，不变量&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;按照这样的字面意思很难理解 'A builder can impose invariants on its parameters' 这句话：builder 强加的是什么不变式或者不变量呢？&lt;/p&gt;
-
-&lt;h3 id=&quot;参考释义&quot;&gt;参考释义&lt;/h3&gt;
-
-&lt;p&gt;我们先看下在维基百科 &lt;a href=&quot;https://www.wikiwand.com/en/Invariant_(computer_science)&quot;&gt;invariant&lt;/a&gt; 词条的定义：&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;In computer science, an invariant is a condition that can be relied upon to be true during execution of a program, or during some portion of it. It is a logical assertion that is held to always be true during a certain phase of execution. For example, a loop invariant is a condition that is true at the beginning and end of every execution of a loop.&lt;/p&gt;
-
-  &lt;p&gt;在计算机科学中，invariant 就是在程序的执行过程或部分执行过程中，可以认为绝对正确的条件。它是在执行的某个阶段中总是 true 的逻辑断言。比如，循环不变性约束条件就是在循环每次执行的开始和结束都是 true 的条件。&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;在没有完全理解的情况下看这段介绍是有点摸不着头脑，弄明白之后再看倒是能看得懂了 -.- 而且我觉得该词条中使用的例子（循环不变式和 MU puzzle）都不太方便理解，反而是 &lt;a href=&quot;https://www.wikiwand.com/en/Class_invariant&quot;&gt;class invariant&lt;/a&gt; 更容易理解一点。&lt;/p&gt;
-
-&lt;h3 id=&quot;示例&quot;&gt;示例&lt;/h3&gt;
-
-&lt;p&gt;网络的其他地方也可以找到解答&lt;sup id=&quot;fnref:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;，但我想用一个更简单的例子来说明：我们想要实现一个加法运算的函数，它接受两个整数作为参数，并输出二者相加的和。&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]){&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2147483647&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2147483646&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;));&lt;/span&gt;
-  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;add&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;执行这段代码，我们发现 add 的结果是 -3。为什么是 -3 相信大家都比较好理解：a + b 溢出了 int 的范围。这里我们就发现了 add 方法的一个 invariant：两个正整数相加，结果必须为正整数。而目前的这个 add 方法显然没有做好这个保证。&lt;/p&gt;
-
-&lt;p&gt;再来看看 class invariant。在维基的词条中给出了一个 D 语言的例子：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;language-D&quot;&gt;class Date {
-  int day;
-  int hour;
-
-  invariant() {
-    assert(1 &amp;lt;= day &amp;amp;&amp;amp; day &amp;lt;= 31);
-    assert(0 &amp;lt;= hour &amp;amp;&amp;amp; hour &amp;lt; 24);
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;D 语言原生支持对类的 invariant 验证。Date 的 day 必然是 1 到 31，而 hour 必然是 0 到 23，这两个条件就是 Date 类的 invariant 条件。Java 语言的 Bean Validation 其实就是一种 class invariant。&lt;/p&gt;
-
-&lt;h3 id=&quot;根据释义理解-builder-模式中的-invariant&quot;&gt;根据释义理解 Builder 模式中的 invariant&lt;/h3&gt;
-
-&lt;p&gt;所谓 invariant，就是针对某个主体（subject，比如对象，方法等）的一些「绝对真理」式的约束，不论该主体处于何种状态或阶段，都必须满足这些约束条件。它们不受状态和阶段的转移影响，即所谓不变性。所以，在本文中，我们将 invariant 翻译成「不变性约束条件」。&lt;/p&gt;
-
-&lt;p&gt;事实上 &lt;a href=&quot;https://book.douban.com/subject/1888733/&quot;&gt;Java Concurrency in Practice&lt;/a&gt; 这本书才是让我理解 invariant 的关键，因为在并发条件下，一个类的不变性约束条件极有可能被破坏掉，我们也很容易通过这种破坏理解什么是 class invariant：对类的不变性约束条件。&lt;/p&gt;
-
-&lt;p&gt;代码示例如下&lt;sup id=&quot;fnref:3&quot;&gt;&lt;a href=&quot;#fn:3&quot; class=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// &quot;mutable&quot; time period class&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Period&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getStart&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setStart&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getEnd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setEnd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Date&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;end&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;如果有两个线程都可以操作 Period 的对象，每个线程都可以设置 start 和 end，可想而知对于 Period 的实例来说，因为缺乏必要的验证，&lt;span class=&quot;codespan&quot;&gt;start &amp;lt;= end&lt;/span&gt;这个 invariant 条件很容易被破坏。&lt;/p&gt;
-
-&lt;p&gt;回到 Effective Java 中的 Builder 模式。Builder 只是一个方便创建对象的工具，这里面所说的 invariant 其实就是对应类的 invariant，即要满足类所映射的现实世界的约束。&lt;/p&gt;
-
-&lt;h3 id=&quot;invariant-与-immutable&quot;&gt;invariant 与 immutable&lt;/h3&gt;
-
-&lt;p&gt;将 invariant 翻译成不变性&lt;sup id=&quot;fnref:2&quot;&gt;&lt;a href=&quot;#fn:2&quot; class=&quot;footnote&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;容易和 immutable 混淆，即使二者的意思差别很大。我们在「Java 编程思想」这本书的中文版中就发现了这个错误：&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;Integer 类（以及基本的“封装器”类）用简单的形式实现了“不变性”：它们没有提供可以修改对象的方法。 若确实需要一个容纳了基本数据类型的对象，并想对基本据类型进行修改，就必须亲自创建它们。&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;注意这个翻译是不好的。immutable 翻译成不可变更好。虽然我在本文中将 invariant 翻译成不变性约束条件，但约束条件其实是一个隐含的意思，并非字面意思，正常情况下还是翻译成不变性比较好。因此，immutable 的翻译应能够很好地区分 invariant 才是。&lt;/p&gt;
-
-&lt;p&gt;invariant 指的是对对象的某些约束条件，而 immutable 指的是对象本身是不可变的。比如我们用经纬度来表示地球表面的一个点，这个类是 Point，它有两个参数：经度和纬度。所谓 invariant，就是说这个类的经度参数必须在 -180 到 180 之间，而纬度必须在 -90 到 90 之间。无论是构造器还是 setter 方法都必须验证这个 invariant 条件。所谓 immutable，指的是为了方便地实现线程安全类，我们将 Point 设计为 immutable 的，即经度和纬度属性都是 final 的，且不能提供 setter 方法。一旦实例化一个 point，它就不能再被修改，而只能通过重新 new 一个新的实例来代替旧的 point。&lt;/p&gt;
-
-&lt;p&gt;可见，invariant 和 immutable 是无关的，不管一个类是不是 immutable 的，它都必须受到 invariant 条件的制约（即谓不变性），否则它产生的对象就可能是无效的。&lt;/p&gt;
-
-&lt;div class=&quot;footnotes&quot;&gt;
-  &lt;ol&gt;
-    &lt;li id=&quot;fn:1&quot;&gt;
-      &lt;p&gt;stackoverflow 上的 &lt;a href=&quot;https://stackoverflow.com/questions/112064/what-is-an-invariant&quot;&gt;what-is-an-invariant&lt;/a&gt; 对 invariant 的解释也较为浅显，可以参考 &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:3&quot;&gt;
-      &lt;p&gt;代码改编自 &lt;a href=&quot;https://book.douban.com/subject/2696119/&quot;&gt;Effective Java&lt;/a&gt; Item 39 &lt;a href=&quot;#fnref:3&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:2&quot;&gt;
-      &lt;p&gt;&lt;a href=&quot;https://book.douban.com/subject/1888733/&quot;&gt;Java Concurrency in Practice&lt;/a&gt; 这本书将 invariant 翻译成不变性 &lt;a href=&quot;#fnref:2&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Sun, 19 Nov 2017 15:26:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/11/what-is-invariant/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/11/what-is-invariant/</guid>
-        
-        <category>java</category>
-        
-        <category>effective java</category>
-        
-        <category>invariant</category>
-        
-        <category>builder</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>Effective-Java-创建和销毁对象</title>
-        <description>&lt;p&gt;Effective Java[EJ] 的第二章讲的是创建和销毁对象：在什么情况下需要创建对象，怎样创建；在什么情况下需要避免创建对象，怎样避免；如何按照既定顺序销毁对象，如何在销毁对象前正确清理现场。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item1&quot;&gt;使用静态工厂方法而不是构造器&lt;/h2&gt;
-
-&lt;p&gt;创建对象的最基础最常用的方法是通过构造函数 new 出来。但在实际的复杂业务环境中，往往显得太简单，不能很好的满足各种业务需求，而且很有可能使代码变得混乱。&lt;/p&gt;
-
-&lt;p&gt;你可以考虑为你的类提供一个静态工厂方法。静态工厂方法是一个返回类的示例的静态方法，如：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Boolean&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;valueOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;boolean&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Boolean&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;TRUE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Boolean&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;FALSE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;通过静态工厂方法获取实例拥有以下优势：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;静态工厂方法可以根据方法名表明自己的作用，比如 valueOf 表示获取值，newInstance 表示创建新实例，getInstance 一般意味着拿到一个重用的实例。如果一个类需要提供不同的实例，静态工厂方法可以很清晰的表明自己，而构造器由于方法名必须和类名一致，容易让人感到混乱；&lt;/li&gt;
-  &lt;li&gt;静态工厂方法在调用时不一定会创建对象，比如 Boolean.valueOf 就不会创建对象；&lt;/li&gt;
-  &lt;li&gt;构造器会返回一个确定的类型（当前类），而静态工厂方法可以返回 subtype（子类，接口类），这在 java.util.Collections 中用的非常多；&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Map&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getInstance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 这个接口可以返回所有实现了 Map 的接口的类的实例&lt;/span&gt;
-
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;AbstractMap&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getInstance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 这个接口可以返回所有继承了 AbstractMap 的类的实例&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;让开发者更关注返回对象的接口而不是具体的实现类；&lt;/li&gt;
-  &lt;li&gt;方便维护。比如一个接口返回 EnumSet，在实现上可以返回各种 EnumSet 的子类型，升级之后也可以更改返回的类型。&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;一个典型的例子就是服务提供框架（TODO）。&lt;/p&gt;
-
-&lt;p&gt;使用静态工厂方法的劣势：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;只有静态工厂方法的类，无法创建子类来继承；&lt;/li&gt;
-  &lt;li&gt;不能让人一眼看出来是重要的创建对象的方法（和构造函数相比），只能在注释中写明 。&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;常用的静态工厂方法的名字有：valueOf, of,newInstance, getInstance, getType, newType 等。&lt;/p&gt;
-
-&lt;p&gt;当你编写类的时候，请先考虑使用静态工厂方法，如果确定不需要，再使用构造器。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item2&quot;&gt;构造函数参数过多的时候可以考虑 Builder&lt;/h2&gt;
-
-&lt;p&gt;静态工厂方法和构造器有一个共同的局限：不能很好的扩展到大量的可选参数。书中给出了这样一个例子：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Telescoping constructor pattern - does not scale well!&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NutritionFacts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-  &lt;span class=&quot;c1&quot;&gt;// ... field 定义&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-  &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;carbohydrate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;这样的构造函数想必在没有充分优化的代码中很常见。客户端想要的实例可能有各种情况的默认值，类就要为各种情况都提供构造器，代码显得非常臃肿；当获取实例的时候，冗长的参数列表也很容易导致参数填写出错。静态工厂方法也是如此。&lt;/p&gt;
-
-&lt;p&gt;JavaBean 可以避免这种问题。JavaBean 在现代 Java 代码中应该说使用的非常频繁了（序列化，对象持久化等）。客户端先 new 一个空对象，然后调用 setter 方法设置属性。JavaBean 代码没那么臃肿了，同时也不容易填错参数，但是一样有缺点：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;代码长，每个参数都需要提供 setter 方法；setter 方法通常返回值是 void，这意味着客户端代码只能一行一行 set，不能链式调用；&lt;/li&gt;
-  &lt;li&gt;JavaBean 无法实现不可变对象，因为随时可以执行 setter 方法，对象的状态不可控。JavaBean 极有可能出现不一致的情况，对客户端来说，它并不知道这个 JavaBean 是否已经完成构建（你并不知道某个 setter 是尚未执行还是不需要执行），这导致该对象是线程不安全的。&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Builder 模式可以很好的兼顾安全和代码可读性。Builder 是目标类的静态成员类，在 Builder 类中处理实际参数的设置。客户端通过 Builder 类设置参数，然后由无参的 build 方法获取所需的不可变对象。&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Builder 模式&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NutritionFacts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;carbohydrate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;c1&quot;&gt;// 必需参数&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-
-        &lt;span class=&quot;c1&quot;&gt;// 可选参数 - 初始化为默认值&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;carbohydrate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;Builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-            &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;servingSize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-            &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;servings&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
-            &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-            &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;             &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-            &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;          &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;carbohydrate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-            &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;carbohydrate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-
-        &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NutritionFacts&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-            &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Builder&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;servingSize&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;servingSize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;servings&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;servings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;calories&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;fat&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;fat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;sodium&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;carbohydrate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;carbohydrate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;可见，NutritionFacts 是不可变的；Builder 的 setter 方法返回 this，这样可以链式调用 setter，如下所示：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;NutritionFacts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cocaCola&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NutritionFacts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;Builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;240&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;calories&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sodium&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;35&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;carbohydrate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;27&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;动态语言如 Python 可以通过参数默认值实现类似效果，比如：&lt;/p&gt;
-
-&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
-  &lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Builder 模式代码易编写，易阅读，同时可以实现不可变对象，因此是线程安全的。除此之外：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;参数可检查，可以在 Builder 的 build 中检查参数是否符合 invariant 约束条件（见 &lt;a href=&quot;/2017/11/what-is-invariant&quot;&gt;invariant 释义&lt;/a&gt;）。约束条件的检查应该在 object 的 fields 上而不是 Builder 的 fields 上， 否则约束条件还是有可能被破坏（&lt;a href=&quot;/2017/11/builder-validate-fields&quot;&gt;为什么要在对象的 fields 上验证&lt;/a&gt;）；&lt;/li&gt;
-  &lt;li&gt;可以有多个 varargs（每个 setter 都可以），非常灵活；&lt;/li&gt;
-  &lt;li&gt;创建对象时可以自动填入某些字段，例如每次创建对象时自动增加序列号；&lt;/li&gt;
-  &lt;li&gt;如果 builder 是外部类，那么设置了参数的 builder 是一个很好的静态抽象工厂&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;当然 Builder 模式也有自身的缺点：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;创建 Builder 导致的潜在的性能问题，一般来说几乎可以忽略不计，但在某些性能敏感的场合就必须考虑到这种损耗；&lt;/li&gt;
-  &lt;li&gt;写起来稍微有点麻烦，因此只适用于参数很多，定制化很强的场景（要考虑到未来的情况，一个类很有可能由简单变得复杂）。&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;随着代码的积累可能既有构造器也有 Builder，这使得代码显得混乱不易控制，因此推荐优先使用 Builder。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item3&quot;&gt;使用私有构造器或枚举类型强化单例属性&lt;/h2&gt;
-
-&lt;p&gt;单例也是一种常用的设计模式，Singleton 通常被用来代表那些本质上唯一的系统组件，比如窗口管理器或者文件系统。但 Singleton 使得测试更困难：无法使用 mock 的替代实现，除非实现了一个可以看做该类型的接口。&lt;/p&gt;
-
-&lt;p&gt;常用的两个实现单例方法：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;实例成员是一个 final 的变量&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Singleton with public final field&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;INSTANCE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;Elvis&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;leaveTheBuilding&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;通过一个静态工厂方法返回&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Singleton with static factory&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;INSTANCE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;Elvis&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getInstance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;INSTANCE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;leaveTheBuilding&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;需要注意，享有特权的客户端可以借助 AccessibleObject.setAccessible 方法，通过反射机制（Item 53）调用私有构造器。如果需要抵御这种攻击，可以修改构造器，让它在被要求创建第二个实例的时候抛出异常。&lt;/p&gt;
-
-&lt;p&gt;得益于现代 JVM 的优化，二者性能上没啥区别；前者简单，但后者更加灵活，可以支持全局单例，线程内单例等；而且在泛型方面也更有优势。&lt;/p&gt;
-
-&lt;p&gt;前两种实现有这么一个问题：容易在序列化的时候踩坑。因为每次反序列化都会创建一个新的对象，所以需要添加一个 readResolve 方法：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// readResolve method to preserve sigleton property&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Object&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;readResolve&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;// Return the one true Elvis and let the garbage collector&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;// take care of the Elvis impersonator.&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;INSTANCE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;现在更推荐使用枚举来实现单例，它和 public field 方法是一样的，但是自带序列化支持，可以防范复杂的序列化和反射攻击。单元素的枚举类型已经成为实现 Singleton 的最佳方法。&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Enum singleton - the prefered approach&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;enum&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Elvis&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;INSTANCE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;leaveTheBuilding&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h2 id=&quot;Item4&quot;&gt;使用私有构造器强制禁止实例化&lt;/h2&gt;
-
-&lt;p&gt;有些类就是需要设计成不能实例化的，比如 util 工具类，Math 类，实现同一接口的对象的工厂方法等等。对于这些类，可以提供一个私有的构造器，这样就不能实例化了。&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Noninstantiable utility class&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;UtilityClass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;// Suppress default constructor for noninstantiability&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;UtilityClass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;AssertionError&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Remainder omitted&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;缺点是这种类也无法继承了。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item5&quot;&gt;避免创建不必要的对象&lt;/h2&gt;
-
-&lt;p&gt;如果对象可重用，尽量重用而不是每次都新建，这样能够节省资源。如果对象是不可变的，它就始终可以被重用。&lt;/p&gt;
-
-&lt;p&gt;对于同时提供了静态工厂方法（&lt;a href=&quot;#Item1&quot;&gt;Item 1&lt;/a&gt;）和构造器的不可变类，通常可以使用静态工厂方法而不是构造器，以避免创建不必要的对象。&lt;/p&gt;
-
-&lt;p&gt;如果一个属性初始化之后就不再变化，并且会被多次使用，它应该被当做常量（static final field），尽量不要当做变量。&lt;/p&gt;
-
-&lt;p&gt;有一种容易忽略的不必要创建对象的场合：基本类型的自动装箱。如下所示：&lt;/p&gt;
-
-&lt;div  class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Hideously slow program! Can you spot the object creation?&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;Long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Integer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;MAX_VALUE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;上面这段代码可以正常运行，但是很慢，因为 sum 是 Long 类型，而 i 是 long 类型，执行&lt;span class=&quot;codespan&quot;&gt;sum += i&lt;/span&gt;的时候会自动给 i 装箱 Long，然后执行计算。可想而知自动装箱执行了 Integer.MAX_VALUE 次，也创建了 Integer.MAX_VALUE 这么多中间对象。&lt;/p&gt;
-
-&lt;p&gt;解决方法：将&lt;span class=&quot;codespan&quot;&gt;Long sum = 0L&lt;/span&gt;改成&lt;span class=&quot;codespan&quot;&gt;long sum = 0&lt;/span&gt;即可，这样就不存在自动装箱了。但不能将&lt;span class=&quot;codespan&quot;&gt;long i = 0&lt;/span&gt;改成&lt;span class=&quot;codespan&quot;&gt;Long i = 0L&lt;/span&gt;，因为 Long 是不可变对象，所以在进行加法的时候，事实上是每次都要创建 Long 对象，速度依然会很慢，但 long 没有对象创建，只是基本类型，速度会好很多。&lt;/p&gt;
-
-&lt;p&gt;这个例子表明，要优先使用基本类型而不是装箱基本类型，要当心无意识的自动装箱。&lt;/p&gt;
-
-&lt;p&gt;但是实际使用中恐怕还是装箱类型多一些，毕竟泛型只支持装箱类型不支持基本类型。书中也表示，小对象的创建和销毁是很轻量的操作，通过创建对象使得程序简洁、清晰、功能强大，这是一件好事。&lt;/p&gt;
-
-&lt;p&gt;在提倡使用保护性拷贝的时候，因为重用对象要付出的代价要远远大于因创建重复对象而付出的代价。必要时如果没能实施保护性拷贝，将会导致潜在的错误和安全漏洞；而不必要的创建对象则只会影响程序的风格和性能。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item6&quot;&gt;消除过期的对象引用&lt;/h2&gt;
-
-&lt;p&gt;Java 不能使用指针，过期的对象由系统自动回收（GC）。但是即使有 GC，也不能完全不关心内存管理，本节讲的就是这种情况。&lt;/p&gt;
-
-&lt;p&gt;书中的 Stack 示例表明，如果没有及时清除过期引用，就可能导致出现内存泄露。一个过期引用没有清除的话，该对象所引用的其他对象也不会被清除了，随着这种过期引用的积累，可能会使程序发生 OOM 崩溃。&lt;/p&gt;
-
-&lt;p&gt;解决方法就是 null 掉过期的引用。&lt;/p&gt;
-
-&lt;p&gt;但是不应该对此过分小心，jvm的 GC 效率是很高的。时刻提醒自己要清除对象引用不仅麻烦，而且会让代码混乱。控制好变量的作用域，依赖正常的 GC 来做这件事情。&lt;/p&gt;
-
-&lt;p&gt;在例子中，Stack 自己管理内存，所以就可能出现内存管理不善的问题。所以，当需要自己管理内存时，一定要注意潜在的内存泄露问题。&lt;/p&gt;
-
-&lt;h2 id=&quot;Item7&quot;&gt;避免使用终结方法&lt;/h2&gt;
-
-&lt;p&gt;终结方法（finalizer）通常是不可预测的，也是很危险的，一般情况下是不必要的：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;finalizer 是 GC 调用的，GC 调用时间不可预测&lt;/li&gt;
-  &lt;li&gt;性能变差&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;资源回收应该显式使用 try finally。&lt;/p&gt;
-
-&lt;p&gt;finalizer 也有可以使用的场合，但都比较偏门，还是不要用了，真正需要的时候自然会想起来有这个东西的。&lt;/p&gt;
-</description>
-        <pubDate>Mon, 13 Nov 2017 20:08:00 +0800</pubDate>
-        <link>http://wulfric.me/2017/11/effective-java-2/</link>
-        <guid isPermaLink="true">http://wulfric.me/2017/11/effective-java-2/</guid>
-        
-        <category>java</category>
-        
-        <category>effective java</category>
         
         
         <category>技术</category>

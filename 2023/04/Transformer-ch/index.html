@@ -19,7 +19,7 @@
 ">
   <meta name="keywords" content="ai,chatgpt">
   <link rel="canonical" href="http://wulfric.me/2023/04/Transformer-ch/">
-  <link type="text/css" rel="stylesheet" href="/assets/app.css" media=screen>
+  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
   
     <script type="text/x-mathjax-config">
   MathJax.Hub.Config({
@@ -117,7 +117,7 @@
           <picture>
             
             
-            <img src="http://static.wulfric.me/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" width= height= />
+            <img src="images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" width= height= />
           </picture>
           <figcaption><i class='icon-pencil'></i>图1：Transformer 模型架构</figcaption>
         </figure></p>
@@ -138,7 +138,7 @@
           <picture>
             
             
-            <img src="http://static.wulfric.me/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" width= height= />
+            <img src="images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" width= height= />
           </picture>
           <figcaption><i class='icon-pencil'></i>图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。</figcaption>
         </figure></p>
@@ -153,7 +153,7 @@
 
 <p>两种最常用的注意力函数是加性注意力[2]和点积（乘法）注意力。点积注意力与我们的算法相同，除了缩放因子 $\frac{1}{d_k}$。加性注意力使用具有单个隐藏层的前馈网络计算兼容性函数。虽然两者在理论复杂度上相似，但在实践中，点积注意力速度更快，空间效率更高，因为它可以使用高度优化的矩阵乘法代码实现。</p>
 
-<p>虽然在dk的值较小的情况下，这两种机制的表现相似，但对于较大的dk值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的dk值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4"><a href="#fn:4" class="footnote">1</a></sup>。为了抵消这种效应，我们通过 $\frac{1}{d_k}$ 对点积进行缩放。</p>
+<p>虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4"><a href="#fn:4" class="footnote">1</a></sup>。为了抵消这种效应，我们通过 $\frac{1}{d_k}$ 对点积进行缩放。</p>
 
 <h4 id="322-多头注意力">3.2.2 多头注意力</h4>
 
@@ -164,7 +164,9 @@
 <script type="math/tex; mode=display">MultiHead(Q,K,V)=Concat(head_1,...,head_h)W^O \\
 where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)</script>
 
-<p>这里的线性映射就是参数矩阵 $W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}$。</p>
+<p>这里的线性映射就是参数矩阵</p>
+
+<script type="math/tex; mode=display">W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}</script>
 
 <p>在本文中，我们使用了h = 8个平行的注意力层或头。对于每个头，我们使用dk = dv = dmodel/h = 64。由于每个头的维度降低，总的计算成本类似于全维度的单头注意力。</p>
 
@@ -198,7 +200,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)</script>
           <picture>
             
             
-            <img src="http://static.wulfric.me/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" width= height= />
+            <img src="images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" width= height= />
           </picture>
           <figcaption><i class='icon-pencil'></i>表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。</figcaption>
         </figure></p>
@@ -299,12 +301,12 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})</script>
       </div>
 
       <footer>
-  wulfric © 2013~2023. All rights reserved.
+  wulfric © 2013~2025. All rights reserved.
 </footer>
 
 
     </div>
-    <script type="text/javascript" src="/assets/app.js"></script>
+    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
     <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));

@@ -8,22 +8,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: checkout source
+      uses: actions/checkout@v4
       with:
         ref: 'source'  # 确保从 source 分支检出代码
 
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+    - name: Checkout articles
+      uses: actions/checkout@v4
       with:
-        ruby-version: '2.6'  # 根据你的 Jekyll 项目选择 Ruby 版本
+        repository: wwulfric/articles
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        path: ${{ github.workspace }}/_posts  # 下载到这个目录
 
-    - name: Install dependencies
+    - name: mv articles/images to sources
       run: |
-        gem install bundler
-        bundle install
+        mv -r ${{ github.workspace }}/_posts/images ${{ github.workspace }}/
 
-    - name: Build Jekyll site
-      run: bundle exec jekyll build
+    - name: Build the site in the jekyll/builder container
+      run: |
+        docker run \
+        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+        jekyll/builder:3.8 /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3

@@ -22,7 +22,7 @@ jobs:
 
     - name: mv articles/images to sources
       run: |
-        mv -r ${{ github.workspace }}/_posts/images ${{ github.workspace }}/
+        mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
 
     - name: Build the site in the jekyll/builder container
       run: |

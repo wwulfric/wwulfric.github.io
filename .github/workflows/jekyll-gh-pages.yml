@@ -2,6 +2,44 @@ name: Build and Deploy Jekyll to GitHub Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+    - source
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout source
+      uses: actions/checkout@v4
+      with:
+        ref: 'source'  # 确保从 source 分支检出代码
+
+    - name: Checkout articles
+      uses: actions/checkout@v4
+      with:
+        repository: wwulfric/articles
+        # token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        path: ${{ github.workspace }}/_posts  # 下载到这个目录
+
+    - name: mv articles/images to sources
+      run: |
+        mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
+        find . -name "*.md" -type f -exec sed -i 's/(images\/(/\/images\//g' {} +
+    - name: Build the site in the jekyll/builder container
+      run: |
+        docker run \
+        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+        jekyll/builder:3.8 /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./_site
+        publish_branch: master  # 将生成的页面推送到 master 分支
+        keep_files: true  # 保留 master 分支中现有的文件on:
+  workflow_dispatch:
 
 jobs:
   build:

@@ -6,8 +6,8 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Wed, 06 Aug 2025 08:26:47 -0500</pubDate>
-    <lastBuildDate>Wed, 06 Aug 2025 08:26:47 -0500</lastBuildDate>
+    <pubDate>Wed, 06 Aug 2025 08:29:46 -0500</pubDate>
+    <lastBuildDate>Wed, 06 Aug 2025 08:29:46 -0500</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2025. All rights reserved.</rights>
     
@@ -29,7 +29,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/ReAct-figure1.png&quot; alt=&quot;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/ReAct-figure1.png&quot; alt=&quot;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -75,7 +75,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/ReAct-table1.png&quot; alt=&quot;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/ReAct-table1.png&quot; alt=&quot;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -84,7 +84,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/ReAct-figure2.png&quot; alt=&quot;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/ReAct-figure2.png&quot; alt=&quot;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -148,7 +148,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/Transformer-encoder-decoder.png&quot; alt=&quot;图1：Transformer 模型架构&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/Transformer-encoder-decoder.png&quot; alt=&quot;图1：Transformer 模型架构&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图1：Transformer 模型架构&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -169,7 +169,7 @@
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/Transformer-attention2.png&quot; alt=&quot;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/Transformer-attention2.png&quot; alt=&quot;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -231,7 +231,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/Transformer-table1.png&quot; alt=&quot;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/Transformer-table1.png&quot; alt=&quot;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -454,7 +454,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/gpt1.jpg&quot; alt=&quot;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/gpt1.jpg&quot; alt=&quot;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -518,7 +518,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/GPT1-table2.jpg&quot; alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/GPT1-table2.jpg&quot; alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -529,7 +529,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/GPT1-table3.jpg&quot; alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/GPT1-table3.jpg&quot; alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -542,7 +542,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/GPT1-table4.jpg&quot; alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/GPT1-table4.jpg&quot; alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -557,7 +557,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})&lt;/script&gt;
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/chatgpt/gpt1-2.jpg&quot; alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/chatgpt/gpt1-2.jpg&quot; alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1146,7 +1146,7 @@ href=&quot;#fnref3&quot; class=&quot;footnote-back&quot; role=&quot;doc-backlink
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-download.png&quot; alt=&quot;jdk11 download&quot; title=&quot;jdk11 download&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-download.png&quot; alt=&quot;jdk11 download&quot; title=&quot;jdk11 download&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 download&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1242,7 +1242,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-classpath.png&quot; alt=&quot;jdk11 classpath&quot; title=&quot;jdk11 classpath&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-classpath.png&quot; alt=&quot;jdk11 classpath&quot; title=&quot;jdk11 classpath&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 classpath&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1255,7 +1255,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-sourcepath.png&quot; alt=&quot;jdk11 sourcepath&quot; title=&quot;jdk11 sourcepath&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-sourcepath.png&quot; alt=&quot;jdk11 sourcepath&quot; title=&quot;jdk11 sourcepath&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 sourcepath&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1266,7 +1266,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-ide-conf.png&quot; alt=&quot;jdk11 ide conf&quot; title=&quot;jdk11 ide conf&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-ide-conf.png&quot; alt=&quot;jdk11 ide conf&quot; title=&quot;jdk11 ide conf&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 ide conf&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1283,7 +1283,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/clion-debug-jvm.png&quot; alt=&quot;clion debug jvm&quot; title=&quot;clion debug jvm&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/clion-debug-jvm.png&quot; alt=&quot;clion debug jvm&quot; title=&quot;clion debug jvm&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;clion debug jvm&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1296,7 +1296,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-debug1.png&quot; alt=&quot;jdk11 debug1&quot; title=&quot;jdk11 debug1&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-debug1.png&quot; alt=&quot;jdk11 debug1&quot; title=&quot;jdk11 debug1&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug1&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1307,7 +1307,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/java/jdk11-debug2.png&quot; alt=&quot;jdk11 debug2&quot; title=&quot;jdk11 debug2&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/java/jdk11-debug2.png&quot; alt=&quot;jdk11 debug2&quot; title=&quot;jdk11 debug2&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;jdk11 debug2&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
@@ -1437,7 +1437,7 @@ Build performance summary:
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;images/R-aarrr-model.png&quot; alt=&quot;AARRR 模型&quot; width= height= /&gt;
+            &lt;img src=&quot;/images/R-aarrr-model.png&quot; alt=&quot;AARRR 模型&quot; width= height= /&gt;
           &lt;/picture&gt;
           &lt;figcaption&gt;&lt;i class='icon-pencil'&gt;&lt;/i&gt;AARRR 模型&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;

@@ -26,7 +26,7 @@ jobs:
     - name: mv articles/images to sources
       run: |
         mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
-        find . -name "*.md" -type f -exec sed -i 's/(images\/(/\/images\//g' {} +
+        sed -i 's#(images\/#(\/images\/#g' *.md
     - name: Build the site in the jekyll/builder container
       run: |
         docker run \

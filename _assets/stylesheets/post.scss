@@ -29,6 +29,13 @@
         }
       }
     }
+    .table-container {
+        overflow-x: auto; /* 内容溢出时显示水平滚动条 */
+    }
+    table {
+        width: 100%;
+        min-width: 300px; /* 设置最小宽度防止过度压缩 */
+    }
     h2{
       background-color: $header-color;
       padding-left: 5px;

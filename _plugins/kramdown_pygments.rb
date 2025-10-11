@@ -10,6 +10,12 @@ module Kramdown
         STDERR.puts 'You are missing a library required for syntax highlighting. Please run:'
         raise FatalException.new("Missing dependency: Pygments")
       end
+      
+      alias_method :original_convert_table, :convert_table
+      def convert_table(el, indent)
+        table_html = original_convert_table(el, indent)
+        "#{' ' * indent}<div class=\"table-container\">\n#{table_html}#{' ' * indent}</div>\n"
+      end
 
       def convert_codeblock(el, indent)
         attr = el.attr.dup

@@ -6,8 +6,8 @@
 </description>
     <link>http://wulfric.me/</link>
     <atom:link href="http://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 11 Oct 2025 04:01:46 -0500</pubDate>
-    <lastBuildDate>Sat, 11 Oct 2025 04:01:46 -0500</lastBuildDate>
+    <pubDate>Sat, 11 Oct 2025 06:28:35 -0500</pubDate>
+    <lastBuildDate>Sat, 11 Oct 2025 06:28:35 -0500</lastBuildDate>
     <generator>Jekyll v3.6.3</generator>
     <rights>wulfric © 2013~2025. All rights reserved.</rights>
     
@@ -633,18 +633,86 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 &lt;/ul&gt;
 
 &lt;p&gt;可以使用Colab的GPU来训练NeuralForecast。&lt;/p&gt;
+
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# Read the results from Colab&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;fcst_nf_df&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_parquet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'https://m5-benchmarks.s3.amazonaws.com/data/forecast-nf.parquet'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;fcst_nf_df&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;head&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;|| unique_id | ds               | AutoNHITS  | AutoNHITS-lo-90 | AutoNHITS-hi-90 | AutoTFT | AutoTFT-lo-90 | AutoTFT-hi-90 |
-| ——— | —————- | ———- | ————— | ————— | ——- | ————- | ————- | —- |
-| 0         | FOODS_3_001_CA_1 | 2016-05-23 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 1         | FOODS_3_001_CA_1 | 2016-05-24 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 2         | FOODS_3_001_CA_1 | 2016-05-25 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 1.0  |
-| 3         | FOODS_3_001_CA_1 | 2016-05-26 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 4         | FOODS_3_001_CA_1 | 2016-05-27 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;unique_id&lt;/th&gt;
+      &lt;th&gt;ds&lt;/th&gt;
+      &lt;th&gt;AutoNHITS&lt;/th&gt;
+      &lt;th&gt;AutoNHITS-lo-90&lt;/th&gt;
+      &lt;th&gt;AutoNHITS-hi-90&lt;/th&gt;
+      &lt;th&gt;AutoTFT&lt;/th&gt;
+      &lt;th&gt;AutoTFT-lo-90&lt;/th&gt;
+      &lt;th&gt;AutoTFT-hi-90&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;FOODS_3_001_CA_1&lt;/td&gt;
+      &lt;td&gt;2016-05-23&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;FOODS_3_001_CA_1&lt;/td&gt;
+      &lt;td&gt;2016-05-24&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2&lt;/td&gt;
+      &lt;td&gt;FOODS_3_001_CA_1&lt;/td&gt;
+      &lt;td&gt;2016-05-25&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;1.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;3&lt;/td&gt;
+      &lt;td&gt;FOODS_3_001_CA_1&lt;/td&gt;
+      &lt;td&gt;2016-05-26&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;4&lt;/td&gt;
+      &lt;td&gt;FOODS_3_001_CA_1&lt;/td&gt;
+      &lt;td&gt;2016-05-27&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;0.0&lt;/td&gt;
+      &lt;td&gt;2.0&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# Merge the forecasts from StatsForecast and NeuralForecast&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;fcst_df&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fcst_df&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;merge&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fcst_nf_df&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;how&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'left'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;on&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'unique_id'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'ds'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;

@@ -579,18 +579,86 @@
 </ul>
 
 <p>可以使用Colab的GPU来训练NeuralForecast。</p>
+
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Read the results from Colab</span>
 <span class="n">fcst_nf_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s">'https://m5-benchmarks.s3.amazonaws.com/data/forecast-nf.parquet'</span><span class="p">)</span>
 </code></pre></div></div>
+
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_nf_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </code></pre></div></div>
-<p>|| unique_id | ds               | AutoNHITS  | AutoNHITS-lo-90 | AutoNHITS-hi-90 | AutoTFT | AutoTFT-lo-90 | AutoTFT-hi-90 |
-| ——— | —————- | ———- | ————— | ————— | ——- | ————- | ————- | —- |
-| 0         | FOODS_3_001_CA_1 | 2016-05-23 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 1         | FOODS_3_001_CA_1 | 2016-05-24 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 2         | FOODS_3_001_CA_1 | 2016-05-25 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 1.0  |
-| 3         | FOODS_3_001_CA_1 | 2016-05-26 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |
-| 4         | FOODS_3_001_CA_1 | 2016-05-27 | 0.0             | 0.0             | 2.0     | 0.0           | 0.0           | 2.0  |</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>unique_id</th>
+      <th>ds</th>
+      <th>AutoNHITS</th>
+      <th>AutoNHITS-lo-90</th>
+      <th>AutoNHITS-hi-90</th>
+      <th>AutoTFT</th>
+      <th>AutoTFT-lo-90</th>
+      <th>AutoTFT-hi-90</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>FOODS_3_001_CA_1</td>
+      <td>2016-05-23</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>FOODS_3_001_CA_1</td>
+      <td>2016-05-24</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>FOODS_3_001_CA_1</td>
+      <td>2016-05-25</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>FOODS_3_001_CA_1</td>
+      <td>2016-05-26</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>FOODS_3_001_CA_1</td>
+      <td>2016-05-27</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+    </tr>
+  </tbody>
+</table>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Merge the forecasts from StatsForecast and NeuralForecast</span>
 <span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">fcst_nf_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">])</span>

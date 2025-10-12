@@ -10,12 +10,14 @@ github_username:  wwulfric
 permalink: /:year/:month/:title/
 
 # Build settings
-plugins: [jekyll-assets, jekyll-sitemap]
-assets:
-  sources:
-    - _assets/fonts
-  js_compressor:  uglifier
-  css_compressor: sass
+plugins:
+  - jekyll-sass-converter
+  - jekyll-sitemap
+# assets:
+#   sources:
+#     - _assets/fonts
+#   js_compressor:  uglifier
+#   css_compressor: sass
 # KramdownPygments is based on kramdown and share config
 markdown: kramdown
 # highlighter: pygments
@@ -43,13 +45,19 @@ defaults:
       path: "images"
     values:
       image: true
+
 analytics:
   provider: google
   google:
     tracking_id: 'UA-54608037-1'
 
 sass:
-  style: :compressed
+  sass_dir: _sass
+  style: compressed
+  load_paths:
+    - _sass
+    - assets/fonts
+
 
 exclude:
   - _posts/images/  

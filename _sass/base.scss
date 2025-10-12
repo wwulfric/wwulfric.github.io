@@ -2,16 +2,17 @@
 /* https://kuler.adobe.com/main-cxcedar-color-theme-4237607/ */
 /* https://kuler.adobe.com/Copy-of-Copy-of-main-cxcedar-color-theme-4361434/ */
 // $main-color : #2E313D; //333
+@use "sass:color";
 $main-color : #333;
-$lighter-color : lighten( $main-color, 20% ); //666
-$lightest-color : lighten( $main-color, 40% ); //999
-$border-color : lighten( $main-color, 67% ); //ddd
-$darker-bg-color : lighten( $main-color, 77% ); //f8f8f8
-$bg-color : lighten( $main-color, 80% );
+$lighter-color : color.scale( $main-color, $lightness:20% ); //666
+$lightest-color : color.scale( $main-color, $lightness:40% ); //999
+$border-color : color.scale( $main-color, $lightness:67% ); //ddd
+$darker-bg-color : color.scale( $main-color, $lightness:77% ); //f8f8f8
+$bg-color : color.scale( $main-color, $lightness:80% );
 
 $header-color : #9C0; //#B7C11E;
 $link-color : #008D00; //#23A38F;
-$link-hover-color : darken( $link-color, 20% );
+$link-hover-color : color.scale( $link-color, $lightness:-20% );
 
 $em-color : #F0563D; // 用于红色强调
 

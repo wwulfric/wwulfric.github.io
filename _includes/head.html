@@ -14,7 +14,7 @@
   <meta name="description" content="{% if page.excerpt %}{{ page.excerpt | strip_html }}{% else %}{{ site.description }}{% endif %}">
   <meta name="keywords" content="{{ page.tags | join: ',' }}">
   <link rel="canonical" href="{{ page.url | replace:'index.html','' | prepend: site.baseurl | prepend: site.url }}">
-  {% stylesheet app media='screen' %}
+  <link rel="stylesheet" href="{{ '/assets/stylesheets/main.css' | relative_url }}">
   {% if page.math %}
     {% include mathjax.html %}
   {% endif %}

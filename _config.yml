@@ -50,3 +50,6 @@ analytics:
 
 sass:
   style: :compressed
+
+exclude:
+  - _posts/images/  

@@ -54,6 +54,7 @@ analytics:
 sass:
   sass_dir: _sass
   style: compressed
+  sourcemap: development
   load_paths:
     - _sass
     - assets/fonts

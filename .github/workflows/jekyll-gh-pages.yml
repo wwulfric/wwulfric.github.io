@@ -28,10 +28,7 @@ jobs:
         mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
         sed -i 's#(images\/#(\/images\/#g' ${{ github.workspace }}/_posts/*.md
     - name: Build jekyll
-      uses: actions/jekyll-build-pages@v1
-      with:
-        source: ./
-        destination: ./_site
+      run: bundle exec jekyll build
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:

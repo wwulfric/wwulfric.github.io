@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="分布式,微服务,dubbo,maven,provider,consumer,rest">
-  <link rel="canonical" href="http://wulfric.me/2017/03/dubbo-demo-test/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2017/03/dubbo-demo-test/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -70,18 +70,11 @@
   <article class="post-content">
     <p>这篇文章将简单的介绍如何写一个 dubbo 服务。dubbo 的准备工作请参照<a href="/2017/03/intro-dubbo/">前文</a>。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>dubbo 架构</figcaption>
-        </figure></p>
+<p><img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" /></p>
 
-<p>从此图可知，当注册中心和监控已经工作起来之后，我们需要写的就是消费方和服务方的代码了。一个简单的一对一提供服务的代码结构如下<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>：</p>
+<p>从此图可知，当注册中心和监控已经工作起来之后，我们需要写的就是消费方和服务方的代码了。一个简单的一对一提供服务的代码结构如下<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>：</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/IdeaProjects/dubbox/dubbo-demo master
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/IdeaProjects/dubbox/dubbo-demo master
 <span class="o">&gt;</span> <span class="nb">ls
 </span>dubbo-demo-api      dubbo-demo-provider pom.xml
 dubbo-demo-consumer dubbo-demo.iml
@@ -91,9 +84,9 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <h2 id="接口定义与步骤">接口定义与步骤</h2>
 
-<p>该 dubbo 服务将实现获取权限数组的功能，即调用<span class="codespan">PermissionService.getPermissions</span>获取权限数组。在本文的例子中，我们将实现 1) 直接返回字符串的数组；2) 返回 java 对象（POJO） 的  json/xml 序列化的结果。</p>
+<p>该 dubbo 服务将实现获取权限数组的功能，即调用<code class="language-plaintext highlighter-rouge">PermissionService.getPermissions</code>获取权限数组。在本文的例子中，我们将实现 1) 直接返回字符串的数组；2) 返回 java 对象（POJO） 的  json/xml 序列化的结果。</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 直接返回字符串的数组</span>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 直接返回字符串的数组</span>
 <span class="o">[</span><span class="s1">'permission_1'</span>, <span class="s1">'permission_2'</span>, <span class="s1">'permission_3'</span><span class="o">]</span>
 <span class="c"># 返回 json/xml 序列化的结果</span>
 <span class="o">[</span>
@@ -157,7 +150,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>创建 maven 项目 dubbo-test，编辑 pom 文件，并仿照官方示例，在 maven 项目下分别创建 3 个 module：api, provider 和 consumer。</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">&lt;!-- dubbo test 的 pom 文件直接用默认生成的即可 --&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">&lt;!-- dubbo test 的 pom 文件直接用默认生成的即可 --&gt;</span>
 <span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
 <span class="nt">&lt;project</span> <span class="na">xmlns=</span><span class="s">"http://maven.apache.org/POM/4.0.0"</span>
          <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span>
@@ -173,16 +166,16 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>通过 IDE 创建 api 子模块（或者手动创建文件夹），并创建 api.PermissionService 类：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">api</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">api</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
 <span class="kd">public</span> <span class="kd">interface</span> <span class="nc">PermissionService</span> <span class="o">{</span>
-    <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="n">Long</span> <span class="n">id</span><span class="o">);</span>
+    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nc">Long</span> <span class="n">id</span><span class="o">);</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
 <p>文件夹结构如下：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
 ├── api
 │   ├── pom.xml
 │   └── src
@@ -200,7 +193,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>用同样的方式创建子模块，并编辑 pom 文件，引入 dubbo 等必要的依赖包：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
     <span class="nt">&lt;dependencies&gt;</span>
         <span class="c">&lt;!-- 引入 api，在 provider 中实现 api 定义的接口 --&gt;</span>
         <span class="nt">&lt;dependency&gt;</span>
@@ -232,16 +225,16 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>阿里的 Dubbo 框架已经集成了 Zookeeper、Spring 等框架的依赖，但是有一个例外就是 zkclient，如果没有引用将会抛出如下异常信息：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Exception in thread "main" java.lang.NoClassDefFoundError: org/I0Itec/zkclient/exception/ZkNoNodeException
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Exception in thread "main" java.lang.NoClassDefFoundError: org/I0Itec/zkclient/exception/ZkNoNodeException
 ...
 </code></pre></div></div>
 
 <p>创建 provider.DemoProvider 类：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">provider</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">provider</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DemoProvider</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
       	<span class="c1">// 如果 spring 配置文件的位置是默认的，则可以直接这样启动服务</span>
         <span class="n">com</span><span class="o">.</span><span class="na">alibaba</span><span class="o">.</span><span class="na">dubbo</span><span class="o">.</span><span class="na">container</span><span class="o">.</span><span class="na">Main</span><span class="o">.</span><span class="na">main</span><span class="o">(</span><span class="n">args</span><span class="o">);</span>
     <span class="o">}</span>
@@ -250,34 +243,34 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>如果 spring 配置文件在默认的 resources/META-INF/spring 下，则可以直接这样启动服务，否则需要声明指定其位置：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 建议使用上一种方法</span>
-<span class="kn">package</span> <span class="n">provider</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 建议使用上一种方法</span>
+<span class="kn">package</span> <span class="nn">provider</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">org.springframework.context.support.ClassPathXmlApplicationContext</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DemoProvider</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
-        <span class="n">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="na">getDisplayName</span><span class="o">()</span> <span class="o">+</span> <span class="s">": here"</span><span class="o">);</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+        <span class="nc">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="na">getDisplayName</span><span class="o">()</span> <span class="o">+</span> <span class="s">": here"</span><span class="o">);</span>
         <span class="n">context</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"服务已经启动..."</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">in</span><span class="o">.</span><span class="na">read</span><span class="o">();</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"服务已经启动..."</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">in</span><span class="o">.</span><span class="na">read</span><span class="o">();</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
 <p>创建 api 中定义 api.PermissionService 接口的实现类 provider.PermissionServiceImpl：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">provider</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">provider</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">api.PermissionService</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
-<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PermissionServiceImpl</span> <span class="kd">implements</span> <span class="n">PermissionService</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="kd">final</span> <span class="n">Long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PermissionServiceImpl</span> <span class="kd">implements</span> <span class="nc">PermissionService</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="kd">final</span> <span class="nc">Long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
       	<span class="c1">// 该函数应该实现 getPermissions 的业务逻辑，这里简单返回一个 list</span>
-        <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">permissions</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;();</span>
-      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span> <span class="o">-</span> <span class="mi">1</span><span class="o">));</span>
-      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span><span class="o">));</span>
-      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span> <span class="o">+</span> <span class="mi">1</span><span class="o">));</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">permissions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;();</span>
+      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span> <span class="o">-</span> <span class="mi">1</span><span class="o">));</span>
+      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span><span class="o">));</span>
+      	<span class="n">permissions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Permission_%d"</span><span class="o">,</span> <span class="n">id</span> <span class="o">+</span> <span class="mi">1</span><span class="o">));</span>
         <span class="k">return</span> <span class="n">permissions</span><span class="o">;</span>
     <span class="o">}</span>
 <span class="o">}</span>
@@ -285,7 +278,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>创建 spring 配置文件，重点是 dubbo 相关服务的配置：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
 <span class="nt">&lt;beans</span> <span class="na">xmlns=</span><span class="s">"http://www.springframework.org/schema/beans"</span>
        <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span>
        <span class="na">xmlns:dubbo=</span><span class="s">"http://code.alibabatech.com/schema/dubbo"</span>
@@ -308,7 +301,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>最后，在 resources 目录下创建 log4j 的配置文件：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
 <span class="cp">&lt;!DOCTYPE log4j:configuration SYSTEM "log4j.dtd"&gt;</span>
 <span class="nt">&lt;log4j:configuration</span> <span class="na">xmlns:log4j=</span><span class="s">"http://jakarta.apache.org/log4j/"</span> <span class="na">debug=</span><span class="s">"false"</span><span class="nt">&gt;</span>
     <span class="nt">&lt;appender</span> <span class="na">name=</span><span class="s">"CONSOLE"</span> <span class="na">class=</span><span class="s">"org.apache.log4j.ConsoleAppender"</span><span class="nt">&gt;</span>
@@ -323,16 +316,16 @@ dubbo-demo-consumer dubbo-demo.iml
 <span class="nt">&lt;/log4j:configuration&gt;</span>
 </code></pre></div></div>
 
-<p>文件创建完毕，接下来在根目录下执行<span class="codespan">mvn clean package</span>，然后执行 provider.DemoProvider 的 main 函数，即可启动该服务了。查看 monitor/admin，看我们定义的 demotest-provider 这个名称的提供者是否出现在服务列表中；或者在 console 输出中发现如下信息，即表示成功启动：</p>
+<p>文件创建完毕，接下来在根目录下执行<code class="language-plaintext highlighter-rouge">mvn clean package</code>，然后执行 provider.DemoProvider 的 main 函数，即可启动该服务了。查看 monitor/admin，看我们定义的 demotest-provider 这个名称的提供者是否出现在服务列表中；或者在 console 输出中发现如下信息，即表示成功启动：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
 [05/03/17 11:56:43:043 CST] main  INFO container.Main:  [DUBBO] Dubbo SpringContainer started!, dubbo version: 2.8.4, current host: 127.0.0.1
 [2017-03-05 23:56:43] Dubbo service server started!
 </code></pre></div></div>
 
 <p>provider 的文件结构如下：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
 ├── pom.xml
 ├── src
 │   ├── main
@@ -353,7 +346,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>consumer 子模块的创建和 provider 很像。pom 文件：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nt">&lt;dependencies&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nt">&lt;dependencies&gt;</span>
         <span class="nt">&lt;dependency&gt;</span>
             <span class="c">&lt;!-- 引入 api，在 consumer 中调用 api 定义的接口 --&gt;</span>
             <span class="nt">&lt;groupId&gt;</span>dubbotest<span class="nt">&lt;/groupId&gt;</span>
@@ -380,7 +373,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>创建 spring 配置文件：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
 <span class="nt">&lt;beans</span> <span class="na">xmlns=</span><span class="s">"http://www.springframework.org/schema/beans"</span>
        <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span>
        <span class="na">xmlns:dubbo=</span><span class="s">"http://code.alibabatech.com/schema/dubbo"</span>
@@ -396,25 +389,25 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>创建 consumer.DemoConsumer 类：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">consumer</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">consumer</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">api.PermissionService</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">org.springframework.context.support.ClassPathXmlApplicationContext</span><span class="o">;</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DemoConsumer</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
         <span class="c1">//测试常规服务</span>
-        <span class="n">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
+        <span class="nc">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
         <span class="n">context</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-        <span class="n">PermissionService</span> <span class="n">permissionService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">PermissionService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">1L</span><span class="o">));</span>
+        <span class="nc">PermissionService</span> <span class="n">permissionService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="nc">PermissionService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">1L</span><span class="o">));</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
 <p>log4j 配置相同。</p>
 
-<p>执行<span class="codespan">mvn clean package</span>，然后执行 consumer.DemoConsumer 的 main 函数，即可启动该服务了。查看 monitor/admin，看我们定义的 demotest-consumer 这个名称的提供者是否出现在服务列表中；或者在 console 输出中发现如下信息，即表示成功启动（输出的数组即为调用的结果）：</p>
+<p>执行<code class="language-plaintext highlighter-rouge">mvn clean package</code>，然后执行 consumer.DemoConsumer 的 main 函数，即可启动该服务了。查看 monitor/admin，看我们定义的 demotest-consumer 这个名称的提供者是否出现在服务列表中；或者在 console 输出中发现如下信息，即表示成功启动（输出的数组即为调用的结果）：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
 [Permission_0, Permission_1, Permission_2]
 </code></pre></div></div>
 
@@ -422,7 +415,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>consumer 文件结构如下：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
 ├── pom.xml
 ├── src
 │   ├── main
@@ -448,17 +441,17 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>添加 api.PermissionRestService 类：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">api</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">api</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">javax.validation.constraints.Min</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
 <span class="kd">public</span> <span class="kd">interface</span> <span class="nc">PermissionRestService</span> <span class="o">{</span>
-    <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@Min</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">,</span> <span class="n">message</span> <span class="o">=</span> <span class="s">"User ID must be greater than 1"</span><span class="o">)</span> <span class="n">Long</span> <span class="n">id</span><span class="o">);</span>
+    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@Min</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">,</span> <span class="n">message</span> <span class="o">=</span> <span class="s">"User ID must be greater than 1"</span><span class="o">)</span> <span class="nc">Long</span> <span class="n">id</span><span class="o">);</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
 <p>pom 文件添加依赖：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="nt">&lt;dependency&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="nt">&lt;dependency&gt;</span>
             <span class="nt">&lt;groupId&gt;</span>javax.validation<span class="nt">&lt;/groupId&gt;</span>
             <span class="nt">&lt;artifactId&gt;</span>validation-api<span class="nt">&lt;/artifactId&gt;</span>
             <span class="nt">&lt;version&gt;</span>2.0.0.Alpha1<span class="nt">&lt;/version&gt;</span>
@@ -469,7 +462,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>在 pom 文件中添加依赖：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="c">&lt;!--rest 规范，比如 Get, Path, MediaType 等--&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="c">&lt;!--rest 规范，比如 Get, Path, MediaType 等--&gt;</span>
         <span class="nt">&lt;dependency&gt;</span>
             <span class="nt">&lt;groupId&gt;</span>javax.ws.rs<span class="nt">&lt;/groupId&gt;</span>
             <span class="nt">&lt;artifactId&gt;</span>javax.ws.rs-api<span class="nt">&lt;/artifactId&gt;</span>
@@ -516,7 +509,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>创建 provider.PermissionRestServiceImpl 实现 上面的接口：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">provider</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">provider</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">api.PermissionRestService</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">api.PermissionService</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">com.alibaba.dubbo.rpc.RpcContext</span><span class="o">;</span>
@@ -527,22 +520,22 @@ dubbo-demo-consumer dubbo-demo.iml
 <span class="kn">import</span> <span class="nn">javax.ws.rs.core.MediaType</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
 <span class="nd">@Path</span><span class="o">(</span><span class="s">"permissions"</span><span class="o">)</span>
-<span class="nd">@Consumes</span><span class="o">({</span><span class="n">MediaType</span><span class="o">.</span><span class="na">APPLICATION_JSON</span><span class="o">})</span>
-<span class="nd">@Produces</span><span class="o">({</span><span class="n">ContentType</span><span class="o">.</span><span class="na">APPLICATION_JSON_UTF_8</span><span class="o">})</span>
-<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PermissionRestServiceImpl</span> <span class="kd">implements</span> <span class="n">PermissionRestService</span> <span class="o">{</span>
-    <span class="kd">private</span> <span class="n">PermissionService</span> <span class="n">permissionService</span><span class="o">;</span>
+<span class="nd">@Consumes</span><span class="o">({</span><span class="nc">MediaType</span><span class="o">.</span><span class="na">APPLICATION_JSON</span><span class="o">})</span>
+<span class="nd">@Produces</span><span class="o">({</span><span class="nc">ContentType</span><span class="o">.</span><span class="na">APPLICATION_JSON_UTF_8</span><span class="o">})</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PermissionRestServiceImpl</span> <span class="kd">implements</span> <span class="nc">PermissionRestService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="nc">PermissionService</span> <span class="n">permissionService</span><span class="o">;</span>
 
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setPermissionService</span><span class="o">(</span><span class="n">PermissionService</span> <span class="n">permissionService</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setPermissionService</span><span class="o">(</span><span class="nc">PermissionService</span> <span class="n">permissionService</span><span class="o">)</span> <span class="o">{</span>
         <span class="k">this</span><span class="o">.</span><span class="na">permissionService</span> <span class="o">=</span> <span class="n">permissionService</span><span class="o">;</span>
     <span class="o">}</span>
     <span class="nd">@GET</span>
     <span class="nd">@Path</span><span class="o">(</span><span class="s">"{id : \\d+}"</span><span class="o">)</span>
-    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@PathParam</span><span class="o">(</span><span class="s">"id"</span><span class="o">)</span> <span class="n">Long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getRequest</span><span class="o">(</span><span class="n">HttpServletRequest</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Client IP address from RpcContext: "</span> <span class="o">+</span> <span class="n">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getRequest</span><span class="o">(</span><span class="n">HttpServletRequest</span><span class="o">.</span><span class="na">class</span><span class="o">).</span><span class="na">getRemoteAddr</span><span class="o">());</span>
+    <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@PathParam</span><span class="o">(</span><span class="s">"id"</span><span class="o">)</span> <span class="nc">Long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getRequest</span><span class="o">(</span><span class="nc">HttpServletRequest</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Client IP address from RpcContext: "</span> <span class="o">+</span> <span class="nc">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getRequest</span><span class="o">(</span><span class="nc">HttpServletRequest</span><span class="o">.</span><span class="na">class</span><span class="o">).</span><span class="na">getRemoteAddr</span><span class="o">());</span>
         <span class="o">}</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getResponse</span><span class="o">(</span><span class="n">HttpServletResponse</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Response object from RpcContext: "</span> <span class="o">+</span> <span class="n">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getResponse</span><span class="o">(</span><span class="n">HttpServletResponse</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getResponse</span><span class="o">(</span><span class="nc">HttpServletResponse</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Response object from RpcContext: "</span> <span class="o">+</span> <span class="nc">RpcContext</span><span class="o">.</span><span class="na">getContext</span><span class="o">().</span><span class="na">getResponse</span><span class="o">(</span><span class="nc">HttpServletResponse</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
         <span class="o">}</span>
         <span class="c1">// 上面是输出相应的测试信息的，真实的实现只有下面这句</span>
         <span class="k">return</span> <span class="n">permissionService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
@@ -552,7 +545,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>编辑 spring 配置：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ...
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ...
     <span class="c">&lt;!--使用 netty 服务，将 rest 服务暴露在 4567 端口--&gt;</span>
     <span class="nt">&lt;dubbo:protocol</span> <span class="na">name=</span><span class="s">"rest"</span> <span class="na">port=</span><span class="s">"4567"</span> <span class="na">threads=</span><span class="s">"500"</span> <span class="na">contextpath=</span><span class="s">"services"</span> <span class="na">server=</span><span class="s">"netty"</span> <span class="na">accepts=</span><span class="s">"500"</span> <span class="na">extension=</span><span class="s">"com.alibaba.dubbo.rpc.protocol.rest.support.LoggingFilter"</span><span class="nt">/&gt;</span>
     <span class="c">&lt;!--使用 rest 规范实现定义好的 api.PermissionRestService 接口--&gt;</span>
@@ -569,17 +562,17 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>编辑 DemoConsumer 类，添加 rest 调用：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">DemoConsumer</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">DemoConsumer</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
         <span class="c1">// 测试常规服务</span>
-        <span class="n">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
+        <span class="nc">ClassPathXmlApplicationContext</span> <span class="n">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ClassPathXmlApplicationContext</span><span class="o">(</span><span class="s">"classpath*:META-INF/spring/*.xml"</span><span class="o">);</span>
         <span class="n">context</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
         <span class="c1">// dubbo 协议</span>
-        <span class="n">PermissionService</span> <span class="n">permissionService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">PermissionService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">1L</span><span class="o">));</span>
+        <span class="nc">PermissionService</span> <span class="n">permissionService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="nc">PermissionService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">1L</span><span class="o">));</span>
         <span class="c1">// rest 规范</span>
-        <span class="n">PermissionRestService</span> <span class="n">permissionRestService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="n">PermissionRestService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionRestService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">2L</span><span class="o">));</span>
+        <span class="nc">PermissionRestService</span> <span class="n">permissionRestService</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="na">getBean</span><span class="o">(</span><span class="nc">PermissionRestService</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">permissionRestService</span><span class="o">.</span><span class="na">getPermissions</span><span class="o">(</span><span class="mi">2L</span><span class="o">));</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
@@ -596,37 +589,37 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>编辑 spring 配置，添加 permissionRestService：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c">&lt;!--使用 dubbo 协议调用定义好的 api.PermissionRestService 接口--&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c">&lt;!--使用 dubbo 协议调用定义好的 api.PermissionRestService 接口--&gt;</span>
     <span class="nt">&lt;dubbo:reference</span> <span class="na">id=</span><span class="s">"permissionRestService"</span> <span class="na">interface=</span><span class="s">"api.PermissionRestService"</span><span class="nt">/&gt;</span>
 </code></pre></div></div>
 
 <p>执行 DemoConsumer 的 main 函数，报错：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java.lang.IllegalStateException: Unsupported protocol rest in notified url: ...
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>java.lang.IllegalStateException: Unsupported protocol rest in notified url: ...
 </code></pre></div></div>
 
 <p><a href="https://dangdangdotcom.github.io/dubbox/rest.html">文档</a>中指明，这种调用方式必须把 JAX-RS 的 annotation 添加到服务接口上，这样在 dubbo 在消费端才能共享相应的 REST 配置信息，并据之做远程调用，编辑 api.PermissionRestService 类：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 注意这里编辑的是 api module 下的文件</span>
-<span class="kn">package</span> <span class="n">api</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 注意这里编辑的是 api module 下的文件</span>
+<span class="kn">package</span> <span class="nn">api</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">com.alibaba.dubbo.rpc.protocol.rest.support.ContentType</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">javax.validation.constraints.Min</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">javax.ws.rs.*</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">javax.ws.rs.core.MediaType</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
 <span class="nd">@Path</span><span class="o">(</span><span class="s">"permissions"</span><span class="o">)</span>
-<span class="nd">@Consumes</span><span class="o">({</span><span class="n">MediaType</span><span class="o">.</span><span class="na">APPLICATION_JSON</span><span class="o">})</span>
-<span class="nd">@Produces</span><span class="o">({</span><span class="n">ContentType</span><span class="o">.</span><span class="na">APPLICATION_JSON_UTF_8</span><span class="o">})</span>
+<span class="nd">@Consumes</span><span class="o">({</span><span class="nc">MediaType</span><span class="o">.</span><span class="na">APPLICATION_JSON</span><span class="o">})</span>
+<span class="nd">@Produces</span><span class="o">({</span><span class="nc">ContentType</span><span class="o">.</span><span class="na">APPLICATION_JSON_UTF_8</span><span class="o">})</span>
 <span class="kd">public</span> <span class="kd">interface</span> <span class="nc">PermissionRestService</span> <span class="o">{</span>
     <span class="nd">@GET</span>
     <span class="nd">@Path</span><span class="o">(</span><span class="s">"{id : \\d+}"</span><span class="o">)</span>
-    <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@PathParam</span><span class="o">(</span><span class="s">"id"</span><span class="o">)</span> <span class="nd">@Min</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">,</span> <span class="n">message</span> <span class="o">=</span> <span class="s">"User ID must be greater than 1"</span><span class="o">)</span> <span class="n">Long</span> <span class="n">id</span><span class="o">);</span>
+    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">getPermissions</span><span class="o">(</span><span class="nd">@PathParam</span><span class="o">(</span><span class="s">"id"</span><span class="o">)</span> <span class="nd">@Min</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">,</span> <span class="n">message</span> <span class="o">=</span> <span class="s">"User ID must be greater than 1"</span><span class="o">)</span> <span class="nc">Long</span> <span class="n">id</span><span class="o">);</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
 <p>同时需要在 api module 的 pom 文件下添加对应的依赖：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nt">&lt;dependencies&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nt">&lt;dependencies&gt;</span>
         <span class="nt">&lt;dependency&gt;</span>
             <span class="nt">&lt;groupId&gt;</span>javax.validation<span class="nt">&lt;/groupId&gt;</span>
             <span class="nt">&lt;artifactId&gt;</span>validation-api<span class="nt">&lt;/artifactId&gt;</span>
@@ -645,16 +638,16 @@ dubbo-demo-consumer dubbo-demo.iml
     <span class="nt">&lt;/dependencies&gt;</span>
 </code></pre></div></div>
 
-<p>再次<span class="codespan">mvn clean package</span>，遇到错误 ：</p>
+<p>再次<code class="language-plaintext highlighter-rouge">mvn clean package</code>，遇到错误 ：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. org.springframework.beans.factory.BeanCreationException...
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. org.springframework.beans.factory.BeanCreationException...
 2. ERROR integration.RegistryDirectory: Unsupported protocol rest in notified url...
 3. ...
 </code></pre></div></div>
 
 <p>从该 <a href="https://github.com/dangdangdotcom/dubbox/issues/73">issue</a> 来看是 consumer 缺少相关依赖，添加上：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="c">&lt;!--使用 netty 启动 rest 服务--&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="c">&lt;!--使用 netty 启动 rest 服务--&gt;</span>
         <span class="nt">&lt;dependency&gt;</span>
             <span class="nt">&lt;groupId&gt;</span>org.jboss.resteasy<span class="nt">&lt;/groupId&gt;</span>
             <span class="nt">&lt;artifactId&gt;</span>resteasy-netty<span class="nt">&lt;/artifactId&gt;</span>
@@ -693,7 +686,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>再次执行，发现一切正常了，输出的结果也是对的：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Permission_0, Permission_1, Permission_2]
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Permission_0, Permission_1, Permission_2]
 [Permission_1, Permission_2, Permission_3]
 </code></pre></div></div>
 
@@ -707,17 +700,17 @@ dubbo-demo-consumer dubbo-demo.iml
   <li>校验注解要放在服务的接口上，一个例子如下：</li>
 </ol>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 接口文件</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 接口文件</span>
 <span class="kd">public</span> <span class="kd">interface</span> <span class="nc">PermissionRestService</span> <span class="o">{</span>
-    <span class="n">ItemPermissionResponse</span> <span class="nf">GetPermissions</span><span class="o">(</span><span class="nd">@Valid</span> <span class="n">UserItemPermissionRequest</span> <span class="n">userItemPermissionRequest</span><span class="o">);</span>
+    <span class="nc">ItemPermissionResponse</span> <span class="nf">GetPermissions</span><span class="o">(</span><span class="nd">@Valid</span> <span class="nc">UserItemPermissionRequest</span> <span class="n">userItemPermissionRequest</span><span class="o">);</span>
 <span class="o">}</span>
 
 <span class="c1">// request 文件</span>
-<span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserItemPermissionRequest</span> <span class="kd">extends</span> <span class="n">BaseRequest</span> <span class="o">{</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserItemPermissionRequest</span> <span class="kd">extends</span> <span class="nc">BaseRequest</span> <span class="o">{</span>
     <span class="nd">@NotNull</span> <span class="nd">@Valid</span>
-    <span class="kd">private</span> <span class="n">UserDto</span> <span class="n">userDto</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">UserDto</span> <span class="n">userDto</span><span class="o">;</span>
     <span class="nd">@NotNull</span> <span class="nd">@Valid</span>
-    <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">ItemDto</span><span class="o">&gt;</span> <span class="n">itemDtoList</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">ItemDto</span><span class="o">&gt;</span> <span class="n">itemDtoList</span><span class="o">;</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -725,16 +718,16 @@ dubbo-demo-consumer dubbo-demo.iml
   <li>按照 dubbo 的标准方式在 XML 配置中打开验证，我们在前面的配置中已经设置好了。</li>
 </ol>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;dubbo:service</span> <span class="na">interface=</span><span class="s">"api.PermissionRestService"</span> <span class="na">ref=</span><span class="s">"permissionRestService"</span> <span class="na">protocol=</span><span class="s">"rest"</span>  <span class="na">validation=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;dubbo:service</span> <span class="na">interface=</span><span class="s">"api.PermissionRestService"</span> <span class="na">ref=</span><span class="s">"permissionRestService"</span> <span class="na">protocol=</span><span class="s">"rest"</span>  <span class="na">validation=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
 </code></pre></div></div>
 
 <ol>
   <li>注意 NotNull 要使用包裹类型而不是基本类型(primitive type)。</li>
 </ol>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">GroupDto</span> <span class="kd">implements</span> <span class="n">Serializable</span> <span class="o">{</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">GroupDto</span> <span class="kd">implements</span> <span class="nc">Serializable</span> <span class="o">{</span>
     <span class="nd">@NotNull</span>
-    <span class="kd">private</span> <span class="n">Long</span> <span class="n">id</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Long</span> <span class="n">id</span><span class="o">;</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -744,7 +737,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>按照 dubbo 推荐的方式打包成一个 .tar.gz 文件。在 provider 的 pom 文件中添加打包的依赖插件（或直接看最终结果 <a href="https://github.com/wwulfric/dubbodemo/blob/package/provider/pom.xml">pom.xml</a>）：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	<span class="c">&lt;!-- 前面是 dependencies --&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	<span class="c">&lt;!-- 前面是 dependencies --&gt;</span>
 	<span class="nt">&lt;build&gt;</span>
         <span class="nt">&lt;plugins&gt;</span>
             <span class="nt">&lt;plugin&gt;</span>
@@ -791,7 +784,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>在 src/main 下创建文件夹 assembly，并创建相应文件，如下所示：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
 ├── pom.xml
 ├── src
 │   ├── main
@@ -807,7 +800,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>其中 dubbo.properties 留空即可，dubbo 的配置已经写在了 spring 的配置中。assembly.xml 内容为：</p>
 
-<div  class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;assembly&gt;</span>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;assembly&gt;</span>
     <span class="nt">&lt;id&gt;</span>assembly<span class="nt">&lt;/id&gt;</span>
     <span class="nt">&lt;formats&gt;</span>
         <span class="nt">&lt;format&gt;</span>tar.gz<span class="nt">&lt;/format&gt;</span>
@@ -837,7 +830,7 @@ dubbo-demo-consumer dubbo-demo.iml
 
 <p>打包结果为 provider-1.0-SNAPSHOT-assembly.tar.gz，解压，其文件结构为：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/IdeaProjects/dubbotest/provider/target/provider-1.0-SNAPSHOT
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/IdeaProjects/dubbotest/provider/target/provider-1.0-SNAPSHOT
 &gt; ls
 bin  conf lib  logs
 </code></pre></div></div>
@@ -854,24 +847,17 @@ bin  conf lib  logs
 
 <p>将打包好的服务 .tar.gz 传到阿里云服务器上，并解压，进入文件夹，编辑 bin/start.sh 文件：</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 调整调试的端口号</span>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 调整调试的端口号</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="o">=</span> <span class="s2">"debug"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
     </span><span class="nv">JAVA_DEBUG_OPTS</span><span class="o">=</span><span class="s2">" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n "</span>
 <span class="k">fi</span>
 </code></pre></div></div>
 
-<p>然后按照 start.sh 的提示，执行<span class="codespan">bin/start.sh debug</span>，启动服务。</p>
+<p>然后按照 start.sh 的提示，执行<code class="language-plaintext highlighter-rouge">bin/start.sh debug</code>，启动服务。</p>
 
 <h3 id="intellij-配置">intellij 配置</h3>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/R-dubbo-remote-debug.png" alt="intellij remote debug" title="intellij remote debug" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>intellij remote debug</figcaption>
-        </figure></p>
+<p><img src="/images/dubbo/R-dubbo-remote-debug.png" alt="intellij remote debug" title="intellij remote debug" /></p>
 
 <p>接下来就可以在 intellij 里打断点调试了。</p>
 
@@ -879,17 +865,17 @@ bin  conf lib  logs
 
 <p>P.S.: java8 打包的结果不能在 java7 上运行。如果遇到错误：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>could not be instantiated: java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>could not be instantiated: java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;
 </code></pre></div></div>
 
 <p>请考虑将依赖的包全部以 jdk7 的 maven 重新安装一遍，尤其是 dubbo 的。mac 下 java 环境的管理可以参考这篇<a href="/2017/03/macos-jenv/">文章</a>；</p>
 
 <p>P.S.: 如果你是从阿里云的服务器访问另一台阿里云的服务器，可能会遇到 'no route to host' 错误，这种情况一般都是 ip 和 host 问题，注意阿里云互相访问需要使用它们的内网 ip。可以参考这个<a href="http://superuser.com/questions/720851/connection-refused-vs-no-route-to-host">回答</a>，'no route to host' 不是来自目标主机的回复，是网络问题。</p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1">
-      <p>该段示例来自 dubbox 的源码 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:1" role="doc-endnote">
+      <p>该段示例来自 dubbox 的源码 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -971,8 +957,8 @@ bin  conf lib  logs
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -990,8 +976,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -1001,7 +987,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="SourceTree,P4Merge,tig,git">
-  <link rel="canonical" href="http://wulfric.me/2015/08/git-tools/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2015/08/git-tools/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -74,40 +74,19 @@
 
 <p><a href="https://www.sourcetreeapp.com/">SourceTree</a>。在各种<a href="http://www.slant.co/topics/465/~what-are-the-best-git-clients-for-mac-os-x">测评</a>中，SourceTree 一般被评价为 MAC 下性价比最高的。SourceTree 在查看 commit 信息，浏览文件的 git log 等方面特别便利。不过一些较为复杂的操作，比如 merge 和 rebase 还是在命令行操作比较放心。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/git/sourcetree.png" alt="SourceTree" title="SourceTree" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>SourceTree</figcaption>
-        </figure></p>
+<p><img src="/images/git/sourcetree.png" alt="SourceTree" title="SourceTree" /></p>
 
 <p><a href="http://www.perforce.com/product/components/perforce-visual-merge-and-diff-tools">P4Merge</a> 也是<a href="http://www.slant.co/topics/48/~what-are-the-best-visual-merge-tools-for-git">测评</a>中可视化合并工具中性价比最高的。可以将 P4Merge 配置为 git 的默认可视化合并工具，参见<a href="http://wulfric.me/2015/01/git-merge-with-p4merge/">使用 P4Merge 作为 GIT 的可视化合并工具</a>。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>P4Merge</figcaption>
-        </figure></p>
+<p><img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" /></p>
 
 <p>PS: P4Merge 并没有针对 Retina 屏优化，请使用 <a href="http://retinizer.mikelpr.com/">Retinizer</a> 工具修正一下。</p>
 
 <p>最近发现了一款新的三方合并和比较工具：<a href="http://www.kaleidoscopeapp.com/">Kaleidoscope</a>，效果很棒，只是价格偏高。 官网有 screenshots，做的比较漂亮。</p>
 
-<p><a href="https://github.com/jonas/tig">tig</a> 则是终端的 git 工具，可以认为是终端下的SourceTree。有了这么一个工具，便可以在终端快速的查看 commit 和 diff 信息了。有了 tig，再也不需要记住各种<span class="codespan">git log</span>和<span class="codespan">git diff</span>的命令了。</p>
+<p><a href="https://github.com/jonas/tig">tig</a> 则是终端的 git 工具，可以认为是终端下的SourceTree。有了这么一个工具，便可以在终端快速的查看 commit 和 diff 信息了。有了 tig，再也不需要记住各种<code class="language-plaintext highlighter-rouge">git log</code>和<code class="language-plaintext highlighter-rouge">git diff</code>的命令了。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/tig.png" alt="tig" title="tig" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>tig</figcaption>
-        </figure></p>
+<p><img src="/images/tig.png" alt="tig" title="tig" /></p>
 
 <p>我的使用习惯是，用 SourceTree 看平时的 commit 和 diff，rebase 或 merge 的时候出现冲突用 p4Merge 解决，临时在终端查看 commit 和 diff 用 tig。</p>
 
@@ -176,8 +155,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -195,8 +174,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -206,7 +185,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="github pages,302 redirect">
-  <link rel="canonical" href="http://wulfric.me/2015/05/github-pages-with-302/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2015/05/github-pages-with-302/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -74,21 +74,14 @@
 
 <p>解决方法是，换用可以支持 ALIAS 的 DNS 服务。注意这里的 ALIAS 不是 CNAME(ALIAS)，大多数域名服务不提供 ALIAS，所以需要好好选择，推荐的有<a href="https://pointhq.com/">Pointhq</a>，支持一个免费域名；<a href="https://dnsimple.com/">DNSimple</a>，ALIAS 需要收费。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/conf.png" alt="ALIAS 配置" title="ALIAS 配置" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>ALIAS 配置</figcaption>
-        </figure></p>
+<p><img src="/images/conf.png" alt="ALIAS 配置" title="ALIAS 配置" /></p>
 
 <p>改完之后再看一下：</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
 </code></pre></div></div>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
 ;; global options: +cmd
 ;wulfric.me.      IN A
 wulfric.me.  3600 IN A xxx.xxx.xxx.xxx
@@ -96,10 +89,10 @@ wulfric.me.  3600 IN A xxx.xxx.xxx.xxx
 
 <p>这里的 IP 地址不再是 Github 给出的 IP 了</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-I</span> wulfric.me/archive/
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-I</span> wulfric.me/archive/
 </code></pre></div></div>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
 Server: GitHub.com
 Content-Type: text/html; charset=utf-8
 Last-Modified: Fri, 17 Oct 2014 16:29:11 GMT
@@ -177,8 +170,8 @@ Vary: Accept-Encoding
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -196,8 +189,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -207,7 +200,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

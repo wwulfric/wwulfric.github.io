@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="git,gitignore,gitconfig">
-  <link rel="canonical" href="http://wulfric.me/2014/04/gitconfig-and-gitignore/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2014/04/gitconfig-and-gitignore/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -74,7 +74,7 @@
 
 <p>在家目录下创建 .gitconfig 文件，</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>user]
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>user]
 	name <span class="o">=</span> 你的名字
 	email <span class="o">=</span> 你的邮箱
 <span class="o">[</span>core]
@@ -93,11 +93,11 @@
     ui <span class="o">=</span> <span class="nb">true</span>
 </code></pre></div></div>
 
-<p>配置好后，你就可以使用<span class="codespan">git ci</span>, <span class="codespan">git co</span>, <span class="codespan">git st</span>等命令了。</p>
+<p>配置好后，你就可以使用<code class="language-plaintext highlighter-rouge">git ci</code>, <code class="language-plaintext highlighter-rouge">git co</code>, <code class="language-plaintext highlighter-rouge">git st</code>等命令了。</p>
 
 <p>在家目录下创建 .gitignore_global，这个文件中放的是全局的 git ignore 文件，比如编辑器的配置文件，缓存文件，编译的文件等，下为例子</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Compiled source #</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Compiled source #</span>
 <span class="c">###################</span>
 <span class="k">*</span>.com
 <span class="k">*</span>.class
@@ -146,7 +146,7 @@ Thumbs.db
 
 <p>在项目下的 .gitignore 文件应该放和项目紧密相关的 ignore 文件，比如项目的配置，数据库的配置等，如：</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">*</span>/conf_set.php
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">*</span>/conf_set.php
 database.yml
 </code></pre></div></div>
 
@@ -211,8 +211,8 @@ database.yml
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -230,8 +230,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -241,7 +241,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

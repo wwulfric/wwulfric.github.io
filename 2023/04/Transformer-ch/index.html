@@ -18,22 +18,24 @@
 
 ">
   <meta name="keywords" content="ai,chatgpt">
-  <link rel="canonical" href="http://wulfric.me/2023/04/Transformer-ch/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2023/04/Transformer-ch/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
-    <script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: {
-      equationNumbers: { autoNumber: "AMS" },
-      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
-    },
-    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-  });
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
 </script>
 
 <script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
-</script>
+        defer src="//cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+></script>
 
   
 </head>
@@ -113,14 +115,7 @@
 
 <p>大多数竞争性神经序列转换模型都具有编码器-解码器结构[5, 2, 35]。其中，编码器将符号表示的输入序列(x1,…,xn)映射到一系列连续表示z = (z1,…,zn)。给定z，解码器随后生成一个符号输出序列(y1, …, ym)，每次生成一个元素。在每个步骤中，该模型是自回归的[10]，在生成下一个符号时消耗先前生成的符号作为额外的输入。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图1：Transformer 模型架构</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" /></p>
 
 <p>Transformer遵循这种总体架构，使用堆叠的自注意力和点式全连接层分别作为编码器和解码器，分别显示在图1的左半部分和右半部分。</p>
 
@@ -134,14 +129,7 @@
 
 <p>注意力函数可以描述为将一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。输出是值的加权和，其中分配给每个值的权重是由查询与相应键的兼容性函数计算的。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" /></p>
 
 <h4 id="321-缩放点积注意力">3.2.1 缩放点积注意力</h4>
 
@@ -149,11 +137,11 @@
 
 <p>在实践中，我们同时在一组查询上计算注意力函数，将它们打包成矩阵Q。键和值也打包成矩阵K和V。我们计算输出矩阵如下：</p>
 
-<script type="math/tex; mode=display">Attention(Q,K,V) = softmax(\frac{QK^T}{\sqrt{d_k}})V</script>
+\[Attention(Q,K,V) = softmax(\frac{QK^T}{\sqrt{d_k}})V\]
 
 <p>两种最常用的注意力函数是加性注意力[2]和点积（乘法）注意力。点积注意力与我们的算法相同，除了缩放因子 $frac{1}{d_k}$。加性注意力使用具有单个隐藏层的前馈网络计算兼容性函数。虽然两者在理论复杂度上相似，但在实践中，点积注意力速度更快，空间效率更高，因为它可以使用高度优化的矩阵乘法代码实现。</p>
 
-<p>虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4"><a href="#fn:4" class="footnote">1</a></sup>。为了抵消这种效应，我们通过 $frac{1}{d_k}$ 对点积进行缩放。</p>
+<p>虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4" role="doc-noteref"><a href="#fn:4" class="footnote" rel="footnote">1</a></sup>。为了抵消这种效应，我们通过 $frac{1}{d_k}$ 对点积进行缩放。</p>
 
 <h4 id="322-多头注意力">3.2.2 多头注意力</h4>
 
@@ -161,12 +149,12 @@
 
 <p>多头注意力允许模型在不同位置同时关注来自不同表示子空间的信息。使用单个注意力头时，平均效应会抑制这种效果。</p>
 
-<script type="math/tex; mode=display">MultiHead(Q,K,V)=Concat(head_1,...,head_h)W^O \\
-where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)</script>
+\[MultiHead(Q,K,V)=Concat(head_1,...,head_h)W^O \\
+where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)\]
 
 <p>这里的线性映射就是参数矩阵</p>
 
-<script type="math/tex; mode=display">W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}</script>
+\[W_i^Q \in \R^{d_{model}\times d_k},W_i^K\in \R^{d_{model}\times d_k},W_i^V\in \R^{d_{model}\times d_v}, W^O\in \R^{hd_v \times d_{model}}\]
 
 <p>在本文中，我们使用了h = 8个平行的注意力层或头。对于每个头，我们使用dk = dv = dmodel/h = 64。由于每个头的维度降低，总的计算成本类似于全维度的单头注意力。</p>
 
@@ -182,9 +170,9 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)</script>
 
 <h3 id="33-位置编码前馈网络">3.3 位置编码前馈网络</h3>
 
-<p>除了注意力子层外，我们的编码器和解码器中的每个层都包含一个全连接的前馈神经网络<sup id="fnref:PFFN"><a href="#fn:PFFN" class="footnote">2</a></sup>，它是独立地应用于每个位置并且相同地处理。该前馈神经网络由两个线性变换层组成，中间使用ReLU激活函数。</p>
+<p>除了注意力子层外，我们的编码器和解码器中的每个层都包含一个全连接的前馈神经网络<sup id="fnref:PFFN" role="doc-noteref"><a href="#fn:PFFN" class="footnote" rel="footnote">2</a></sup>，它是独立地应用于每个位置并且相同地处理。该前馈神经网络由两个线性变换层组成，中间使用ReLU激活函数。</p>
 
-<script type="math/tex; mode=display">FFN(x)=max(0,xW_1+b_1)W_2+b_2</script>
+\[FFN(x)=max(0,xW_1+b_1)W_2+b_2\]
 
 <p>虽然线性变换在不同位置上是相同的，但它们在不同层之间使用不同的参数。另一种描述方式是将其视为两个内核大小为1的卷积。输入和输出的维度是dmodel = 512，而内部层的维度为dff = 2048。</p>
 
@@ -196,19 +184,12 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)</script>
 
 <p>由于我们的模型不包含循环和卷积，为了使模型能够利用序列的顺序，我们必须注入有关序列中标记的相对或绝对位置的一些信息。为此，在编码器和解码器堆栈底部的输入嵌入中添加“位置编码”。位置编码与嵌入具有相同的维度dmodel，因此可以将它们相加。有许多位置编码的选择，可以是可学习的或固定的[9]。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" /></p>
 
 <p>我们的工作中使用了不同频率的 sin 和 cos 函数：</p>
 
-<script type="math/tex; mode=display">PE_{(pos,2i)}=sin(pos/10000^{2i/d_{model}}) \\
-PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})</script>
+\[PE_{(pos,2i)}=sin(pos/10000^{2i/d_{model}}) \\
+PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 
 <p>其中，pos 是未知，i 是维度。也就是说，位置编码中的每个维度对应于一个正弦波。波长从2π到10000·2π形成一个几何级数。我们选择这个函数是因为我们假设它可以使模型轻松地学习相对位置的注意力，由于对于任何固定的偏移k，$PE_{pos+k}$ 可以表示为$PE_{pos}$ 的线性函数。</p>
 
@@ -238,13 +219,13 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})</script>
 
 <p>我们对基于注意力机制的模型未来感到兴奋，并计划将其应用于其他任务。我们计划将Transformer扩展到涉及文本以外的输入和输出模态问题，并研究局部、受限制的注意力机制，以有效处理大量输入和输出，如图像、音频和视频。使生成 less sequential 是我们的另一个研究目标。</p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:4">
-      <p>为了说明为什么点积变得很大，假设q和k的分量是具有均值0和方差1的独立随机变量。那么它们的点积，$q·k = \sum_{i=1}^{d_k} q_ik_i$ 的均值为0，方差为dk。 <a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:4" role="doc-endnote">
+      <p>为了说明为什么点积变得很大，假设q和k的分量是具有均值0和方差1的独立随机变量。那么它们的点积，$q·k = \sum_{i=1}^{d_k} q_ik_i$ 的均值为0，方差为dk。 <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:PFFN">
-      <p>（位置编码前馈网络）是Transformer模型中的一种组件，用于在每个注意力子层之间增加一个前馈神经网络层，从而提高模型性能。该网络层是在每个位置上独立地应用的，因此称为“位置编码”。它由两个全连接层组成，每个层之间使用ReLU激活函数。在每个位置上，该网络将输入向量映射到具有相同维度的中间向量，再通过第二个全连接层将中间向量映射回原始维度的输出向量。通过使用位置编码前馈网络，Transformer模型能够更好地处理不同位置之间的依赖关系，从而提高了其在序列到序列任务中的性能。 <a href="#fnref:PFFN" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:PFFN" role="doc-endnote">
+      <p>（位置编码前馈网络）是Transformer模型中的一种组件，用于在每个注意力子层之间增加一个前馈神经网络层，从而提高模型性能。该网络层是在每个位置上独立地应用的，因此称为“位置编码”。它由两个全连接层组成，每个层之间使用ReLU激活函数。在每个位置上，该网络将输入向量映射到具有相同维度的中间向量，再通过第二个全连接层将中间向量映射回原始维度的输出向量。通过使用位置编码前馈网络，Transformer模型能够更好地处理不同位置之间的依赖关系，从而提高了其在序列到序列任务中的性能。 <a href="#fnref:PFFN" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -306,8 +287,8 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})</script>
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -325,8 +306,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -336,7 +317,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

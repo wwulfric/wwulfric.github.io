@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="MAC,alfred,dash">
-  <link rel="canonical" href="http://wulfric.me/2015/12/alfred-dash/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2015/12/alfred-dash/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -68,18 +68,11 @@
 
 
   <article class="post-content">
-    <p>你生活在二维 Mac 世界里，在<span class="codespan">Applications</span>下散落着各种应用，在<span class="codespan">Finder</span>下散落着各种文件和文件夹，而文本内容又散落在各个文件中。命运如潮水般汹涌而来，你在平面里穿梭，寻找那命中注定的字符串。</p>
+    <p>你生活在二维 Mac 世界里，在<code class="language-plaintext highlighter-rouge">Applications</code>下散落着各种应用，在<code class="language-plaintext highlighter-rouge">Finder</code>下散落着各种文件和文件夹，而文本内容又散落在各个文件中。命运如潮水般汹涌而来，你在平面里穿梭，寻找那命中注定的字符串。</p>
 
 <p>够了！你冲出纷至沓来的字符串洪流，艰难地走向书柜，掏出一本「哆啦A梦」— 是时候穿越时空了！</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/space-wrap.png" alt="空间翘曲" title="空间翘曲" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>空间翘曲</figcaption>
-        </figure></p>
+<p><img src="/images/space-wrap.png" alt="空间翘曲" title="空间翘曲" /></p>
 
 <p>alfred 就是 Mac 世界里穿越时空的飞船。</p>
 
@@ -89,111 +82,55 @@
 
 <h3 id="基础功能">基础功能</h3>
 
-<p>打开<span class="codespan">Alfred Preference</span>，在<span class="codespan">Features</span>选项卡中的内容就是免费版提供的各项基础功能，如图。</p>
+<p>打开<code class="language-plaintext highlighter-rouge">Alfred Preference</code>，在<code class="language-plaintext highlighter-rouge">Features</code>选项卡中的内容就是免费版提供的各项基础功能，如图。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/alfred-preference.png" alt="Alfred Preference" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>Alfred Preference</figcaption>
-        </figure></p>
+<p><img src="/images/alfred-preference.png" alt="Alfred Preference" /></p>
 
 <p>把上述内容过一遍，就能对 Alfred 有一个比较全面的印象了。</p>
 
-<p>最常用功能：定位 APP。<span class="codespan">Option+Space</span>键打开后，键入 APP 名称，便可以轻松打开 APP。名称输入支持部分匹配，但不支持模糊匹配。</p>
+<p>最常用功能：定位 APP。<code class="language-plaintext highlighter-rouge">Option+Space</code>键打开后，键入 APP 名称，便可以轻松打开 APP。名称输入支持部分匹配，但不支持模糊匹配。</p>
 
-<p>计算器：简单计算，也可输入<span class="codespan">=</span>使用高级函数比如「sin, cos, log, ln」等。</p>
+<p>计算器：简单计算，也可输入<code class="language-plaintext highlighter-rouge">=</code>使用高级函数比如「sin, cos, log, ln」等。</p>
 
-<p>定位文件：<span class="codespan">Option+Space</span>键打开并输入<span class="codespan">find</span>，空格之后输入文件或文件夹的部分名称，便可找到其位置，确定后将会在 Finder 中定位该文件；如果输入的是<span class="codespan">open</span>，确定后定位并打开该文件；<span class="codespan">in</span>，搜索文件中的信息。该部分配置项在<span class="codespan">Features</span>选项卡中<span class="codespan">File Search</span>部分。</p>
+<p>定位文件：<code class="language-plaintext highlighter-rouge">Option+Space</code>键打开并输入<code class="language-plaintext highlighter-rouge">find</code>，空格之后输入文件或文件夹的部分名称，便可找到其位置，确定后将会在 Finder 中定位该文件；如果输入的是<code class="language-plaintext highlighter-rouge">open</code>，确定后定位并打开该文件；<code class="language-plaintext highlighter-rouge">in</code>，搜索文件中的信息。该部分配置项在<code class="language-plaintext highlighter-rouge">Features</code>选项卡中<code class="language-plaintext highlighter-rouge">File Search</code>部分。</p>
 
-<p>剪贴板：Alfred 也可以操作剪贴板。获得剪贴板历史，合并剪贴板等。除此之外还可以自定义 snippet。snippet 可以操作的变量只有三个：time, date, clipboard。我做了一个 snippet，快捷键是<span class="codespan">sj</span>，内容是<span class="codespan">{date:medium} {time}</span>。输入<span class="codespan">Option+Cmd+c</span>调出 Alfred 的剪贴板工具，输入<span class="codespan">sj</span>，即可输出符合 Jekyll 格式的当前时间。PS: date 的 short, medium 和 long 的配置见系统设置-时间和日期-语言和地区中。</p>
+<p>剪贴板：Alfred 也可以操作剪贴板。获得剪贴板历史，合并剪贴板等。除此之外还可以自定义 snippet。snippet 可以操作的变量只有三个：time, date, clipboard。我做了一个 snippet，快捷键是<code class="language-plaintext highlighter-rouge">sj</code>，内容是<code class="language-plaintext highlighter-rouge">{date:medium} {time}</code>。输入<code class="language-plaintext highlighter-rouge">Option+Cmd+c</code>调出 Alfred 的剪贴板工具，输入<code class="language-plaintext highlighter-rouge">sj</code>，即可输出符合 Jekyll 格式的当前时间。PS: date 的 short, medium 和 long 的配置见系统设置-时间和日期-语言和地区中。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/systempreference-datetime-languageregion.png" alt="时间设置" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>时间设置</figcaption>
-        </figure></p>
+<p><img src="/images/systempreference-datetime-languageregion.png" alt="时间设置" /></p>
 
 <h3 id="workflow">workflow</h3>
 
 <p>workflow 作为 Alfred 的付费功能，提供了相当强大的自定义功能。workflow 支持调用脚本（shell/ruby/python/php），这为 Alfred 提供了无限可能。比如这个 workflow，就是调用 Python 脚本实现的一个有趣的功能。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-alfred-zhenxiang.png" alt="alfred workflow 真相" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>alfred workflow 真相</figcaption>
-        </figure></p>
+<p><img src="/images/R-alfred-zhenxiang.png" alt="alfred workflow 真相" /></p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/alfred-workflow-example.png" alt="alfred workflow 示例" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>alfred workflow 示例</figcaption>
-        </figure></p>
+<p><img src="/images/alfred-workflow-example.png" alt="alfred workflow 示例" /></p>
 
 <p>豆瓣 workflow：输入 movie/music/book，查找豆瓣信息。
-<figure>
-          <picture>
-            
-            
-            <img src="/images/alfred-douban.png" alt="alfred workflow douban" title="alfred workflow douban" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>alfred workflow douban</figcaption>
-        </figure></p>
+<img src="/images/alfred-douban.png" alt="alfred workflow douban" title="alfred workflow douban" /></p>
 
 <h2 id="dash">Dash</h2>
 
 <p><a href="https://kapeli.com/dash">dash</a>是 Mac 下的文档集合工具，支持海量语言和插件。其原理倒是比较简单，就是把各种语言和框架的文档下载到本地以供查找。一方面可以节约网络查询的成本，另一方面可以原生提供针对几乎每一个编辑器和 IDE 的支持，非常的便利。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://kapeli.com/img/dash-s1.png" alt="dash" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>dash</figcaption>
-        </figure></p>
+<p><img src="https://kapeli.com/img/dash-s1.png" alt="dash" /></p>
 
 <h3 id="和-alfred-配合">和 Alfred 配合</h3>
 
 <p>配合 Alfred 下的 dash workflow，可以轻松的查找文档，如图所示。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/dash-alfred.png" alt="dash alfred" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>dash alfred</figcaption>
-        </figure></p>
+<p><img src="/images/dash-alfred.png" alt="dash alfred" /></p>
 
 <h2 id="结语">结语</h2>
 
-<p>直方图一样丛生的石头森林，命运之线下苦苦挣扎的傀儡，远方朝露晨雾中若隐若现的灯塔，这是个纷纷扰扰的世界。想要成为一个穿越时空的 <del>少女</del> 少年。<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup></p>
+<p>直方图一样丛生的石头森林，命运之线下苦苦挣扎的傀儡，远方朝露晨雾中若隐若现的灯塔，这是个纷纷扰扰的世界。想要成为一个穿越时空的 <del>少女</del> 少年。<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup></p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chuanyueshikongdeshaonv.png" alt="穿越时空的少女" title="穿越时空的少女" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>穿越时空的少女</figcaption>
-        </figure></p>
+<p><img src="/images/chuanyueshikongdeshaonv.png" alt="穿越时空的少女" title="穿越时空的少女" /></p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1">
-      <p>图片来源于剧照，和 google 图片搜得。用 google 按图找图也没有找到原版权所有者，找到的全是素材站你懂的。侵权请通知我删除。 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:1" role="doc-endnote">
+      <p>图片来源于剧照，和 google 图片搜得。用 google 按图找图也没有找到原版权所有者，找到的全是素材站你懂的。侵权请通知我删除。 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -259,8 +196,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -278,8 +215,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -289,7 +226,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

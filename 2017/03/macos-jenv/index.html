@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="brew,jenv,rbenv,java">
-  <link rel="canonical" href="http://wulfric.me/2017/03/macos-jenv/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2017/03/macos-jenv/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -70,15 +70,15 @@
   <article class="post-content">
     <p><a href="http://www.jenv.be/">jenv</a> 是跨平台的 java 版本管理工具。当然，pyenv 仿的 rbenv，jenv 也是仿的 rbenv，功能和用法也很类似。</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>brew install jenv
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>brew <span class="nb">install </span>jenv
 <span class="c"># 添加 path</span>
 <span class="nv">$ </span><span class="nb">echo</span> <span class="s1">'export PATH="$HOME/.jenv/bin:$PATH"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
 <span class="nv">$ </span><span class="nb">echo</span> <span class="s1">'eval "$(jenv init -)"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
 
 <span class="c"># 安装成功，添加 java 版本(需自行下载安装)</span>
 <span class="nv">$ </span>brew tap caskroom/versions
-<span class="nv">$ </span>brew cask install java7
-<span class="nv">$ </span>brew cask install java8
+<span class="nv">$ </span>brew cask <span class="nb">install </span>java7
+<span class="nv">$ </span>brew cask <span class="nb">install </span>java8
 <span class="c"># 需要注意的是，这里仅仅安装了 java 的 pkg 文件，你还需要进入对应的目录，执行这个 pkg 文件来完成安装。</span>
 <span class="nv">$ </span><span class="nb">cd</span> /usr/local/Caskroom/java7/1.7.xxx
 <span class="nv">$ </span>open xxx.pkg
@@ -90,7 +90,7 @@
 
 <p>安装好后，大部分的使用方法都和 rbenv/pyenv 类似，无非就是 /versions/local/global 等，当然还有一些特殊的配置，比如 java 的 options：</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 使用 1.7 版本</span>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 使用 1.7 版本</span>
 <span class="nv">$ </span>jenv <span class="nb">local </span>1.7
 <span class="c"># 设置编译参数选项</span>
 <span class="nv">$ </span>jenv local-options <span class="s2">"-Xmx512m"</span>
@@ -100,7 +100,7 @@
 
 <p>查看版本是否更改成功：</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>java <span class="nt">-version</span>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>java <span class="nt">-version</span>
 java version <span class="s2">"1.8.0_66"</span>
 Java<span class="o">(</span>TM<span class="o">)</span> SE Runtime Environment <span class="o">(</span>build 1.8.0_66-b17<span class="o">)</span>
 Java HotSpot<span class="o">(</span>TM<span class="o">)</span> 64-Bit Server VM <span class="o">(</span>build 25.66-b17, mixed mode<span class="o">)</span>
@@ -124,20 +124,20 @@ Java HotSpot<span class="o">(</span>TM<span class="o">)</span> 64-Bit Server VM 
 jenv: no such <span class="nb">command</span> <span class="sb">`</span>enable-plugin<span class="s1">'
 </span></code></pre></div></div>
 
-<p>我们发现虽然 jenv 的 version 对了，但是 java -version 的结果还是不对，而且尝试开启 maven 插件也出错。执行<span class="codespan">jenv doctor</span>查看原因：</p>
+<p>我们发现虽然 jenv 的 version 对了，但是 java -version 的结果还是不对，而且尝试开启 maven 插件也出错。执行<code class="language-plaintext highlighter-rouge">jenv doctor</code>查看原因：</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>jenv doctor
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>jenv doctor
 <span class="o">[</span>OK]   	No JAVA_HOME <span class="nb">set</span>
 <span class="o">[</span>ERROR]	Java binary <span class="k">in </span>path is not <span class="k">in </span>the jenv shims.
 <span class="o">[</span>ERROR]	Please check your path, or try using /path/to/java/home is not a valid path to java installation.
        	PATH : ...
 <span class="o">[</span>ERROR]	Jenv is not loaded <span class="k">in </span>your zsh
-<span class="o">[</span>ERROR]	To fix :       	<span class="nb">cat eval</span> <span class="s2">"</span><span class="k">$(</span>jenv init -<span class="k">)</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> /Users/xxx/.zshrc
+<span class="o">[</span>ERROR]	To fix :       	<span class="nb">cat eval</span> <span class="s2">"</span><span class="si">$(</span>jenv init -<span class="si">)</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> /Users/xxx/.zshrc
 </code></pre></div></div>
 
-<p>原来是因为终端开了多个标签页，在另一个标签页编辑完 .zshrc 文件后直接到这个标签页执行了，应该先 source 一下：<span class="codespan">source ~/.zshrc</span>。</p>
+<p>原来是因为终端开了多个标签页，在另一个标签页编辑完 .zshrc 文件后直接到这个标签页执行了，应该先 source 一下：<code class="language-plaintext highlighter-rouge">source ~/.zshrc</code>。</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>jenv enable-plugin maven
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>jenv enable-plugin maven
 maven plugin activated
 
 <span class="nv">$ </span>jenv disable-plugin maven
@@ -211,8 +211,8 @@ maven disabled
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -230,8 +230,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -241,7 +241,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

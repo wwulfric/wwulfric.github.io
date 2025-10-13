@@ -18,22 +18,24 @@
 
 ">
   <meta name="keywords" content="复杂,元胞自动机,网络,小世界,无尺度,大统一理论">
-  <link rel="canonical" href="http://wulfric.me/2016/06/complexity-guide/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2016/06/complexity-guide/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
-    <script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: {
-      equationNumbers: { autoNumber: "AMS" },
-      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
-    },
-    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-  });
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
 </script>
 
 <script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
-</script>
+        defer src="//cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+></script>
 
   
 </head>
@@ -93,14 +95,7 @@
 
 <p>本书深入浅出的介绍了复杂学科的历史背景、研究内容和挑战，是一本相当优秀的科普读物。从复杂学科产生原因讲起，依次介绍了复杂学科的一些较为成功的模型，比如元胞自动机，小世界网络，无尺度网络，随机布尔网络等。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/complexity.jpg" alt="复杂" title="复杂" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>复杂</figcaption>
-        </figure></p>
+<p><img src="/images/complexity.jpg" alt="复杂" title="复杂" /></p>
 
 <h2 id="导读">导读</h2>
 
@@ -124,25 +119,11 @@
 
 <p>当然事实上我们并不能做到，量子力学的发展否定了拉普拉斯的假设，我们无法同时准确的知道一个粒子的当前位置和速度。后来统计物理另辟新径，不关心各个分子具体的位置、速度和未来的变化，而去预测大量分子整体上的平均位置和速度，从而较好的解释了很多热学现象。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/kepler-newton-laplace.png" alt="开普勒-牛顿-拉普拉斯" title="开普勒-牛顿-拉普拉斯" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>开普勒-牛顿-拉普拉斯</figcaption>
-        </figure></p>
+<p><img src="/images/kepler-newton-laplace.png" alt="开普勒-牛顿-拉普拉斯" title="开普勒-牛顿-拉普拉斯" /></p>
 
 <p>如果说统计物理研究的是大量随机运动的物理整体上表现出来的物理现象，那么如果是确定性的运动，是否我们就能得到解析解呢？拉普拉斯如此笃定，这一梦想却很快被庞加莱击碎。牛顿力学几乎是完美的解决了两个物体的运动问题，但没想到三体要复杂的多。庞加莱在尝试解决这个问题时，发现了对初始条件的敏感依赖性。本书以人口模型为例说明了确定条件导致混沌的这一现象。马尔萨斯的人口模型认为人口的增长率是固定不变的值，即次年人口＝当年人口 $\times$ 增长倍率。那么，人口便呈几何速率增长。这一模型可以很好的解释 1860 年之前的人口发展现象，但之后的偏差越来越大。Logistic 模型是对这一模型的改进。该模型加入阻滞增长因子，即人口的增长会阻滞其增长速率，且环境有最大容许的人口限度，超过最大限度，整个族群将走向灭亡。然而，对这一模型的研究发现，当初始增长率满足一定条件时，人口增长的曲线将会随着人口初始值的微小变动呈现出极大的震荡。也就是说，我们没有办法通过观察某些年的人口数变化来推测出这个初始值和初始增长率—这就是确定性导致的混沌现象。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/LogisticMap_BifurcationDiagram.png/512px-LogisticMap_BifurcationDiagram.png" alt="混沌的产生" title="混沌的产生" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>混沌的产生</figcaption>
-        </figure></p>
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/LogisticMap_BifurcationDiagram.png/512px-LogisticMap_BifurcationDiagram.png" alt="混沌的产生" title="混沌的产生" /></p>
 
 <p>和意气风发的拉普拉斯一样，1900 年的希尔伯特雄心勃勃。在拉普拉斯眼里，物理法则是完备的，只要条件充足，我们就可以知道过去和未来的一切。希尔伯特对此表示赞同。他还认为，数学是一致和完备的，全部数学的相容性都可以归结为基本算术的相容性。罗素也认为，可以建立逻辑主义数学体系，从而将整个数学归纳为逻辑学。这一年，希尔伯特在巴黎的数学家大会上提出了 23 道最重要的数学问题，其中部分可以总结为三个问题：数学是不是完备的；数学是不是一致的；是不是所有命题都是数学可判定的。这三个问题过了 30 年也没有能够解决，但是希尔伯特很有信心，认为答案一定是「是」。不幸的，或者说幸运的，这个梦想并没有实现。1931 年，25 岁的哥德尔漂亮地证明了两条不完备定理，破坏了希尔伯特计划的哲学企图。哥德尔的证明意义非常深远，以至于几十年后，在一个蝉声聒噪的午后，「GEB」的作者侯世达在一家书店偶然看到了「哥德尔的证明」一书，被他的理论震动，从而对相关命题产生了浓厚的兴趣。让我们记住这个平凡的下午，它将在未来关键的历史时刻多次重现。</p>
 
@@ -160,18 +141,11 @@
 
 <p>元胞自动机描述了一个元胞矩阵，在这个矩阵中，每个元胞的下一步的状态，都由自己和周围的 8 个元胞的当前状态所决定。每一种组合态和其对应的下一步状态都是一种规则，显而易见，这种规则的数量极为庞大。</p>
 
-<p>元胞自动机是复杂系统的理想模型<sup id="fnref:5"><a href="#fn:5" class="footnote">1</a></sup>。同自然界的复杂系统一样，元胞自动机也是由大量简单个体组成，不存在中央控制，每个个体都只与少量其他个体交互，而且元胞自动机也能表现出非常复杂的行为，它们的行为甚至不可能通过更新规则预测。</p>
+<p>元胞自动机是复杂系统的理想模型<sup id="fnref:5" role="doc-noteref"><a href="#fn:5" class="footnote" rel="footnote">1</a></sup>。同自然界的复杂系统一样，元胞自动机也是由大量简单个体组成，不存在中央控制，每个个体都只与少量其他个体交互，而且元胞自动机也能表现出非常复杂的行为，它们的行为甚至不可能通过更新规则预测。</p>
 
-<p>一些爱好者简化了元胞自动机的规则，发展了很多有趣的实验和游戏(<a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">康威生命游戏</a>)。但却一直没能找到合理解释元胞自动机工作原理的理论。克鲁奇菲尔德提出可以按照研究动力系统行为的「信息处理结构」来分析遗传算法演化出的元胞自动机。在这种思想下，元胞自动机状态的改变在宏观上的表现被具象化为粒子的碰撞、湮灭和延续<sup id="fnref:3"><a href="#fn:3" class="footnote">2</a></sup>，在一定程度上可以解释元胞自动机的原理<sup id="fnref:4"><a href="#fn:4" class="footnote">3</a></sup>。</p>
+<p>一些爱好者简化了元胞自动机的规则，发展了很多有趣的实验和游戏(<a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">康威生命游戏</a>)。但却一直没能找到合理解释元胞自动机工作原理的理论。克鲁奇菲尔德提出可以按照研究动力系统行为的「信息处理结构」来分析遗传算法演化出的元胞自动机。在这种思想下，元胞自动机状态的改变在宏观上的表现被具象化为粒子的碰撞、湮灭和延续<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">2</a></sup>，在一定程度上可以解释元胞自动机的原理<sup id="fnref:4" role="doc-noteref"><a href="#fn:4" class="footnote" rel="footnote">3</a></sup>。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/cellar-auto.png" alt="简化版元胞自动机" title="简化版元胞自动机" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>简化版元胞自动机</figcaption>
-        </figure></p>
+<p><img src="/images/cellar-auto.png" alt="简化版元胞自动机" title="简化版元胞自动机" /></p>
 
 <p>在这里，生物系统的遗传和变异也找到了意义。元胞自动机的规则数量如此庞大，对于设定的目标，必然大部分规则都无法实现，甚至部分规则都无法收敛于一个稳定的状态。而对生物系统而言，借由自然选择和基因遗传，只有符合当前目标的高效的规则簇才可能存活。但随着时代的发展，最核心的目标也在变化，如果没有变异，那么千年万年前形成的规则将不再适应当前的核心目标。寻找更加高效的规则，并遗传下去，同时不放弃其他暂时不高效的规则，这就是遗传算法演化的元胞自动机状态，也是生命得以延续的方式。</p>
 
@@ -193,16 +167,9 @@
 
 <p>在元胞自动机中，每个个体是平等的，状态值由相邻个体决定。这一模型似乎过于简单，无法更准确的描述现实世界中的网络。哈佛大学心理学家米尔格兰姆设计了一个实验，发现在人际关系中，平均经过 5 个熟人，一个人就可以达到另一个陌生人：我们似乎生活在一个小世界中。这个发现后来被称为六度分隔。</p>
 
-<p>虽然后来的学者针对这个实验提出了诸多质疑，六度分隔也被认为并不可信，但是小世界的概念已深入人心。这些网络问题吸引了大批复杂系统研究者，关于网络科学的各种发现迅速涌现。邓肯·瓦特和斯托加茨率先从数学上定义了小世界网络的概念。在元胞自动机模型中，每个节点只和附近的一些节点有关。但在小世界网络模型中，我们选取部分连接，打断并重新连接。重连后的网络与原来的规则网络的连接数一样多，但是两个节点的平均路径长度大大下降。即小世界网络拥有这样的特性：网络只有少量的长程连接，相对于节点数量来说平均路径却很短。如下图所示，每条边的长度都相同，左边是邻点相接的普通网络，右边是部分边打断重连的小世界网络，右边网络的两点之间平均距离要小于左边的网络。而且，节点数越多，这种效果越明显<sup id="fnref:2"><a href="#fn:2" class="footnote">4</a></sup>。（后续研究表明这种随机重连的方法有局限性<sup id="fnref:1"><a href="#fn:1" class="footnote">5</a></sup>）</p>
+<p>虽然后来的学者针对这个实验提出了诸多质疑，六度分隔也被认为并不可信，但是小世界的概念已深入人心。这些网络问题吸引了大批复杂系统研究者，关于网络科学的各种发现迅速涌现。邓肯·瓦特和斯托加茨率先从数学上定义了小世界网络的概念。在元胞自动机模型中，每个节点只和附近的一些节点有关。但在小世界网络模型中，我们选取部分连接，打断并重新连接。重连后的网络与原来的规则网络的连接数一样多，但是两个节点的平均路径长度大大下降。即小世界网络拥有这样的特性：网络只有少量的长程连接，相对于节点数量来说平均路径却很短。如下图所示，每条边的长度都相同，左边是邻点相接的普通网络，右边是部分边打断重连的小世界网络，右边网络的两点之间平均距离要小于左边的网络。而且，节点数越多，这种效果越明显<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">4</a></sup>。（后续研究表明这种随机重连的方法有局限性<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">5</a></sup>）</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/small-world.png" alt="小世界" title="小世界" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>小世界</figcaption>
-        </figure></p>
+<p><img src="/images/small-world.png" alt="小世界" title="小世界" /></p>
 
 <blockquote>
   <p>也许是某个蝉声悠悠的午后，「复杂：诞生于秩序与混沌边缘的科学」一书（复杂科学书籍的源头）的作者在演讲后安静地等待观众的提问。年轻的梅拉妮·米歇尔，也就是本书的作者，问到：「作为个体，是否有程度上的差异？」</p>
@@ -212,25 +179,11 @@
 
 <p>两位学者的论文引发了网络科学研究的热潮，科学家们在现实世界中发现了越来越多的小世界网络，比如美国西部电网，电影明星表演圈等等。然而进一步的研究表明，根据瓦特和斯托加茨提出的规则所生成的网络与许多真实世界网络的度分布并不一样。易知，小世界模型的节点的度分布较为平均，而很多真实网络并非如此：显然，作为个体，是有程度上的差异的。以我们熟悉的万维网为例，像谷歌这样的网站，它的入度必然远远超过大部分普通网站。一些团体的研究表明，入度为 $k​$ 的网页数量正比于 $k^{-2}​$。当我们在这个函数中截取不同的尺度时，我们惊奇的发现，截取到的图形几乎一模一样，在不同尺度下，图形具有自相似性（如下图所示）。也就是说，从表现上来看，这样的网络是无尺度的，这样的网络也自然的被称为无尺度网络。在数学上，无尺度网络就是连接度为幂律分布的网络，即入度为 $k​$ 的节点数量正比于 $k^{d}​$。指数 $d​$ 就是这种分布的关键。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/scale-free.png" alt="无尺度网络" title="无尺度网络" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>无尺度网络</figcaption>
-        </figure></p>
+<p><img src="/images/scale-free.png" alt="无尺度网络" title="无尺度网络" /></p>
 
 <p>拥有小世界和无尺度特性的网络具有稳健性，连接度无尺度分布、集群性和存在中心节点是共同的主题。按照幂律，重要的节点（入度很大）往往很少，大量的节点入度很小，这保证了网络不会轻易的崩溃。网络思想为许多困难问题提供了新的思路，比如更高效的搜索，控制流行病，管理大型组织等等。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Internet_map_1024.jpg" alt="互联网的无尺度特性--来自维基百科" title="互联网的无尺度特性--来自维基百科" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>互联网的无尺度特性--来自维基百科</figcaption>
-        </figure></p>
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Internet_map_1024.jpg" alt="互联网的无尺度特性--来自维基百科" title="互联网的无尺度特性--来自维基百科" /></p>
 
 <p>网络科学为生物的比例之谜提出了一种新颖的解释。所谓比例之谜，指的是，动物的代谢率随着体型增大，也会相应的增加。但是，数据显示，动物的代谢率既不是正比于体积（考虑到动物密度相差不大，可以认为正比于体重），也不是正比于表面积（正比于体重的 $2/3$ 次幂），动物的代谢率正比于体重的 $3/4$ 次幂。更多的研究发现，$3/4$ 幂律不仅哺乳动物和鸟类成立，对鱼类、植物，甚至单细胞生物也成立。除此之外，动物的生命周期，心率等数据也和体重呈幂律关系，而且都是分母为四的分数形式。四分幂律是生物非常重要的共性，但是没人知道是什么共性。</p>
 
@@ -254,22 +207,22 @@
 
 <p>复杂科学的 $n=5$，不妨由你来给出。</p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:5">
-      <p>虽然传统的计算机架构被称为冯·诺依曼体系结构，但是元胞自动机这种和传统计算机架构大为迥异的计算机架构也是由冯·诺依曼所发明。 <a href="#fnref:5" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:5" role="doc-endnote">
+      <p>虽然传统的计算机架构被称为冯·诺依曼体系结构，但是元胞自动机这种和传统计算机架构大为迥异的计算机架构也是由冯·诺依曼所发明。 <a href="#fnref:5" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:3">
-      <p><a href="https://en.wikipedia.org/wiki/Brian%27s_Brain#/media/File:Brian%27s_brain.gif">此图可以直观的看到粒子的碰撞和湮灭</a> <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:3" role="doc-endnote">
+      <p><a href="https://en.wikipedia.org/wiki/Brian%27s_Brain#/media/File:Brian%27s_brain.gif">此图可以直观的看到粒子的碰撞和湮灭</a> <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:4">
-      <p><a href="https://en.wikipedia.org/wiki/Cellular_automaton#Modeling_physical_reality">粒子模拟</a>, <a href="https://en.wikipedia.org/wiki/Rule_110">规则 110 的详细图解</a> <a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:4" role="doc-endnote">
+      <p><a href="https://en.wikipedia.org/wiki/Cellular_automaton#Modeling_physical_reality">粒子模拟</a>, <a href="https://en.wikipedia.org/wiki/Rule_110">规则 110 的详细图解</a> <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2">
-      <p>Watts D J, Strogatz S H. Collective dynamics of ‘small-world’networks[J]. nature, 1998, 393(6684): 440-442. <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:2" role="doc-endnote">
+      <p>Watts D J, Strogatz S H. Collective dynamics of ‘small-world’networks[J]. nature, 1998, 393(6684): 440-442. <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:1">
-      <p>Newman, M. E., Moore, C., &amp; Watts, D. J. (2000). Mean-field solution of the small-world network model. Physical Review Letters, 84(14), 3201. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:1" role="doc-endnote">
+      <p>Newman, M. E., Moore, C., &amp; Watts, D. J. (2000). Mean-field solution of the small-world network model. Physical Review Letters, 84(14), 3201. <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -347,8 +300,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -366,8 +319,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -377,7 +330,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

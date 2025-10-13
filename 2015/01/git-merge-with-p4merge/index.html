@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="P4Merge,git,merge">
-  <link rel="canonical" href="http://wulfric.me/2015/01/git-merge-with-p4merge/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2015/01/git-merge-with-p4merge/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -68,42 +68,35 @@
 
 
   <article class="post-content">
-    <p>P4Merge 是一款非常优秀的 git merge 工具，且跨平台兼容。尽管 git 亦有内部实现的 merge 工具，但并不如 P4Merge 易用。我们可以通过配置<span class="codespan">.gitconfig</span>文件来设置 git 使用外部 merge 工具。</p>
+    <p>P4Merge 是一款非常优秀的 git merge 工具，且跨平台兼容。尽管 git 亦有内部实现的 merge 工具，但并不如 P4Merge 易用。我们可以通过配置<code class="language-plaintext highlighter-rouge">.gitconfig</code>文件来设置 git 使用外部 merge 工具。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>P4Merge</figcaption>
-        </figure></p>
+<p><img src="http://www.perforce.com/sites/default/files/p4merge_three_pane_1.jpg" alt="P4Merge" /></p>
 
-<p>首先，下载安装 <a href="http://www.perforce.com/product/components/perforce-visual-merge-and-diff-tools">P4Merge</a>。MAC 下可以通过<span class="codespan">brew cask install p4merge</span>来安装。</p>
+<p>首先，下载安装 <a href="http://www.perforce.com/product/components/perforce-visual-merge-and-diff-tools">P4Merge</a>。MAC 下可以通过<code class="language-plaintext highlighter-rouge">brew cask install p4merge</code>来安装。</p>
 
-<p>在系统可访问的目录下（我们这里使用<span class="codespan">/usr/local/bin/</span>）创建两个可执行文件<span class="codespan">extMerge</span>和<span class="codespan">extDiff</span>，其内容如下。</p>
+<p>在系统可访问的目录下（我们这里使用<code class="language-plaintext highlighter-rouge">/usr/local/bin/</code>）创建两个可执行文件<code class="language-plaintext highlighter-rouge">extMerge</code>和<code class="language-plaintext highlighter-rouge">extDiff</code>，其内容如下。</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /usr/local/bin/extMerge
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /usr/local/bin/extMerge
 <span class="c">#!/bin/sh</span>
 /Applications/p4merge.app/Contents/MacOS/p4merge <span class="nv">$*</span>
 </code></pre></div></div>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /usr/local/bin/extDiff
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /usr/local/bin/extDiff
 <span class="c">#!/bin/sh</span>
 <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 7 <span class="o">]</span> <span class="o">&amp;&amp;</span> /usr/local/bin/extMerge <span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$5</span><span class="s2">"</span>
 </code></pre></div></div>
 
 <p>别忘了添加可执行权限：</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo </span>chmod +x /usr/local/bin/extMerge
-<span class="nv">$ </span><span class="nb">sudo </span>chmod +x /usr/local/bin/extDiff
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">sudo chmod</span> +x /usr/local/bin/extMerge
+<span class="nv">$ </span><span class="nb">sudo chmod</span> +x /usr/local/bin/extDiff
 </code></pre></div></div>
 
-<p>使用 <span class="codespan">extMerge</span>和<span class="codespan">extDiff</span>的好处是，我们可以很方便的切换 merge 工具。</p>
+<p>使用 <code class="language-plaintext highlighter-rouge">extMerge</code>和<code class="language-plaintext highlighter-rouge">extDiff</code>的好处是，我们可以很方便的切换 merge 工具。</p>
 
-<p>最后，在你的<span class="codespan">.gitconfig</span>文件里添加如下配置：</p>
+<p>最后，在你的<code class="language-plaintext highlighter-rouge">.gitconfig</code>文件里添加如下配置：</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>merge]
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>merge]
     tool <span class="o">=</span> extMerge
 <span class="o">[</span>mergetool <span class="s2">"extMerge"</span><span class="o">]</span>
     cmd <span class="o">=</span> extMerge <span class="s2">"</span><span class="nv">$BASE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$LOCAL</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$REMOTE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MERGED</span><span class="s2">"</span>
@@ -116,7 +109,7 @@
     </span>prompt <span class="o">=</span> <span class="nb">false</span>
 </code></pre></div></div>
 
-<p>好了，当合并（merge/rebase） 出现冲突时，执行<span class="codespan">git mergetool</span>，即可调出 P4Merge 来解决冲突了。唯一的缺点是，目前还不支持 Retina 屏，看起来有些糊。(PS：可以用工具<a href="http://retinizer.mikelpr.com/">Retinizer</a>来解决这一问题)</p>
+<p>好了，当合并（merge/rebase） 出现冲突时，执行<code class="language-plaintext highlighter-rouge">git mergetool</code>，即可调出 P4Merge 来解决冲突了。唯一的缺点是，目前还不支持 Retina 屏，看起来有些糊。(PS：可以用工具<a href="http://retinizer.mikelpr.com/">Retinizer</a>来解决这一问题)</p>
 
 <p>更多细节参见官网<a href="http://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#External-Merge-and-Diff-Tools">链接</a>。</p>
 
@@ -181,8 +174,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -200,8 +193,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -211,7 +204,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="chrome,插件,vim,proxy,markdown,develop,github">
-  <link rel="canonical" href="http://wulfric.me/2015/12/chrome-extensions/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2015/12/chrome-extensions/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -74,18 +74,11 @@
 
 <p>vimium 是 chrome 下的 Vim 模拟器，可以模拟 Vim 的快捷键来进行 chrome 的相关操作。我一直认为，如果你希望学会使用 Vim 编辑器，从 vimium 插件入门是一个不错的选择。vimium 的快捷键如下图所示：</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/vimium.png" alt="vimium" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>vimium</figcaption>
-        </figure></p>
+<p><img src="/images/vimium.png" alt="vimium" /></p>
 
 <p>最基础的快捷键是页面滚动：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>j: 向下滚动一行
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>j: 向下滚动一行
 k: 向上滚动一行
 u: 向上滚动一页
 d: 向下滚动一页
@@ -93,28 +86,28 @@ gg: 滚动到页面顶部
 G: 滚动到页面底部
 </code></pre></div></div>
 
-<p>Vim 的上下左右移动的快捷键是 hjkl，vimium 也是这样，但是 web 页面通常没有左右移动的需要，只需要 jk 即可（JK 大好~），gg 和 G 省去了你安装各种手势插件的需求。在 Vim 中滚动页面的快捷键是<span class="codespan">ctrl+u/d</span>，vimium 这里只需要<span class="codespan">u/d</span>即可。</p>
+<p>Vim 的上下左右移动的快捷键是 hjkl，vimium 也是这样，但是 web 页面通常没有左右移动的需要，只需要 jk 即可（JK 大好~），gg 和 G 省去了你安装各种手势插件的需求。在 Vim 中滚动页面的快捷键是<code class="language-plaintext highlighter-rouge">ctrl+u/d</code>，vimium 这里只需要<code class="language-plaintext highlighter-rouge">u/d</code>即可。</p>
 
 <p>翻页：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Previous patterns: prev,previous,back,older,&lt;,←,«,≪,&lt;&lt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Previous patterns: prev,previous,back,older,&lt;,←,«,≪,&lt;&lt;
 Next patterns: next,more,newer,&gt;,→,»,≫,&gt;&gt;
 </code></pre></div></div>
 
-<p>上面是上下翻页的配置，你也可以配上中文，比如「上一页」和「下一页」。配好之后便可以使用<span class="codespan">[[</span>和<span class="codespan">]]</span>来翻页了。</p>
+<p>上面是上下翻页的配置，你也可以配上中文，比如「上一页」和「下一页」。配好之后便可以使用<code class="language-plaintext highlighter-rouge">[[</code>和<code class="language-plaintext highlighter-rouge">]]</code>来翻页了。</p>
 
 <p>快速跳转：</p>
 
-<div  class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>T: 列出当前所有标签页
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>T: 列出当前所有标签页
 o: 搜索你的历史纪录
 b: 搜索你的收藏夹
 f: 给当前页面的链接加上标记，方便跳转，跳转在当前页面完成
 F: 同上，跳转在新标签页完成
 </code></pre></div></div>
 
-<p>这个不必多说。其中 F 和用鼠标中键点链接和 MAC 下用<span class="codespan">cmd</span>加点击链接的效果是一样的。</p>
+<p>这个不必多说。其中 F 和用鼠标中键点链接和 MAC 下用<code class="language-plaintext highlighter-rouge">cmd</code>加点击链接的效果是一样的。</p>
 
-<p><span class="codespan">Treat find queries as regular expressions</span>在 vimium 配置页面可以将 vimium 的查找改为正则模式，这样查找页面内容更加方便了。</p>
+<p><code class="language-plaintext highlighter-rouge">Treat find queries as regular expressions</code>在 vimium 配置页面可以将 vimium 的查找改为正则模式，这样查找页面内容更加方便了。</p>
 
 <p>因为 chrome 的安全策略，所有插件都无法在 new tab 页工作，所以 chrome 下的 Vim 插件都不如 Firefox 下易用，在 chrome 下使用 Vim 插件需要尽量避免进入 new tab，另一方便 chrome 自带的一些快捷键也需要有所了解，这样才能在 vimium 失效的时候继续脱离鼠标操作。</p>
 
@@ -124,14 +117,7 @@ F: 同上，跳转在新标签页完成
 
 <p>一图解千言。管理插件利器。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-one-click-extension-manager.png" alt="one click extensions manager" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>one click extensions manager</figcaption>
-        </figure></p>
+<p><img src="/images/R-one-click-extension-manager.png" alt="one click extensions manager" /></p>
 
 <h3 id="proxy-switchyomega">proxy switchyOmega</h3>
 
@@ -141,14 +127,7 @@ F: 同上，跳转在新标签页完成
 
 <p>论文管理利器，如下图所示。在有下载权限的前提下，可以一键下载论文到指定目录，生成索引等。现有的 pdf 论文库的迁移也很方便，有相应的插件支持。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/zotero.png" alt="zotero" title="zotero.png" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>zotero</figcaption>
-        </figure></p>
+<p><img src="/images/zotero.png" alt="zotero" title="zotero.png" /></p>
 
 <p>推荐参考阳老的 zotero <a href="http://www.yangzhiping.com/tech/zotero1.html">博文</a>。一共有 6 篇。</p>
 
@@ -164,14 +143,7 @@ F: 同上，跳转在新标签页完成
 
 <p>gmail 等富文本输入框中可以先输入 markdown 然后右键 toggle 转成富文本，如下图示。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/markdown-toggle.png" alt="markdown toggle" title="markdown-toggle.png" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>markdown toggle</figcaption>
-        </figure></p>
+<p><img src="/images/markdown-toggle.png" alt="markdown toggle" title="markdown-toggle.png" /></p>
 
 <h2 id="辅助开发">辅助开发</h2>
 
@@ -179,38 +151,17 @@ F: 同上，跳转在新标签页完成
 
 <p>Postman 是强大易用的 API 测试工具，如下图所示。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/postman.png" alt="postman" title="postman" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>postman</figcaption>
-        </figure></p>
+<p><img src="/images/postman.png" alt="postman" title="postman" /></p>
 
 <p>左侧是常用 URL collection 和 history，还可以按照个人和团队来区分 collection，非常的方便。主面板就是调试页面，功能非常强大，提供了很多方便的工具，其中之一是将当前在调试的请求直接生成代码，如下图示，目前流行的语言基本都可以支持。此外还有环境变量和预设值，以及测试集成功能。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/postman-code.png" alt="postman code" title="postman-code.png" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>postman code</figcaption>
-        </figure></p>
+<p><img src="/images/postman-code.png" alt="postman code" title="postman-code.png" /></p>
 
 <h3 id="json-formatter">json formatter</h3>
 
 <p>调试的时候 get 的 json 页面可以以结构化的形式显示。这样的插件很多，功能也都是大同小异，随便选一个安装即可。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-json-formatter.png" alt="json formatter" title="json formatter" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>json formatter</figcaption>
-        </figure></p>
+<p><img src="/images/R-json-formatter.png" alt="json formatter" title="json formatter" /></p>
 
 <h3 id="coffeeconsole">coffeeconsole</h3>
 
@@ -220,27 +171,13 @@ F: 同上，跳转在新标签页完成
 
 <p>树形结构显示 github repo 中的文件，如下图所示。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-octotree.png" alt="octotree" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>octotree</figcaption>
-        </figure></p>
+<p><img src="/images/R-octotree.png" alt="octotree" /></p>
 
 <h3 id="web-tech-stack-探测">web tech stack 探测</h3>
 
 <p>探测一个页面使用的技术。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-web-tech-stack.png" alt="web tech stack 探测" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>web tech stack 探测</figcaption>
-        </figure></p>
+<p><img src="/images/R-web-tech-stack.png" alt="web tech stack 探测" /></p>
 
 <h2 id="系统增强">系统增强</h2>
 
@@ -248,14 +185,7 @@ F: 同上，跳转在新标签页完成
 
 <p>更好的广告屏蔽插件。可以很直观的看到当前页面的屏蔽列表，还可以临时放行或屏蔽相关 URL（根据域名或 MIMETYPE）。私以为要强于 ABP。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-ublock-origin.png" alt="" width= height= />
-          </picture>
-          
-        </figure></p>
+<p><img src="/images/R-ublock-origin.png" alt="" /></p>
 
 <h3 id="google-art-project-speed-dial-2-各种-new-tab">google art project, speed dial 2, 各种 new tab</h3>
 
@@ -273,14 +203,7 @@ F: 同上，跳转在新标签页完成
 
 <p>可以自定义相关页面的样式，还可以导入他人已经配置好的样式，如下图所示。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-stylebot.png" alt="stylebot" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>stylebot</figcaption>
-        </figure></p>
+<p><img src="/images/R-stylebot.png" alt="stylebot" /></p>
 
   </article>
 
@@ -359,8 +282,8 @@ F: 同上，跳转在新标签页完成
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -378,8 +301,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -389,7 +312,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

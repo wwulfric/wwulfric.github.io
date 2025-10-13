@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="java,effective java,invariant,builder">
-  <link rel="canonical" href="http://wulfric.me/2017/11/what-is-invariant/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2017/11/what-is-invariant/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -100,13 +100,13 @@
 
 <h3 id="示例">示例</h3>
 
-<p>网络的其他地方也可以找到解答<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>，但我想用一个更简单的例子来说明：我们想要实现一个加法运算的函数，它接受两个整数作为参数，并输出二者相加的和。</p>
+<p>网络的其他地方也可以找到解答<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>，但我想用一个更简单的例子来说明：我们想要实现一个加法运算的函数，它接受两个整数作为参数，并输出二者相加的和。</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">Main</span> <span class="o">{</span>
-  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span> <span class="n">args</span><span class="o">[]){</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">Main</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span> <span class="n">args</span><span class="o">[]){</span>
     <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">2147483647</span><span class="o">;</span>
     <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">2147483646</span><span class="o">;</span>
-    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">add</span><span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">));</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">add</span><span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">));</span>
   <span class="o">}</span>
   <span class="kd">private</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">add</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
     <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">;</span>
@@ -137,27 +137,27 @@
 
 <p>事实上 <a href="https://book.douban.com/subject/1888733/">Java Concurrency in Practice</a> 这本书才是让我理解 invariant 的关键，因为在并发条件下，一个类的不变性约束条件极有可能被破坏掉，我们也很容易通过这种破坏理解什么是 class invariant：对类的不变性约束条件。</p>
 
-<p>代码示例如下<sup id="fnref:3"><a href="#fn:3" class="footnote">2</a></sup>：</p>
+<p>代码示例如下<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">2</a></sup>：</p>
 
-<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// "mutable" time period class</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// "mutable" time period class</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Period</span> <span class="o">{</span>
-    <span class="kd">private</span> <span class="n">Date</span> <span class="n">start</span><span class="o">;</span>
-    <span class="kd">private</span> <span class="n">Date</span> <span class="n">end</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Date</span> <span class="n">start</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Date</span> <span class="n">end</span><span class="o">;</span>
 
-    <span class="kd">public</span> <span class="n">Date</span> <span class="nf">getStart</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="n">start</span><span class="o">;</span> <span class="o">}</span>
-    <span class="kd">public</span> <span class="n">Date</span> <span class="nf">setStart</span><span class="o">(</span><span class="n">Date</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="o">}</span>
-    <span class="kd">public</span> <span class="n">Date</span> <span class="nf">getEnd</span><span class="o">()</span> <span class="o">{</span>  <span class="k">return</span> <span class="n">end</span><span class="o">;</span>  <span class="o">}</span>
-    <span class="kd">public</span> <span class="n">Date</span> <span class="nf">setEnd</span><span class="o">(</span><span class="n">Date</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>  <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span>  <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">Date</span> <span class="nf">getStart</span><span class="o">()</span> <span class="o">{</span> <span class="k">return</span> <span class="n">start</span><span class="o">;</span> <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">Date</span> <span class="nf">setStart</span><span class="o">(</span><span class="nc">Date</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">Date</span> <span class="nf">getEnd</span><span class="o">()</span> <span class="o">{</span>  <span class="k">return</span> <span class="n">end</span><span class="o">;</span>  <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">Date</span> <span class="nf">setEnd</span><span class="o">(</span><span class="nc">Date</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>  <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span>  <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
-<p>如果有两个线程都可以操作 Period 的对象，每个线程都可以设置 start 和 end，可想而知对于 Period 的实例来说，因为缺乏必要的验证，<span class="codespan">start &lt;= end</span>这个 invariant 条件很容易被破坏。</p>
+<p>如果有两个线程都可以操作 Period 的对象，每个线程都可以设置 start 和 end，可想而知对于 Period 的实例来说，因为缺乏必要的验证，<code class="language-plaintext highlighter-rouge">start &lt;= end</code>这个 invariant 条件很容易被破坏。</p>
 
 <p>回到 Effective Java 中的 Builder 模式。Builder 只是一个方便创建对象的工具，这里面所说的 invariant 其实就是对应类的 invariant，即要满足类所映射的现实世界的约束。</p>
 
 <h3 id="invariant-与-immutable">invariant 与 immutable</h3>
 
-<p>将 invariant 翻译成不变性<sup id="fnref:2"><a href="#fn:2" class="footnote">3</a></sup>容易和 immutable 混淆，即使二者的意思差别很大。我们在「Java 编程思想」这本书的中文版中就发现了这个错误：</p>
+<p>将 invariant 翻译成不变性<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">3</a></sup>容易和 immutable 混淆，即使二者的意思差别很大。我们在「Java 编程思想」这本书的中文版中就发现了这个错误：</p>
 
 <blockquote>
   <p>Integer 类（以及基本的“封装器”类）用简单的形式实现了“不变性”：它们没有提供可以修改对象的方法。 若确实需要一个容纳了基本数据类型的对象，并想对基本据类型进行修改，就必须亲自创建它们。</p>
@@ -169,16 +169,16 @@
 
 <p>可见，invariant 和 immutable 是无关的，不管一个类是不是 immutable 的，它都必须受到 invariant 条件的制约（即谓不变性），否则它产生的对象就可能是无效的。</p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1">
-      <p>stackoverflow 上的 <a href="https://stackoverflow.com/questions/112064/what-is-an-invariant">what-is-an-invariant</a> 对 invariant 的解释也较为浅显，可以参考 <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:1" role="doc-endnote">
+      <p>stackoverflow 上的 <a href="https://stackoverflow.com/questions/112064/what-is-an-invariant">what-is-an-invariant</a> 对 invariant 的解释也较为浅显，可以参考 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:3">
-      <p>代码改编自 <a href="https://book.douban.com/subject/2696119/">Effective Java</a> Item 39 <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:3" role="doc-endnote">
+      <p>代码改编自 <a href="https://book.douban.com/subject/2696119/">Effective Java</a> Item 39 <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2">
-      <p><a href="https://book.douban.com/subject/1888733/">Java Concurrency in Practice</a> 这本书将 invariant 翻译成不变性 <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:2" role="doc-endnote">
+      <p><a href="https://book.douban.com/subject/1888733/">Java Concurrency in Practice</a> 这本书将 invariant 翻译成不变性 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -248,8 +248,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -267,8 +267,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -278,7 +278,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

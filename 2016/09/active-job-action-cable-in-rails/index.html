@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="active job,action cable,web socket,passenger,queue,sidekiq">
-  <link rel="canonical" href="http://wulfric.me/2016/09/active-job-action-cable-in-rails/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2016/09/active-job-action-cable-in-rails/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -103,15 +103,15 @@
   </tbody>
 </table>
 
-<p>在需要推送消息的场合，比如创建评论，@他人等，在 Comment model 中添加一个<span class="codespan">after_create</span>动作来创建 message。web socket 的推送只显示 title，消息列表可以显示 title 和 content。点击消息时按照 path 来跳转。</p>
+<p>在需要推送消息的场合，比如创建评论，@他人等，在 Comment model 中添加一个<code class="language-plaintext highlighter-rouge">after_create</code>动作来创建 message。web socket 的推送只显示 title，消息列表可以显示 title 和 content。点击消息时按照 path 来跳转。</p>
 
 <h3 id="action-cable">Action Cable</h3>
 
-<p>为了实现 web socket 推送，我们还需要开启 action cable<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>。关于 action cable，请参见<a href="http://railscasts-china.com/episodes/action-cable-rails-5">DHH 的教学视频</a>。</p>
+<p>为了实现 web socket 推送，我们还需要开启 action cable<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。关于 action cable，请参见<a href="http://railscasts-china.com/episodes/action-cable-rails-5">DHH 的教学视频</a>。</p>
 
-<p>开启<span class="codespan">cable.js</span>和<span class="codespan">routes</span>。</p>
+<p>开启<code class="language-plaintext highlighter-rouge">cable.js</code>和<code class="language-plaintext highlighter-rouge">routes</code>。</p>
 
-<div  class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// app/assets/javascripts/cable.js</span>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// app/assets/javascripts/cable.js</span>
 <span class="c1">//= require action_cable</span>
 <span class="c1">//= require_self</span>
 <span class="c1">//= require_tree ./channels</span>
@@ -121,7 +121,7 @@
 <span class="p">}).</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
 </code></pre></div></div>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/routes.rb</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/routes.rb</span>
 <span class="no">Rails</span><span class="p">.</span><span class="nf">application</span><span class="p">.</span><span class="nf">routes</span><span class="p">.</span><span class="nf">draw</span> <span class="k">do</span>
   <span class="n">mount</span> <span class="no">ActionCable</span><span class="p">.</span><span class="nf">server</span> <span class="o">=&gt;</span> <span class="s2">"/cable"</span>
 <span class="k">end</span>
@@ -129,7 +129,7 @@
 
 <p>创建连接。这里连接的时候会写入 current user，供接下来按照 user 订阅用。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/channels/application_cable/connection.rb</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/channels/application_cable/connection.rb</span>
 <span class="k">module</span> <span class="nn">ApplicationCable</span>
   <span class="k">class</span> <span class="nc">Connection</span> <span class="o">&lt;</span> <span class="no">ActionCable</span><span class="o">::</span><span class="no">Connection</span><span class="o">::</span><span class="no">Base</span>
     <span class="n">identified_by</span> <span class="ss">:current_user</span>
@@ -151,9 +151,9 @@
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>创建 channel：<span class="codespan">rails g channel messages</span>。</p>
+<p>创建 channel：<code class="language-plaintext highlighter-rouge">rails g channel messages</code>。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/channels/messages_channel.rb</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/channels/messages_channel.rb</span>
 <span class="k">class</span> <span class="nc">MessagesChannel</span> <span class="o">&lt;</span> <span class="no">ApplicationCable</span><span class="o">::</span><span class="no">Channel</span>
   <span class="k">def</span> <span class="nf">subscribed</span>
     <span class="c1"># 从 connection 可以拿到 current user</span>
@@ -165,7 +165,7 @@
 <span class="k">end</span>
 </code></pre></div></div>
 
-<div  class="language-coffeescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/assets/javascripts/channels/messages.coffee</span>
+<div class="language-coffeescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># app/assets/javascripts/channels/messages.coffee</span>
 <span class="nx">jQuery</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="na">on</span> <span class="s">'turbolinks:load'</span><span class="p">,</span> <span class="o">-&gt;</span>
   <span class="nx">App</span><span class="p">.</span><span class="na">messages</span> <span class="o">=</span> <span class="nx">App</span><span class="p">.</span><span class="na">cable</span><span class="p">.</span><span class="na">subscriptions</span><span class="p">.</span><span class="na">create</span> <span class="s">"MessagesChannel"</span><span class="p">,</span>
     <span class="na">connected</span><span class="o">:</span> <span class="o">-&gt;</span>
@@ -177,18 +177,18 @@
       <span class="c1"># 其他操作</span>
 </code></pre></div></div>
 
-<p>这样，我们便可以在创建 message 的时候推送了，比如，在 message model 中添加<span class="codespan">after_create_commit</span>动作，触发广播。</p>
+<p>这样，我们便可以在创建 message 的时候推送了，比如，在 message model 中添加<code class="language-plaintext highlighter-rouge">after_create_commit</code>动作，触发广播。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="no">ActionCable</span><span class="p">.</span><span class="nf">server</span><span class="p">.</span><span class="nf">broadcast</span> <span class="s2">"messages_</span><span class="si">#{</span><span class="n">message</span><span class="p">.</span><span class="nf">receiver</span><span class="p">.</span><span class="nf">id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">data</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="no">ActionCable</span><span class="p">.</span><span class="nf">server</span><span class="p">.</span><span class="nf">broadcast</span> <span class="s2">"messages_</span><span class="si">#{</span><span class="n">message</span><span class="p">.</span><span class="nf">receiver</span><span class="p">.</span><span class="nf">id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">data</span>
 </code></pre></div></div>
 
 <p>然而这里更推荐使用 active job。</p>
 
 <h3 id="active-job">Active Job</h3>
 
-<p>首先创建 job，<span class="codespan">rails g job message_notification</span>。</p>
+<p>首先创建 job，<code class="language-plaintext highlighter-rouge">rails g job message_notification</code>。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">MessageNotificationJob</span> <span class="o">&lt;</span> <span class="no">ApplicationJob</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">MessageNotificationJob</span> <span class="o">&lt;</span> <span class="no">ApplicationJob</span>
   <span class="n">queue_as</span> <span class="ss">:default</span>
 
   <span class="k">def</span> <span class="nf">perform</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
@@ -197,7 +197,7 @@
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>然后把上面的<span class="codespan">after_create_commit</span>改为：<span class="codespan">MessageNotificationJob.perform_later(self)</span>。</p>
+<p>然后把上面的<code class="language-plaintext highlighter-rouge">after_create_commit</code>改为：<code class="language-plaintext highlighter-rouge">MessageNotificationJob.perform_later(self)</code>。</p>
 
 <p>如此重启服务器即可正常工作。</p>
 
@@ -207,15 +207,15 @@
 
 <h3 id="action-cable-1">Action Cable</h3>
 
-<p>安装 redis<sup id="fnref:2"><a href="#fn:2" class="footnote">2</a></sup>。</p>
+<p>安装 redis<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>。</p>
 
-<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 源码安装</span>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 源码安装</span>
 <span class="c"># wget/tar/configure/make/make install</span>
 
 <span class="c"># yum 安装</span>
 rpm <span class="nt">-Uvh</span> http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 rpm <span class="nt">-Uvh</span> http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
-yum <span class="nt">--enablerepo</span><span class="o">=</span>remi,remi-test install redis
+yum <span class="nt">--enablerepo</span><span class="o">=</span>remi,remi-test <span class="nb">install </span>redis
 <span class="c"># 配置</span>
 vi /etc/sysctl.conf <span class="c"># vm.overcommit_memory=1</span>
 sysctl vm.overcommit_memory<span class="o">=</span>1
@@ -228,7 +228,7 @@ service redis start/stop/restart
 
 <p>设置 redis 的地址。</p>
 
-<div  class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/cable.yml</span>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/cable.yml</span>
 <span class="na">development</span><span class="pi">:</span>
   <span class="na">adapter</span><span class="pi">:</span> <span class="s">async</span>
  
@@ -242,13 +242,13 @@ service redis start/stop/restart
 
 <p>环境设置。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/environments/production</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/environments/production</span>
 <span class="n">config</span><span class="p">.</span><span class="nf">action_cable</span><span class="p">.</span><span class="nf">allowed_request_origins</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"https://example.com"</span><span class="p">,</span> <span class="s2">"http://example.com"</span><span class="p">]</span>
 </code></pre></div></div>
 
 <p>nginx 服务器配置。</p>
 
-<div  class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
   <span class="kn">listen</span> <span class="mi">80</span><span class="p">;</span>
   <span class="kn">server_name</span> <span class="s">example.com</span><span class="p">;</span>
 
@@ -271,15 +271,15 @@ service redis start/stop/restart
 
 <h3 id="active-job-1">Active Job</h3>
 
-<p>Job 适配器使用 <a href="http://sidekiq.org/">sidekiq</a>，在<span class="codespan">Gemfile</span>中添加并<span class="codespan">bundle install</span>。</p>
+<p>Job 适配器使用 <a href="http://sidekiq.org/">sidekiq</a>，在<code class="language-plaintext highlighter-rouge">Gemfile</code>中添加并<code class="language-plaintext highlighter-rouge">bundle install</code>。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/environments/production.rb</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/environments/production.rb</span>
 <span class="n">config</span><span class="p">.</span><span class="nf">active_job</span><span class="p">.</span><span class="nf">queue_adapter</span> <span class="o">=</span> <span class="ss">:sidekiq</span>
 </code></pre></div></div>
 
 <p>初始化。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/initializers/sidekiq.rb</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># config/initializers/sidekiq.rb</span>
 <span class="no">Sidekiq</span><span class="p">.</span><span class="nf">configure_server</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
   <span class="n">config</span><span class="p">.</span><span class="nf">redis</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">url: </span><span class="s1">'redis://localhost:12345'</span> <span class="p">}</span>
 <span class="k">end</span>
@@ -289,37 +289,37 @@ service redis start/stop/restart
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>确保 redis 已经正常启动，然后在项目目录下执行<span class="codespan">sidekiq</span>，此时便可以正常工作了。</p>
+<p>确保 redis 已经正常启动，然后在项目目录下执行<code class="language-plaintext highlighter-rouge">sidekiq</code>，此时便可以正常工作了。</p>
 
-<p>如果你的 job 的 queue 不是  default，那么你还需要创建<span class="codespan">config/sidekiq.yml</span>文件。执行的时候需要<span class="codespan">sidekiq -C ./config/sidekiq.yml</span>。</p>
+<p>如果你的 job 的 queue 不是  default，那么你还需要创建<code class="language-plaintext highlighter-rouge">config/sidekiq.yml</code>文件。执行的时候需要<code class="language-plaintext highlighter-rouge">sidekiq -C ./config/sidekiq.yml</code>。</p>
 
-<div  class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">---</span>
-<span class="s">:concurrency</span><span class="pi">:</span> <span class="s">1</span>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">---</span>
+<span class="s">:concurrency: </span><span class="m">1</span>
 <span class="na">production</span><span class="pi">:</span>
-  <span class="s">:concurrency</span><span class="pi">:</span> <span class="s">25</span>
-<span class="s">:queues</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="pi">[</span><span class="nv">task1</span><span class="pi">,</span> <span class="nv">5</span><span class="pi">]</span>
-  <span class="pi">-</span> <span class="pi">[</span><span class="nv">task2</span><span class="pi">,</span> <span class="nv">1</span><span class="pi">]</span>
+  <span class="s">:concurrency: </span><span class="m">25</span>
+<span class="s">:queues:</span>
+  <span class="s">- [task1, 5]</span>
+  <span class="s">- [task2, 1]</span>
 </code></pre></div></div>
 
-<p>使用 mina 部署的时候，需要添加<span class="codespan">mina_sidekiq</span>这个 gem<sup id="fnref:3"><a href="#fn:3" class="footnote">3</a></sup>。</p>
+<p>使用 mina 部署的时候，需要添加<code class="language-plaintext highlighter-rouge">mina_sidekiq</code>这个 gem<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">3</a></sup>。</p>
 
-<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">require</span> <span class="s1">'mina_sidekiq/tasks'</span>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">require</span> <span class="s1">'mina_sidekiq/tasks'</span>
 <span class="c1"># 在需要的地方 invoke</span>
 <span class="n">invoke</span> <span class="ss">:'sidekiq:quiet'</span>
 <span class="n">invoke</span> <span class="ss">:'sidekiq:restart'</span>
 </code></pre></div></div>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1">
-      <p>参见样例 <a href="http://jargon.io/joeyschoblaska/rails-5-chess-with-action-cable-websockets">Building a chess server in Rails 5 with Action Cable-powered WebSockets</a> 和官方文档 <a href="http://edgeguides.rubyonrails.org/action_cable_overview.html">Action Cable Overview — Ruby on Rails Guides</a> <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:1" role="doc-endnote">
+      <p>参见样例 <a href="http://jargon.io/joeyschoblaska/rails-5-chess-with-action-cable-websockets">Building a chess server in Rails 5 with Action Cable-powered WebSockets</a> 和官方文档 <a href="http://edgeguides.rubyonrails.org/action_cable_overview.html">Action Cable Overview — Ruby on Rails Guides</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2">
-      <p>安装<a href="https://gist.github.com/nghuuphuoc/7801123">gist</a>，<a href="https://gorails.com/episodes/deploy-actioncable-and-rails-5">配置</a> <a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:2" role="doc-endnote">
+      <p>安装<a href="https://gist.github.com/nghuuphuoc/7801123">gist</a>，<a href="https://gorails.com/episodes/deploy-actioncable-and-rails-5">配置</a> <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:3">
-      <p><a href="https://github.com/Mic92/mina-sidekiq">gem</a>，<a href="https://ruby-china.org/topics/26661">示例</a> <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:3" role="doc-endnote">
+      <p><a href="https://github.com/Mic92/mina-sidekiq">gem</a>，<a href="https://ruby-china.org/topics/26661">示例</a> <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -397,8 +397,8 @@ service redis start/stop/restart
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -416,8 +416,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -427,7 +427,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

@@ -18,22 +18,24 @@
 
 ">
   <meta name="keywords" content="llm,forecast,time series">
-  <link rel="canonical" href="http://wulfric.me/2025/10/llm-zeroshot-ts-forecaster/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2025/10/llm-zeroshot-ts-forecaster/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
-    <script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: {
-      equationNumbers: { autoNumber: "AMS" },
-      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
-    },
-    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-  });
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
 </script>
 
 <script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
-</script>
+        defer src="//cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+></script>
 
   
 </head>
@@ -103,14 +105,7 @@
 
 <p>最后，除了具有广泛的预测性能之外，我们发现性能往往随着规模的增大而提高，而点预测的质量也随着不确定性表示的质量而提高。然而，我们还发现GPT-4的不确定性校准比GPT-3差，这可能是由于人类反馈强化学习等干预措施所致。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x1.png" alt="图1：我们提出了LLMTime，一种使用大型语言模型（LLMs）进行时间序列预测的方法，通过将数字编码为文本，并通过文本补全来采样可能的外推结果。LLMTime可以在没有对目标数据集进行任何训练的情况下（即零-shot）胜过许多流行的时间序列方法。LLMTime的性能也随着基础模型的能力而扩展。值得注意的是，经过对齐的模型（例如RLHF）不遵循这种扩展趋势。例如，GPT-4的性能不如GPT-3（第6节）。" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图1：我们提出了LLMTime，一种使用大型语言模型（LLMs）进行时间序列预测的方法，通过将数字编码为文本，并通过文本补全来采样可能的外推结果。LLMTime可以在没有对目标数据集进行任何训练的情况下（即零-shot）胜过许多流行的时间序列方法。LLMTime的性能也随着基础模型的能力而扩展。值得注意的是，经过对齐的模型（例如RLHF）不遵循这种扩展趋势。例如，GPT-4的性能不如GPT-3（第6节）。</figcaption>
-        </figure></p>
+<p><img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x1.png" alt="图1：我们提出了LLMTime，一种使用大型语言模型（LLMs）进行时间序列预测的方法，通过将数字编码为文本，并通过文本补全来采样可能的外推结果。LLMTime可以在没有对目标数据集进行任何训练的情况下（即零-shot）胜过许多流行的时间序列方法。LLMTime的性能也随着基础模型的能力而扩展。值得注意的是，经过对齐的模型（例如RLHF）不遵循这种扩展趋势。例如，GPT-4的性能不如GPT-3（第6节）。" /></p>
 
 <h2 id="2背景">2背景</h2>
 
@@ -135,17 +130,10 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 <p>使用大语言模型进行预测相对来说步骤较少。一旦将数值处理成字符串，使用语言模型进行预测就遵循标准的采样过程。然而，正如我们接下来所展示的，正确的预处理并不总是直观的，但却非常重要，而处理不当可能导致无法使用的预测结果。</p>
 
 <p>Tokenization：Tokenization特别重要，因为它直接影响到 tokenized 序列中模式的形成方式以及语言模型可以学习的操作类型。不幸的是，常见的tokenization方法如BPE往往会将一个数字(number)分成不与digits对齐的token，这可能会使算术运算变得更加困难（Liu和Low，2023）。例如，数字 42235630 在GPT-3的标记器中被标记为 [422,35,630] ，即使只改变一个数字，也可能导致完全不同的tokenization结果。相比之下，在许多新的开源LLMs（例如LLaMA（Touvron等，2023a））中，默认情况下将数字标记为单个数字。为了解决GPT模型的标记化问题，我们使用空格将数字的每个数字分开，以强制对每个数字进行单独的tokenization，并使用逗号（"，"）将时间序列中的每个时间步骤分开。由于在给定固定精度的情况下，小数点是多余的，我们在编码中去掉它们以节省上下文长度。因此，例如，在具有 2 位精度的情况下，我们在将时间序列输入标记器之前进行以下预处理：
-<script type="math/tex">0.123, 1.23, 12.3, 123.0 \rightarrow \text{" 1 2 , 1 2 3 , 1 2 3 0 , 1 2 3 0 0"}.</script>
+\(0.123, 1.23, 12.3, 123.0 \rightarrow \text{" 1 2 , 1 2 3 , 1 2 3 0 , 1 2 3 0 0"}.\)
 在图2中，我们展示了这种编码方式的额外空格对于GPT模型是有帮助的，可以防止模型在采样过程中输出异常的标记而偏离正常情况。对于LLaMA模型来说，由于其对数字的独特分词方式，额外的空格则产生了相反的效果。每个数字和空格已经被分配了自己的标记，空格标记成为了干扰输入，增加了序列长度但没有简化序列的结构，可能使得序列对于模型来说是超出分布范围的。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x2.png" alt="" width= height= />
-          </picture>
-          
-        </figure></p>
+<p><img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x2.png" alt="" /></p>
 
 <p>重新缩放：为了避免在输入非常大的情况下浪费标记，我们将值缩小，使得重新缩放的时间序列值的 $\alpha$ 百分位为 1 。我们避免使用最大值进行缩放，以便LLM可以看到一些数字位数发生变化的示例（ $1-\alpha$），并在其输出中重现此行为以产生比其所见过的更大的值。我们还尝试使用基于输入数据的百分位数计算的偏移量 $\beta$ ，并通过验证对数似然度来调整这两个参数（详见附录A）。</p>
 
@@ -165,14 +153,7 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 <p>语言模型作为灵活的分布：语言模型可以表达数值的灵活分布，这个事实对于时间序列数据来说至关重要。不确定性量化对于预测至关重要，而表示时间序列中的不确定性的典型方法可能会受到错误规定的限制。例如，创建概率预测的常见方法之一是拟合高斯或拉普拉斯观测模型。当底层数据分布是多峰的时候，这两个模型都会表现不佳。高斯混合模型（GMMs）等方法可以解决多峰性问题，但会引入优化和模型选择方面的额外挑战。我们通过在各种一维分布上训练一个小型自回归模型来展示语言模型是一个被低估的解决方案，如图3（右侧）所示。这些分布来自指数随机变量、均匀分布和学生t分布的混合，以及基于MonthlyMilk数据集上ARIMA模型的时间序列预测残差的重尾分布（Herzen等人，2022）。 [20] 我们通过计算Wasserstein距离来定量评估这些拟合结果，并与拉普拉斯观测模型、使用期望最大化训练的高斯混合模型以及对数据进行平坦分箱的逻辑回归进行比较（使用调整后的区间大小）。每个模型仅使用分布中的 200 个样本进行训练。结果表明，十进制自回归语言模型（"Decimal AR"）表现非常出色，能够处理非对称、多峰和重尾分布，这些是时间序列数据的典型多样性类型之一。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x4.png" alt="图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。</figcaption>
-        </figure></p>
+<p><img src="https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x4.png" alt="图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。" /></p>
 
 
   </article>
@@ -236,8 +217,8 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -255,8 +236,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -266,7 +247,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

@@ -18,22 +18,24 @@
 
 ">
   <meta name="keywords" content="ai,chatgpt">
-  <link rel="canonical" href="http://wulfric.me/2023/05/ReAct-ch/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2023/05/ReAct-ch/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
-    <script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: {
-      equationNumbers: { autoNumber: "AMS" },
-      /* extensions: ["AMSmath.js", "AMSsymbols.js", "action.js"] */
-    },
-    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-  });
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
 </script>
 
 <script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
-</script>
+        defer src="//cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+></script>
 
   
 </head>
@@ -95,14 +97,7 @@
 
 <p>最近的研究结果提示了将语言推理与交互决策制定相结合的自主系统的可能性。一方面，经过适当提示的大型语言模型（LLMs）已经展示出具有新兴能力，可以在算术、常识和符号推理任务中执行几个推理步骤，从问题中推导出答案（Wei等，2022）。然而，这种“思维链”推理是一个静态的黑盒子，因为模型使用自己的内部表示来生成思维，而没有与外部世界联系，这限制了其反应性推理或更新知识的能力。这可能会导致像事实幻觉和推理过程中的错误传播等问题（图1（1b））。另一方面，最近的研究探索了预训练语言模型在交互环境中规划和行动的应用（Ahn等，2022; Nakano等，2021; Yao等，2020; Huang等，2022a），重点是通过语言先验来预测行动。这些方法通常将多模态观察转换为文本，使用语言模型生成特定领域的行动或计划，然后使用控制器选择或执行它们。然而，它们没有利用语言模型对高层次目标进行抽象推理或维护工作记忆以支持行动，除了Huang等人（2022b）在当前状态下执行有限形式的语言推理以重申空间事实。除了这种简单的与几个块交互的具体任务外，还没有研究如何以协同的方式将推理和行动结合起来进行一般任务解决，以及这种组合是否与单独推理或行动相比带来系统性的优势。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/ReAct-figure1.png" alt="图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/ReAct-figure1.png" alt="图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。" /></p>
 
 <p>在这项工作中，我们提出了ReAct，这是一种将语言模型与推理和行动相结合的通用范例，用于解决各种语言推理和决策任务（图1）。ReAct提示LLMs以交替方式生成与任务相关的语言推理轨迹和行动，这使得模型能够执行动态推理，创建、维护和调整高级计划以进行行动（推理到行动），同时与外部环境（例如维基百科）交互，将额外信息纳入推理（行动到推理）。</p>
 
@@ -141,23 +136,9 @@
 
 <p>ReAct Prompting: 对于HotpotQA和FEVER，我们从训练集中随机选择了6个和3个案例，并手动编写了ReAct格式的轨迹，用作提示中的少量样本。与图1（d）类似，每个轨迹由多个思考-行动-观察步骤（即密集思考）组成，其中自由形式的思考用于各种目的。具体而言，我们使用一些思考来分解问题（“我需要搜索x，找到y，然后找到z”），从维基百科观察中提取信息（“x始于1844年”，“该段落没有提到x”），进行常识（“x不是y，所以z必须是…”）或算术推理（“1844 &lt; 1989”），指导搜索重构（“也许我可以搜索/查找x”），并综合最终答案（“…所以答案是x”）。更多详细信息请参见附录C。</p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/ReAct-table1.png" alt="表1：PaLM-540B在HotpotQA和FEVER上的提示结果" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>表1：PaLM-540B在HotpotQA和FEVER上的提示结果</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/ReAct-table1.png" alt="表1：PaLM-540B在HotpotQA和FEVER上的提示结果" /></p>
 
-<p><figure>
-          <picture>
-            
-            
-            <img src="/images/chatgpt/ReAct-figure2.png" alt="图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果" width= height= />
-          </picture>
-          <figcaption><i class='icon-pencil'></i>图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果</figcaption>
-        </figure></p>
+<p><img src="/images/chatgpt/ReAct-figure2.png" alt="图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果" /></p>
 
 <p>基线: 我们系统地删除ReAct轨迹以构建用于多个基线的提示（格式如图1（1a-1c））：（a）标准提示（Standard），它删除了ReAct轨迹中的所有思考、行动和观察。 （b）思考链提示（CoT）（Wei等，2022），它删除了行动和观察，并作为仅基于推理的基线。我们还通过在推理过程中使用解码温度0.7对21个CoT轨迹进行采样并采用多数答案来构建自一致性基线（CoT-SC）（Wang等，2022a;b），发现它始终提高了CoT的性能。 （c）仅执行提示（Act），它删除了ReAct轨迹中的思考，略微类似于WebGPT（Nakano等，2021）如何与互联网交互以回答问题，尽管它针对不同的任务和行动空间，并使用模仿和强化学习而不是提示。</p>
 
@@ -226,8 +207,8 @@
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -245,8 +226,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -256,7 +237,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

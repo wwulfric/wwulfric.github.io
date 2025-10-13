@@ -18,8 +18,8 @@
 
 ">
   <meta name="keywords" content="miniconda,python,brew,path">
-  <link rel="canonical" href="http://wulfric.me/2016/09/pyenv-keyerror/">
-  <link type="text/css" rel="stylesheet" href="/assets/app-e04e69eee0e73247e890ada5b9256175cd6a806deefdba1745a0f669eef18fe1.css" media=screen>
+  <link rel="canonical" href="https://wulfric.me/2016/09/pyenv-keyerror/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
 
@@ -70,7 +70,7 @@
   <article class="post-content">
     <p>Error in sitecustomize; set PYTHONVERBOSE for traceback: KeyError: 'PYTHONPATH'</p>
 
-<p>系统不知道更改了什么之后就遇到了这个问题，每当切换目录(<span class="codespan">cd</span>)的时候都会跳出来错误提示，非常恼人。在 stackoverflow<sup id="fnref:stackoverflow_links"><a href="#fn:stackoverflow_links" class="footnote">1</a></sup> 上没找到解决方法，倒是在一个日文<a href="http://qiita.com/Asakage/items/690ce9048e708de41166">博客</a>里找到了。我也不懂日文，但是看他罗列的文件和代码，大概能了解他的思路，按照思路走，才发现了这个问题。</p>
+<p>系统不知道更改了什么之后就遇到了这个问题，每当切换目录(<code class="language-plaintext highlighter-rouge">cd</code>)的时候都会跳出来错误提示，非常恼人。在 stackoverflow<sup id="fnref:stackoverflow_links" role="doc-noteref"><a href="#fn:stackoverflow_links" class="footnote" rel="footnote">1</a></sup> 上没找到解决方法，倒是在一个日文<a href="http://qiita.com/Asakage/items/690ce9048e708de41166">博客</a>里找到了。我也不懂日文，但是看他罗列的文件和代码，大概能了解他的思路，按照思路走，才发现了这个问题。</p>
 
 <h2 id="背景">背景</h2>
 
@@ -78,49 +78,49 @@
 
 <h2 id="挖坑">挖坑</h2>
 
-<p>首先，<span class="codespan">cd</span>会出现这个问题的原因是我在<span class="codespan">.zshrc</span>中执行了<span class="codespan">eval "$(pyenv init -)</span>，如果删除这一行，就不会有这个问题了。</p>
+<p>首先，<code class="language-plaintext highlighter-rouge">cd</code>会出现这个问题的原因是我在<code class="language-plaintext highlighter-rouge">.zshrc</code>中执行了<code class="language-plaintext highlighter-rouge">eval "$(pyenv init -)</code>，如果删除这一行，就不会有这个问题了。</p>
 
 <p>其次，这个问题不仅在 cd 的时候会出现，执行 python 的时候也会。</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="n">python</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="n">python</span>
 <span class="n">Error</span> <span class="ow">in</span> <span class="n">sitecustomize</span><span class="p">;</span> <span class="nb">set</span> <span class="n">PYTHONVERBOSE</span> <span class="k">for</span> <span class="n">traceback</span><span class="p">:</span>
 <span class="nb">KeyError</span><span class="p">:</span> <span class="s">'PYTHONPATH'</span>
-<span class="n">Python</span> <span class="mf">3.5</span><span class="o">.</span><span class="mi">2</span> <span class="o">|</span><span class="n">Continuum</span> <span class="n">Analytics</span><span class="p">,</span> <span class="n">Inc</span><span class="o">.|</span> <span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">Jul</span>  <span class="mi">2</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">17</span><span class="p">:</span><span class="mi">52</span><span class="p">:</span><span class="mi">12</span><span class="p">)</span>
-<span class="p">[</span><span class="n">GCC</span> <span class="mf">4.2</span><span class="o">.</span><span class="mi">1</span> <span class="n">Compatible</span> <span class="n">Apple</span> <span class="n">LLVM</span> <span class="mf">4.2</span> <span class="p">(</span><span class="n">clang</span><span class="o">-</span><span class="mf">425.0</span><span class="o">.</span><span class="mi">28</span><span class="p">)]</span> <span class="n">on</span> <span class="n">darwin</span>
-<span class="n">Type</span> <span class="s">"help"</span><span class="p">,</span> <span class="s">"copyright"</span><span class="p">,</span> <span class="s">"credits"</span> <span class="ow">or</span> <span class="s">"license"</span> <span class="k">for</span> <span class="n">more</span> <span class="n">information</span><span class="o">.</span>
+<span class="n">Python</span> <span class="mf">3.5</span><span class="p">.</span><span class="mi">2</span> <span class="o">|</span><span class="n">Continuum</span> <span class="n">Analytics</span><span class="p">,</span> <span class="n">Inc</span><span class="p">.</span><span class="o">|</span> <span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">Jul</span>  <span class="mi">2</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">17</span><span class="p">:</span><span class="mi">52</span><span class="p">:</span><span class="mi">12</span><span class="p">)</span>
+<span class="p">[</span><span class="n">GCC</span> <span class="mf">4.2</span><span class="p">.</span><span class="mi">1</span> <span class="n">Compatible</span> <span class="n">Apple</span> <span class="n">LLVM</span> <span class="mf">4.2</span> <span class="p">(</span><span class="n">clang</span><span class="o">-</span><span class="mf">425.0</span><span class="p">.</span><span class="mi">28</span><span class="p">)]</span> <span class="n">on</span> <span class="n">darwin</span>
+<span class="n">Type</span> <span class="s">"help"</span><span class="p">,</span> <span class="s">"copyright"</span><span class="p">,</span> <span class="s">"credits"</span> <span class="ow">or</span> <span class="s">"license"</span> <span class="k">for</span> <span class="n">more</span> <span class="n">information</span><span class="p">.</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">sys</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span>
-<span class="c"># 返回一个 list。着重关心其中一个元素：'/usr/local/lib/python2.7/site-packages'</span>
-</code></pre></div></div>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">sys</span><span class="p">.</span><span class="n">path</span>
+<span class="c1"># 返回一个 list。着重关心其中一个元素：'/usr/local/lib/python2.7/site-packages'
+</span></code></pre></div></div>
 
 <p>这里其实就发现问题了，Python3.5 怎么会有 2.7 的 site-packages 呢？</p>
 
-<p><span class="codespan">/usr/local/</span>是 brew 的默认安装路径，继续挖。</p>
+<p><code class="language-plaintext highlighter-rouge">/usr/local/</code>是 brew 的默认安装路径，继续挖。</p>
 
 <h3 id="brew-doctor-看诊断">brew doctor 看诊断</h3>
 
-<p>既然可能是 brew 安装的问题，执行<span class="codespan">brew doctor</span>。</p>
+<p>既然可能是 brew 安装的问题，执行<code class="language-plaintext highlighter-rouge">brew doctor</code>。</p>
 
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Warning: Your default Python does not recognize the Homebrew site-packages
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Warning: Your default Python does not recognize the Homebrew site-packages
 directory as a special site-packages directory, which means that .pth
 files will not be followed. This means you will not be able to import
 some modules after installing them with Homebrew, like wxpython. To fix
 this <span class="k">for </span>the current user, you can run:
-  mkdir <span class="nt">-p</span> /Users/username/.local/lib/python3.5/site-packages
+  <span class="nb">mkdir</span> <span class="nt">-p</span> /Users/username/.local/lib/python3.5/site-packages
   <span class="nb">echo</span> <span class="s1">'import site; site.addsitedir("/usr/local/lib/python2.7/site-packages")'</span> <span class="o">&gt;&gt;</span> /Users/username/.local/lib/python3.5/site-packages/homebrew.pth
 </code></pre></div></div>
 
 <p>这里就是问题所在！brew 在安装某些软件之后，可能需要用户手动做一些后续操作。想起来 brew 更新 Python 的时候，它曾经提示我这样做，于是就直接复制代码执行，结果就导致了这个问题。把homebrew.pth 的内容改成</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">site</span><span class="p">;</span> <span class="n">site</span><span class="o">.</span><span class="n">addsitedir</span><span class="p">(</span><span class="s">"/usr/local/lib/python3.5/site-packages"</span><span class="p">)</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">site</span><span class="p">;</span> <span class="n">site</span><span class="p">.</span><span class="n">addsitedir</span><span class="p">(</span><span class="s">"/usr/local/lib/python3.5/site-packages"</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>我分析，其原因应该是 brew 没有安装 Python3，但是通过 pyenv 安装了 Python3，所以 brew 还是按照自己的意思建议你在homebrew.pth 导入 2.7 的site-packages。</p>
 
-<div class="footnotes">
+<div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:stackoverflow_links">
-      <p><a href="http://stackoverflow.com/questions/34981284/pythonpath-error-when-trying-to-activate-a-virtual-environment">python - PYTHONPATH error when trying to activate a virtual environment - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/31601078/keyerror-pythonpath-message-when-updating-anaconda-packahes-on-mac-os-x">python - "KeyError: 'PYTHONPATH'" message when updating Anaconda packahes on Mac OS X - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/32321973/after-installing-anaconda-i-get-constant-keyerror-pythonpath-messages">python - After installing Anaconda, I get constant "KeyError: 'PYTHONPATH'" messages - Stack Overflow</a> <a href="#fnref:stackoverflow_links" class="reversefootnote">&#8617;</a></p>
+    <li id="fn:stackoverflow_links" role="doc-endnote">
+      <p><a href="http://stackoverflow.com/questions/34981284/pythonpath-error-when-trying-to-activate-a-virtual-environment">python - PYTHONPATH error when trying to activate a virtual environment - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/31601078/keyerror-pythonpath-message-when-updating-anaconda-packahes-on-mac-os-x">python - "KeyError: 'PYTHONPATH'" message when updating Anaconda packahes on Mac OS X - Stack Overflow</a>, <a href="http://stackoverflow.com/questions/32321973/after-installing-anaconda-i-get-constant-keyerror-pythonpath-messages">python - After installing Anaconda, I get constant "KeyError: 'PYTHONPATH'" messages - Stack Overflow</a> <a href="#fnref:stackoverflow_links" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>
@@ -190,8 +190,8 @@ this <span class="k">for </span>the current user, you can run:
 
 
     </div>
-    <script type="text/javascript" src="/assets/app-84a64744083057cdeaad48a9fc2dd715c1428d5bf59aa4274162c7bc77db06ff.js"></script>
-    <script type="text/javascript">
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
 var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
 document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -209,8 +209,8 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   s.parentNode.insertBefore(bp, s);
 })();
 </script>
-
-    <script>
+ -->
+    <!-- <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -220,7 +220,7 @@ document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3
   ga('require', 'displayfeatures');
   ga('send', 'pageview');
 </script>
-
+ -->
   </body>
 
 </html>

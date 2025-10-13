@@ -3,12 +3,16 @@
 /* https://kuler.adobe.com/Copy-of-Copy-of-main-cxcedar-color-theme-4361434/ */
 // $main-color : #2E313D; //333
 @use "sass:color";
+
+$max-width: 840px;
+
 $main-color : #333;
 $lighter-color: color.adjust($main-color, $lightness: 20%); //666
 $lightest-color: color.adjust($main-color, $lightness: 40%); //999
 $border-color: color.adjust($main-color, $lightness: 67%); //ddd
 $darker-bg-color: color.adjust($main-color, $lightness: 77%); //f8f8f8
 $bg-color: color.adjust($main-color, $lightness: 80%);
+
 
 $header-color : #9C0; //#B7C11E;
 $link-color : #008D00; //#23A38F;

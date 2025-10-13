@@ -45,7 +45,7 @@ nav.header-nav{
   padding-bottom: 1.1em;
   border-bottom: 4px solid #000;
   a{
-    padding: 0em .2em;
+    padding: 0 1em;
     @include normal-color();
     &:hover{
       @include reverse-color();

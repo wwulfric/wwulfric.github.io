@@ -6,8 +6,8 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Mon, 13 Oct 2025 03:01:55 +0000</pubDate>
-    <lastBuildDate>Mon, 13 Oct 2025 03:01:55 +0000</lastBuildDate>
+    <pubDate>Mon, 13 Oct 2025 03:03:44 +0000</pubDate>
+    <lastBuildDate>Mon, 13 Oct 2025 03:03:44 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2025. All rights reserved.</rights>
     
@@ -42,7 +42,7 @@
           &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图1：我们提出了LLMTime，一种使用大型语言模型（LLMs）进行时间序列预测的方法，通过将数字编码为文本，并通过文本补全来采样可能的外推结果。LLMTime可以在没有对目标数据集进行任何训练的情况下（即零-shot）胜过许多流行的时间序列方法。LLMTime的性能也随着基础模型的能力而扩展。值得注意的是，经过对齐的模型（例如RLHF）不遵循这种扩展趋势。例如，GPT-4的性能不如GPT-3（第6节）。&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
 
-&lt;h2 id=&quot;2背景&quot;&gt;2背景&lt;/h2&gt;
+&lt;h2 id=&quot;2-背景&quot;&gt;2. 背景&lt;/h2&gt;
 
 &lt;p&gt;语言模型：语言模型是在一系列序列  $\mathcal{U} = {U_1, U_2, \dots, U_i, \dots, U_N}$ 上进行训练的，其中 $U_i = (u_1,u_2,\dots,u_j,\dots,u_{n_i})$ ，每个token $u_i$ 属于一个词汇表 $\mathcal{V}$。大型语言模型通常编码为自回归分布，其中每个token的概率仅依赖于序列中的前面的tokens $p_\theta\left( U_i\right) = \prod_{j=1}^{n_i} p_\theta\left(u_j \mid u_{0:j-1}\right)$。参数 $\theta$ 通过最大化整个数据集 ${p_\theta(\mathcal{U}) = \prod_{i=1}^N p_\theta(U_i)}$ 的概率来学习。每个语言模型都有一个关联的分词器，它将输入字符串分解为一系列 tokens，每个token属于 𝒱 。正确的分词非常重要，细节的微小变化可能会产生意想不到的显著影响。自回归语言模型最常见的分词方法是字节对编码（BPE），它将输入视为位串，并根据在训练语料库中出现的频率分配token，以便平均生成较短的token序列。从语言模型中进行采样通常从一个提示 $u_{0:k}$，并使用 $p_\theta\left(u_j \mid u_{0:j-1}\right)$进行预处理，例如通过温度缩放或核心采样（Holtzman等，2019）。&lt;/p&gt;
 
@@ -60,13 +60,15 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 &lt;p&gt;我们的工作：与利用LLM骨干的方法不同，我们的方法完全是zero-shot的，不需要微调。与PromptCast不同，我们展示了如果我们仔细预处理数值本身，LLMs可以直接用作预测器，而不需要任何额外的文本或提示工程。我们的方法仅仅依赖于LLM在一般序列中外推模式的能力，而不依赖于英语或任何其他语言的特定内容。超越以往的工作，我们还培养了大型语言模型的概率性质以及它们捕捉高度随机时间序列的不确定性的能力。&lt;/p&gt;
 
-&lt;h2 id=&quot;llmtime使用语言模型进行预测&quot;&gt;LLMTime：使用语言模型进行预测&lt;/h2&gt;
+&lt;h2 id=&quot;3-llmtime使用语言模型进行预测&quot;&gt;3. LLMTime：使用语言模型进行预测&lt;/h2&gt;
 
 &lt;p&gt;使用大语言模型进行预测相对来说步骤较少。一旦将数值处理成字符串，使用语言模型进行预测就遵循标准的采样过程。然而，正如我们接下来所展示的，正确的预处理并不总是直观的，但却非常重要，而处理不当可能导致无法使用的预测结果。&lt;/p&gt;
 
-&lt;p&gt;Tokenization：Tokenization特别重要，因为它直接影响到 tokenized 序列中模式的形成方式以及语言模型可以学习的操作类型。不幸的是，常见的tokenization方法如BPE往往会将一个数字(number)分成不与digits对齐的token，这可能会使算术运算变得更加困难（Liu和Low，2023）。例如，数字 42235630 在GPT-3的标记器中被标记为 [422,35,630] ，即使只改变一个数字，也可能导致完全不同的tokenization结果。相比之下，在许多新的开源LLMs（例如LLaMA（Touvron等，2023a））中，默认情况下将数字标记为单个数字。为了解决GPT模型的标记化问题，我们使用空格将数字的每个数字分开，以强制对每个数字进行单独的tokenization，并使用逗号（&quot;，&quot;）将时间序列中的每个时间步骤分开。由于在给定固定精度的情况下，小数点是多余的，我们在编码中去掉它们以节省上下文长度。因此，例如，在具有 2 位精度的情况下，我们在将时间序列输入标记器之前进行以下预处理：
-\(0.123, 1.23, 12.3, 123.0 \rightarrow \text{&quot; 1 2 , 1 2 3 , 1 2 3 0 , 1 2 3 0 0&quot;}.\)
-在图2中，我们展示了这种编码方式的额外空格对于GPT模型是有帮助的，可以防止模型在采样过程中输出异常的标记而偏离正常情况。对于LLaMA模型来说，由于其对数字的独特分词方式，额外的空格则产生了相反的效果。每个数字和空格已经被分配了自己的标记，空格标记成为了干扰输入，增加了序列长度但没有简化序列的结构，可能使得序列对于模型来说是超出分布范围的。&lt;/p&gt;
+&lt;p&gt;Tokenization：Tokenization特别重要，因为它直接影响到 tokenized 序列中模式的形成方式以及语言模型可以学习的操作类型。不幸的是，常见的tokenization方法如BPE往往会将一个数字(number)分成不与digits对齐的token，这可能会使算术运算变得更加困难（Liu和Low，2023）。例如，数字 42235630 在GPT-3的标记器中被标记为 [422,35,630] ，即使只改变一个数字，也可能导致完全不同的tokenization结果。相比之下，在许多新的开源LLMs（例如LLaMA（Touvron等，2023a））中，默认情况下将数字标记为单个数字。为了解决GPT模型的标记化问题，我们使用空格将数字的每个数字分开，以强制对每个数字进行单独的tokenization，并使用逗号（&quot;，&quot;）将时间序列中的每个时间步骤分开。由于在给定固定精度的情况下，小数点是多余的，我们在编码中去掉它们以节省上下文长度。因此，例如，在具有 2 位精度的情况下，我们在将时间序列输入标记器之前进行以下预处理：&lt;/p&gt;
+
+\[0.123, 1.23, 12.3, 123.0 \rightarrow \text{&quot; 1 2 , 1 2 3 , 1 2 3 0 , 1 2 3 0 0&quot;}.\]
+
+&lt;p&gt;在图2中，我们展示了这种编码方式的额外空格对于GPT模型是有帮助的，可以防止模型在采样过程中输出异常的标记而偏离正常情况。对于LLaMA模型来说，由于其对数字的独特分词方式，额外的空格则产生了相反的效果。每个数字和空格已经被分配了自己的标记，空格标记成为了干扰输入，增加了序列长度但没有简化序列的结构，可能使得序列对于模型来说是超出分布范围的。&lt;/p&gt;
 
 &lt;p&gt;&lt;figure&gt;
           &lt;picture&gt;
@@ -81,19 +83,7 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 &lt;p&gt;采样/预测：为了进行预测，从LLM中抽取多个样本（例如20个），并使用每个时间步骤的样本统计数据构建一个点估计（例如中位数）或概率预测（例如分位数）。为了控制采样，我们使用温度缩放、logit偏差和核心采样（附录C）。&lt;/p&gt;
 
-&lt;div class=&quot;table-container&quot;&gt;
-&lt;table&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td&gt;连续似然性：对于建模数字序列来说，除了生成良好的样本之外，还有其他好处。在基数为 $B$ 的情况下，小数点后的 $n$ 位数字序列对应于 $B^n$ 个可能的区间（图3），每个区间的宽度为 $B^{-n}$ 。由于每个分布 $p(u_j \mid u_{0:j-1}; \theta)$ 都是可能数字的softmax函数，我们可以将每个单独数字的分布视为分层softmax（Mnih和Hinton，2008），其中 $p(u_1, …, u_n)= p(u_n&lt;/td&gt;
-      &lt;td&gt;u_{n-1}, …, u_0) \, p(u_1&lt;/td&gt;
-      &lt;td&gt;u_0) \, p(u_0)$ 。尽管语言模型的概率分布是离散的，但我们可以通过在每个区间中放置均匀分布来轻松地将其调整为连续密度。用索引 $k \in \mathbb{N}$ 枚举模型可以产生的所有可数无穷数字(因为模型可以在小数点前输出任意数量的数字),每个概率为 $p_k$，我们可以将分布写成不相交均匀分布在区间$p(x) = \sum_{k \in \mathbb{N}} p_k U_k(x)$上的混合，其中 $U_k(x) = B^n\mathbb{I}_{x\in [B^{-n}k,B^{-n}(k+1))}$。因此,如果给定的数据点在区间 $k$ 中，其连续对数似然度为 $log p(x)=\log p_k + n\log B$。最后,为了获得原始输入空间中的似然度$log p(z)$，我们添加一个变量变换因子$log&lt;/td&gt;
-      &lt;td&gt;\tfrac{dx}{dz}&lt;/td&gt;
-      &lt;td&gt;,$ 其中 $z \mapsto x=s(z)$ 是预处理中的缩放操作。因此，我们的构造方式使得可以使用离散的数字标记来表示灵活且高分辨率的连续分布，尽管存在指数级数量的区间和指数级小的区间宽度，但其效率令人惊讶地高。&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-&lt;/div&gt;
+&lt;p&gt;连续似然性：对于建模数字序列来说，除了生成良好的样本之外，还有其他好处。在基数为 $B$ 的情况下，小数点后的 $n$ 位数字序列对应于 $B^n$ 个可能的区间（图3），每个区间的宽度为 $B^{-n}$ 。由于每个分布 \(p(u_j \mid u_{0:j-1}; \theta)\) 都是可能数字的softmax函数，我们可以将每个单独数字的分布视为分层softmax（Mnih和Hinton，2008），其中 \(p(u_1, ..., u_n)= p(u_n \mid u_{n-1}, ..., u_0) \, p(u_1 \mid u_0) \, p(u_0)\) 。尽管语言模型的概率分布是离散的，但我们可以通过在每个区间中放置均匀分布来轻松地将其调整为连续密度。用索引 $k \in \mathbb{N}$ 枚举模型可以产生的所有可数无穷数字(因为模型可以在小数点前输出任意数量的数字),每个概率为 $p_k$，我们可以将分布写成不相交均匀分布在区间$p(x) = \sum_{k \in \mathbb{N}} p_k U_k(x)$上的混合，其中 $U_k(x) = B^n\mathbb{I}_{x\in [B^{-n}k,B^{-n}(k+1))}$。因此,如果给定的数据点在区间 $k$ 中，其连续对数似然度为 $log p(x)=\log p_k + n\log B$。最后,为了获得原始输入空间中的似然度$log p(z)$，我们添加一个变量变换因子 \(log \vert\tfrac{dx}{dz}\vert,\) 其中 $z \mapsto x=s(z)$ 是预处理中的缩放操作。因此，我们的构造方式使得可以使用离散的数字标记来表示灵活且高分辨率的连续分布，尽管存在指数级数量的区间和指数级小的区间宽度，但其效率令人惊讶地高。&lt;/p&gt;
 
 &lt;p&gt;语言模型作为灵活的分布：语言模型可以表达数值的灵活分布，这个事实对于时间序列数据来说至关重要。不确定性量化对于预测至关重要，而表示时间序列中的不确定性的典型方法可能会受到错误规定的限制。例如，创建概率预测的常见方法之一是拟合高斯或拉普拉斯观测模型。当底层数据分布是多峰的时候，这两个模型都会表现不佳。高斯混合模型（GMMs）等方法可以解决多峰性问题，但会引入优化和模型选择方面的额外挑战。我们通过在各种一维分布上训练一个小型自回归模型来展示语言模型是一个被低估的解决方案，如图3（右侧）所示。这些分布来自指数随机变量、均匀分布和学生t分布的混合，以及基于MonthlyMilk数据集上ARIMA模型的时间序列预测残差的重尾分布（Herzen等人，2022）。 [20] 我们通过计算Wasserstein距离来定量评估这些拟合结果，并与拉普拉斯观测模型、使用期望最大化训练的高斯混合模型以及对数据进行平坦分箱的逻辑回归进行比较（使用调整后的区间大小）。每个模型仅使用分布中的 200 个样本进行训练。结果表明，十进制自回归语言模型（&quot;Decimal AR&quot;）表现非常出色，能够处理非对称、多峰和重尾分布，这些是时间序列数据的典型多样性类型之一。&lt;/p&gt;
 
@@ -101,10 +91,31 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
           &lt;picture&gt;
             
             
-            &lt;img src=&quot;https://ar5iv.labs.arxiv.org/html/2310.07820/assets/x4.png&quot; alt=&quot;图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。&quot; width= height= /&gt;
+            &lt;img src=&quot;https://arxiv.org/html/2310.07820v3/x3.png&quot; alt=&quot;图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布&quot; width= height= /&gt;
           &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。&lt;/figcaption&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图3：（左）自回归模型在数字序列上的作用类似于对应数字的分层softmax分布。当与每个离散桶中的均匀分布相结合时，字符串的分布可以成为连续域上的表达性分布&lt;/figcaption&gt;
         &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;https://arxiv.org/html/2310.07820v3/x4.png&quot; alt=&quot;图3（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图3（右）：使用简单的自回归模型（例如RNN）在数字的字符串表示上进行训练，我们可以拟合复杂的分布，这对于其他方法来说可能具有挑战性，例如重尾或多模态分布。简单的自回归模型可以与密度估计的知名方法（如高斯混合模型（GMM）或具有固定分辨率的分箱）相匹配或胜过，衡量标准是样本之间的Wasserstein距离。&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;7-讨论&quot;&gt;7. 讨论&lt;/h2&gt;
+
+&lt;p&gt;我们已经证明，大语言模型可以通过将数值编码为文本的方式用作预训练的时间序列预测器。与其他&quot;基础&quot;模型一样，预训练赋予了模型对可泛化模式的有用偏置，这些偏置原本需要通过架构设计来工程化地嵌入模型中[21]，并且能够随着基础预训练模型的改进自然地扩展性能。由于LLM预测器是在语言上训练的，它们还具备非常规的能力，比如问答功能。更广泛地说，将时间序列预测框架化为自然语言生成可以被视为在单一大型强大模型中统一更多能力的又一步，在这种模型中，理解可以在多个任务和模态之间共享。&lt;/p&gt;
+
+&lt;p&gt;此外，零样本预测能够在不需要大量计算资源、领域专业知识或大量下游训练数据点的情况下实现广泛令人信服的性能。&lt;/p&gt;
+
+&lt;p&gt;虽然LLM预测器受益于预训练transformer的优势，但它们也继承了其弱点，包括有限的上下文窗口。虽然许多单变量时间序列问题可以舒适地适应日益增大的上下文窗口，但多变量问题构成了更大的挑战。最近在将LLM上下文窗口扩展到10-100K个token方面有了几项进展[36, 4, 5, 1]。将这些进展与时间序列预测相结合是未来研究的一个特别令人兴奋的方向。&lt;/p&gt;
+
+&lt;p&gt;使用当前LLM架构的另一个潜在挑战可能是它们在算术以及执行递归和组合操作方面的弱点，这可能对特别具有挑战性的时间序列构成限制。另一方面，许多时间序列并不需要精确的算术。理解这种情况的程度，以及放宽这一限制，也是未来研究的一个有前景的方向。&lt;/p&gt;
+
+&lt;p&gt;除了任何限制之外，研究在时间序列上微调LLM的有效程序也将是很有前景的。我们希望将LLM研究与时间序列预测相结合能为两个社区带来益处。&lt;/p&gt;
 
 </description>
         <pubDate>Sat, 11 Oct 2025 15:27:00 +0000</pubDate>
@@ -916,7 +927,6 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 &lt;h3 id=&quot;mlforecast-1&quot;&gt;MLForecast&lt;/h3&gt;
 &lt;p&gt;MLForecast 类中的 cross_validation 方法接受以下参数。&lt;/p&gt;
-
 &lt;ul&gt;
   &lt;li&gt;data ：训练数据 dataframe&lt;/li&gt;
   &lt;li&gt;window_size(int)：表示正在预测的未来h步。在这种情况下，是指24小时。&lt;/li&gt;
@@ -1577,7 +1587,6 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 &lt;h2 id=&quot;为时序组合选择模型&quot;&gt;为时序组合选择模型&lt;/h2&gt;
 
 &lt;p&gt;特征：&lt;/p&gt;
-
 &lt;ul&gt;
   &lt;li&gt;一个统一的 dataframe，包含了所有不同模型的预测&lt;/li&gt;
   &lt;li&gt;容易组装&lt;/li&gt;
@@ -2312,17 +2321,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
       &lt;p&gt;fine-tune 翻译成微调；adaption 翻译成调整，有些翻译成适应性、适应，个人感觉在这里是调整的意思。后文也提到了，对于特定的任务，会把输入的词句做一些简单的调整（比如添加分隔符等）。 &lt;a href=&quot;#fnref:tna&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:dtm&quot;&gt;
-      &lt;div class=&quot;table-container&quot;&gt;
-      &lt;table&gt;
-        &lt;tbody&gt;
-          &lt;tr&gt;
-            &lt;td&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 $P(Y&lt;/td&gt;
-            &lt;td&gt;X)$，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;/td&gt;
-          &lt;/tr&gt;
-        &lt;/tbody&gt;
-      &lt;/table&gt;
-      &lt;/div&gt;
-      &lt;p&gt;&lt;a href=&quot;#fnref:dtm&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;在机器学习中，discriminatively trained model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布 P(X,Y)，而是直接建模条件分布 \(P(Y \mid X)\)，也就是在给定输入 X 的情况下预测输出 Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。 &lt;a href=&quot;#fnref:dtm&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
@@ -2337,444 +2336,6 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
         
         
         <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>Gpt1 Ch</title>
-        <description>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;
-&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Strict//EN&quot;
-	&quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd&quot;&gt;
-
-&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-
-&lt;head&gt;
-&lt;title&gt;2023-04-05-gpt1-ch.html&lt;/title&gt;
-&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html;charset=utf-8&quot;/&gt;
-
-&lt;/head&gt;
-
-&lt;body&gt;
-
-[WARNING] Could not convert TeX math  \begin{aligned} &amp;h_0 = UW_e + W_p \\ &amp;h_l = transformer\_block(h_{l−1})\forall_i \in [1, n] \\  &amp;P(u) = softmax(h_n W_e^T ) \end{aligned}, rendering as TeX
-&lt;p&gt;通过生成式预训练提高语言模型的理解能力。&lt;/p&gt;
-&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
-&lt;p&gt;「自然语言理解」包括了文本蕴涵、问答、语义相似性评估和文档分类等多种不同的任务。尽管大型无标注文本语料库是很丰富的，但用于学习这些特定任务的标注数据却比较稀缺，这使得以判别方式训练的模型难以表现良好。我们证明，在多样化的无标注文本语料库上对语言模型进行「生成式预训练」（即
-GPT），然后对每个特定任务进行「判别式微调」，可以在这些任务上实现大幅能力提升。与以前的方法不同，我们在微调过程中使用任务感知输入变换，在不需要对模型架构进行大量更改的情况下实现有效的迁移。我们在一系列自然语言理解基准任务上展示了我们方法的有效性。我们的通用任务不可知模型优于使用专门为每个任务定制的架构的判别式训练模型，在
-12 个研究任务中有 9
-个任务上显著改善了最先进水平。例如，我们在常识推理（Stories Cloze
-Test）上实现了 8.9% 的绝对提升，在问答（RACE）上实现了 5.7%
-的提升，在文本蕴涵（MultiNLI）上实现了 1.5% 的提升。&lt;/p&gt;
-&lt;h2 id=&quot;导言&quot;&gt;1. 导言&lt;/h2&gt;
-&lt;p&gt;学会有效地从原始文本中学习对于减轻自然语言处理（NLP）中对监督学习的依赖至关重要。大多数深度学习方法需要大量手动标注的数据，这限制了它们在许多缺乏注释资源的领域中的适用性[61]。在这些情况下，能够利用未标注数据中的语言信息的模型提供了一种收集更多注释的有价值的替代方案，而收集这些注释可能是耗时且昂贵的。此外，即使在监督较多（considerable
-supervision）的情况下，以无监督的方式学习良好的表示（good
-representations）也可以带来显著的性能提升。迄今为止最引人注目的证据是广泛使用预训练词嵌入[10,
-39, 42]来提高一系列 NLP 任务性能[8, 11, 26, 45]。&lt;/p&gt;
-&lt;p&gt;然而，从未标注文本中提取比词级信息（word-level
-information）更多的信息具有挑战性。原因有两个：首先，不清楚哪种类型的优化目标（optimization
-objectives）在学习对于迁移有用的文本表示&lt;a href=&quot;#fn1&quot;
-class=&quot;footnote-ref&quot; id=&quot;fnref1&quot;
-role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;1&lt;/sup&gt;&lt;/a&gt;（text
-representations）方面最有效。近期研究已经考察了各种目标，如语言建模[44]、机器翻译[38]和话语连贯性[22]，在不同任务上，每种方法的表现也不同（在
-A 任务上方法 1 优于方法 2；在 B
-任务上可能相反）。其次，关于如何最有效地将这些学到的表示迁移到目标任务上，尚无共识。现有技术涉及对模型架构进行针对特定任务的更改[43,
-44]、使用复杂的学习方案[21]以及添加辅助学习目标[50]。这些不确定性使得开发用于语言处理的有效半监督学习方法变得困难。&lt;/p&gt;
-&lt;p&gt;在本文中，我们探讨了一种使用无监督预训练和监督微调相结合的半监督方法来进行语言理解任务。我们的目标是学习一种通用表示，可以在很少的调整下适应各种任务。我们假设有大量未标记文本的语料库和几个带有手动注释训练示例的数据集（目标任务）。我们的设置不要求这些目标任务与未标记语料库在同一领域。我们采用两阶段训练过程。首先，我们在未标记数据上使用语言建模目标来学习神经网络模型的初始参数。随后，我们使用相应的监督目标将这些参数调整以适应目标任务。&lt;/p&gt;
-&lt;p&gt;对于我们的模型架构，我们采用了 Transformer
-模型[62]，它已被证明在各种任务上表现出色，如机器翻译[62]、文档生成[34]和句法解析[29]。与循环网络等替代方案相比，选择的这种模型为我们提供了一个更加结构化的记忆，用于处理文本中的长距离依赖关系，从而在各种不同任务中实现了稳健的迁移性能。在迁移过程中，我们利用遍历式方法[52]，针对特定任务对输入进行调整，该方法将结构化文本输入作为一个连续的
-token
-序列进行处理。正如我们在实验中所展示的，这些调整使我们能够在对预训练模型的架构进行最小改动的情况下进行有效的微调&lt;a
-href=&quot;#fn2&quot; class=&quot;footnote-ref&quot; id=&quot;fnref2&quot;
-role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;我们在四种类型的语言理解任务上评估我们的方法，包括自然语言推理、问题回答、语义相似性和文本分类。我们的通用任务无关模型胜过了采用针对每个任务专门设计的架构的判别式训练模型&lt;a
-href=&quot;#fn3&quot; class=&quot;footnote-ref&quot; id=&quot;fnref3&quot;
-role=&quot;doc-noteref&quot;&gt;&lt;sup&gt;3&lt;/sup&gt;&lt;/a&gt;，在研究的 12 个任务中有 9
-个任务显著提高了技术水平。例如，我们在常识推理（Stories Cloze
-Test）[40]上实现了 8.9% 的绝对改进，在问题回答（RACE）[30]上实现了 5.7%
-的改进，在文本蕴含（MultiNLI）[66]上实现了 1.5% 的改进，以及在最近引入的
-GLUE 多任务基准[64]上实现了 5.5%
-的改进。我们还分析了预训练模型在四种不同设置下的零样本行为，并证明它获取了对下游任务有用的语言知识。&lt;/p&gt;
-&lt;h2 id=&quot;相关工作&quot;&gt;2. 相关工作&lt;/h2&gt;
-&lt;p&gt;NLP
-的半监督学习：我们的工作大致属于自然语言半监督学习的范畴。这一范式引起了广泛关注，应用于诸如序列标记[24,
-33, 57]或文本分类[41,
-70]等任务。最早的方法使用未标注数据计算单词级或短语级统计信息，然后将其用作监督模型中的特征[33]。在过去的几年里，研究人员已经证明了使用词嵌入[11,
-39,
-42]的好处，这些词嵌入在未标注的语料库上进行训练，以提高各种任务的性能[8,
-11, 26,
-45]。然而，这些方法主要迁移单词级信息，而我们的目标是捕捉更高级别的语义。&lt;/p&gt;
-&lt;p&gt;最近的方法研究了从未标注数据中学习和利用超过单词级语义的方法。可以使用未标注语料库训练的短语级或句子级嵌入已被用于将文本编码为适合各种目标任务的向量表示[28,
-32, 1, 36, 22, 12, 56, 31]。&lt;/p&gt;
-&lt;p&gt;无监督预训练：无监督预训练是半监督学习的一个特例，其目标是寻找一个好的初始化点，而不是修改监督学习目标。早期的工作探讨了这种技术在图像分类[20,
-49,
-63]和回归任务[3]中的应用。随后的研究[15]表明，预训练作为一种正则化方案，能够在深度神经网络中实现更好的泛化。在最近的工作中，该方法已经被用于帮助训练各种任务的深度神经网络，如图像分类[69]、语音识别[68]、实体消歧[17]和机器翻译[48]。&lt;/p&gt;
-&lt;p&gt;与我们的工作最接近的一条研究路线是使用语言建模目标预训练神经网络，然后在有监督的目标任务上对其进行微调。Dai
-等人[13]和 Howard 和
-Ruder[21]遵循这种方法来改进文本分类。然而，尽管预训练阶段有助于捕捉一些语言信息，但他们使用
-LSTM
-模型，这一模型将其预测能力限制在一个比较小的范围内。相反，我们选择的
-transformer
-网络允许我们捕捉更长的语言结构，如我们的实验中所示。此外，我们还展示了我们的模型在更广泛的任务范围内的有效性，包括自然语言推理、释义检测和故事补全。其他方法[43,
-44,
-38]在训练目标任务的监督模型时，使用预训练语言或机器翻译模型的隐藏表示（hidden
-representations）作为辅助特征。这涉及到为每个独立的目标任务引入大量新的参数，而在迁移过程中，我们对模型架构的改变最小。&lt;/p&gt;
-&lt;p&gt;辅助训练目标：添加辅助无监督训练目标是半监督学习的另一种形式。Collobert
-和 Weston[10]的早期工作使用了各种辅助 NLP
-任务，如词性标注、分块、命名实体识别和语言建模来改进语义角色标注。最近，Rei[50]在他们的目标任务目标中添加了辅助语言建模目标，并在序列标注任务上获得了性能提升。我们的实验也使用辅助目标，但如我们所示，无监督预训练已经学会了与目标任务相关的多种语言方面。&lt;/p&gt;
-&lt;h2 id=&quot;框架&quot;&gt;3. 框架&lt;/h2&gt;
-&lt;p&gt;我们的训练过程包含 2
-个阶段。第一阶段是在大型文本语料上学习高容量的语言模型。接下来是微调阶段。在这个阶段，我们借助标注数据，调整模型以适应一个判别任务。&lt;/p&gt;
-&lt;p&gt;无监督预训练：给定一个无监督的 token 语料库&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;U&lt;/em&gt; = {&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;, ..., &lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;n&lt;/em&gt;&lt;/sub&gt;}&lt;/span&gt;，我们使用标准的语言建模目标来最大化以下似然：&lt;/p&gt;
-&lt;p&gt;&lt;span
-class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;(&lt;em&gt;U&lt;/em&gt;) = &lt;em&gt;Σ&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt;&lt;/sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;g&lt;/em&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt;&lt;/sub&gt;|&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt; − &lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;,...,&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;&lt;em&gt;i&lt;/em&gt; − 1&lt;/sub&gt;;&lt;em&gt;Θ&lt;/em&gt;)&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;其中 k 是上下文窗口的大小，条件概率 P 使用具有参数&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;Θ&lt;/em&gt;&lt;/span&gt;的神经网络进行建模。这些参数使用随机梯度下降[51]进行训练。&lt;/p&gt;
-&lt;p&gt;在我们的实验中，我们使用多层 Transformer decoder
-[34]作为语言模型，这是 Transformer[62]的一个变种。该模型在输入上下文
-token 上应用多头自注意力操作，然后通过逐位置前馈层来产生目标 token
-上的输出分布：&lt;/p&gt;
-&lt;p&gt;&lt;span class=&quot;math display&quot;&gt;$$ \begin{aligned} &amp;amp;h_0 = UW_e + W_p
-\\ &amp;amp;h_l = transformer\_block(h_{l−1})\forall_i \in [1, n]
-\\  &amp;amp;P(u) = softmax(h_n W_e^T ) \end{aligned}$$&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;其中&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;U&lt;/em&gt; = (&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;−&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;,...,&lt;em&gt;u&lt;/em&gt;&lt;sub&gt;−1&lt;/sub&gt;)&lt;/span&gt;是
-token 的上下文向量，n 是层数，&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;e&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;是 token
-嵌入矩阵，&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;p&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;是位置嵌入矩阵。l
-是神经网络的层数。&lt;/p&gt;
-&lt;p&gt;在使用等式 1
-中的目标训练模型之后，我们将参数调整以适应有监督目标任务。我们假设一个带标签的数据集&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;C&lt;/em&gt;&lt;/span&gt;，其中每个实例包括一系列输入 token
-&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;, ..., &lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;，以及一个标签
-y。该输入数据传输通过我们的预训练模型，以获得最终的 Transformer block
-的激活器&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;
-，然后将其输入到新添加的线性输出层（参数为&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;）中以预测
-y：&lt;/p&gt;
-&lt;p&gt;&lt;span
-class=&quot;math display&quot;&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;y&lt;/em&gt;|&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;,...,&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;) = &lt;em&gt;s&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;f&lt;/em&gt;&lt;em&gt;t&lt;/em&gt;&lt;em&gt;m&lt;/em&gt;&lt;em&gt;a&lt;/em&gt;&lt;em&gt;x&lt;/em&gt;(&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;)&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;这给我们提供了最大化的目标：&lt;/p&gt;
-&lt;p&gt;&lt;span
-class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;2&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) = &lt;em&gt;Σ&lt;/em&gt;&lt;sub&gt;(&lt;em&gt;x&lt;/em&gt;,&lt;em&gt;y&lt;/em&gt;)&lt;/sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;em&gt;o&lt;/em&gt;&lt;em&gt;g&lt;/em&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;y&lt;/em&gt;|&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;1&lt;/sup&gt;,...,&lt;em&gt;x&lt;/em&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;)&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;我们还发现，在微调过程中将语言建模作为辅助目标有助于学习，原因是：（a）改善监督模型的泛化能力；（b）加速收敛。这与之前的工作[50,
-43]一致，他们也观察到了使用这样一个辅助目标可以提高性能。具体来说，我们优化以下目标（权重λ）：&lt;/p&gt;
-&lt;p&gt;&lt;span
-class=&quot;math display&quot;&gt;&lt;em&gt;L&lt;/em&gt;&lt;sub&gt;3&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) = &lt;em&gt;L&lt;/em&gt;&lt;sub&gt;2&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;) + &lt;em&gt;λ&lt;/em&gt; * &lt;em&gt;L&lt;/em&gt;&lt;sub&gt;1&lt;/sub&gt;(&lt;em&gt;C&lt;/em&gt;)&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;总的来说，在微调过程中，我们仅需要额外的参数&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;W&lt;/em&gt;&lt;sub&gt;&lt;em&gt;y&lt;/em&gt;&lt;/sub&gt;&lt;/span&gt;以及分隔符
-token 的嵌入（在第 3.3 节中描述）。&lt;/p&gt;
-&lt;figure&gt;
-&lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1.jpg&quot;
-alt=&quot;图 1: (左侧) 这项工作中用到的 transformer 结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层&quot; /&gt;
-&lt;figcaption aria-hidden=&quot;true&quot;&gt;图 1: (左侧) 这项工作中用到的 transformer
-结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的
-token 序列，然后在最后添加一层线性+softmax 层&lt;/figcaption&gt;
-&lt;/figure&gt;
-&lt;p&gt;对于某些任务，如文本分类，我们可以直接按照上述方法微调我们的模型。某些其他任务，如问题回答或文本蕴含，具有结构化输入，如有序句子对或文档、问题和答案的三元组。由于我们的预训练模型是在连续文本序列上进行训练的，因此我们需要对其进行一些修改才能将其应用于这些任务。之前的工作提出了在转移表示之上学习特定任务的架构[44]。这种方法重新引入了大量任务特定的定制，并且没有为这些额外的架构组件使用迁移学习。相反，我们使用遍历式方法[52]，将结构化输入转换为我们的预训练模型可以处理的有序序列。这些输入转换使我们能够避免在任务之间对架构进行大量更改。我们在下面简要描述了这些输入转换，图
-1 提供了一个视觉示例。所有转换都包括添加随机初始化的开始和结束标记（⟨s⟩,
-⟨e⟩）。&lt;/p&gt;
-&lt;p&gt;文本蕴含：对于蕴含任务，我们将前提 p 和假设 h
-的令牌序列连接在一起，中间用分隔符标记 ($) 隔开。&lt;/p&gt;
-&lt;p&gt;相似性：对于相似性任务，比较的两个句子之间没有固有的顺序。为了反映这一点，我们修改输入序列以包含两种可能的句子顺序（中间有分隔符），并分别处理它们以生成两个序列表示
-&lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;h&lt;/em&gt;&lt;sub&gt;&lt;em&gt;l&lt;/em&gt;&lt;/sub&gt;&lt;sup&gt;&lt;em&gt;m&lt;/em&gt;&lt;/sup&gt;&lt;/span&gt;，这些表示在输入到线性输出层之前按元素相加。&lt;/p&gt;
-&lt;p&gt;问题回答和常识推理：对于这些任务，我们给定一个上下文文档 z，一个问题
-q 和一组可能的答案&lt;span
-class=&quot;math inline&quot;&gt;{&lt;em&gt;a&lt;/em&gt;&lt;sub&gt;&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;}&lt;/span&gt;。我们将文档上下文和问题与每个可能的答案连接在一起，在中间添加一个分隔符标记，得到&lt;span
-class=&quot;math inline&quot;&gt;[&lt;em&gt;z&lt;/em&gt;;&lt;em&gt;q&lt;/em&gt;;$;&lt;em&gt;a&lt;/em&gt;&lt;sub&gt;&lt;em&gt;k&lt;/em&gt;&lt;/sub&gt;]&lt;/span&gt;。使用我们的模型独立处理这些序列，然后通过
-softmax 层进行归一化，以生成可能答案的分布。&lt;/p&gt;
-&lt;h2 id=&quot;试验&quot;&gt;4. 试验&lt;/h2&gt;
-&lt;h3 id=&quot;设置&quot;&gt;4.1 设置&lt;/h3&gt;
-&lt;p&gt;无监督预训练：我们使用 BooksCorpus
-数据集[71]来训练语言模型。该数据集包含超过 7,000
-本不同的未发表书籍，涵盖了冒险、奇幻和浪漫等多种类型。关键在于，它包含了长篇连续的文本，这使得生成模型能够学会根据长距离的上下文信息进行条件化建模。另一个可替代的数据集是
-1B Word Benchmark，它被类似的方法
-ELMo[44]所使用，虽然数据集规模大致相同，但在句子层面进行了打乱处理，从而破坏了长距离的结构。在这个语料库上，我们的语言模型取得了非常低的
-token 级别困惑度，达到了 18.4。&lt;/p&gt;
-&lt;table&gt;
-&lt;colgroup&gt;
-&lt;col style=&quot;width: 30%&quot; /&gt;
-&lt;col style=&quot;width: 69%&quot; /&gt;
-&lt;/colgroup&gt;
-&lt;thead&gt;
-&lt;tr class=&quot;header&quot;&gt;
-&lt;th&gt;Task&lt;/th&gt;
-&lt;th&gt;Datasets&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr class=&quot;odd&quot;&gt;
-&lt;td&gt;Natural language inference&lt;/td&gt;
-&lt;td&gt;SNLI [5], MultiNLI [66], Question NLI [64], RTE [4], SciTail
-[25]&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;even&quot;&gt;
-&lt;td&gt;Question Answering&lt;/td&gt;
-&lt;td&gt;RACE [30], Story Cloze [40]&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;odd&quot;&gt;
-&lt;td&gt;Sentence similarity&lt;/td&gt;
-&lt;td&gt;MSR Paraphrase Corpus [14], Quora Question Pairs [9], STS Benchmark
-[6]&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;even&quot;&gt;
-&lt;td&gt;Classification&lt;/td&gt;
-&lt;td&gt;Stanford Sentiment Treebank-2 [54], CoLA [65]&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;表 1: 本次试验中用到的任务和数据集&lt;/p&gt;
-&lt;p&gt;模型规格：我们的模型主要依据原始 Transformer 架构[62]。我们训练了一个
-12 层的 decoder-only Transformer，具有遮蔽式自注意力机制（768 维状态和
-12 个注意力头）。对于逐位置前馈网络，我们使用了 3072
-维的内部状态。我们使用了 Adam 优化方案[27]，最大学习率为
-2.5e-4。学习率在前 2000 次更新中从零线性增加，然后使用余弦调度退火至
-0。我们在 64 个随机抽样的连续序列（每个序列包含 512 个标记）上进行 100
-个周期的小批量训练。由于
-LayerNorm[2]在整个模型中被广泛使用，简单的权重初始化 N(0,0.02)
-就足够了。我们使用了包含 40,000
-次合并[53]的字节对编码（BPE）词汇表，以及具有 0.1
-正则化率的残差、嵌入和注意力
-dropout。我们还采用了[37]中提出的一种修改版的 L2
-正则化，对所有非偏置或增益权重
-w=0.01。对于激活函数，我们使用高斯误差线性单元（GELU）[18]。我们使用学习位置嵌入替代了原始工作中提出的正弦版本。我们使用
-ftfy 库来清理 BooksCorpus 中的原始文本，标准化一些标点符号和空白，并使用
-spaCy 分词器。&lt;/p&gt;
-&lt;p&gt;微调细节：除非特别指定，我们会沿用无监督预训练的超参数设置。我们在分类器中添加
-0.1 的 dropout 率。对于大多数任务，我们采用 6.25e-5 的学习率和 32
-的批次大小。我们的模型能够快速进行微调，在大多数情况下，训练 3
-个周期就足够了。我们采用线性学习率衰减调度策略，训练的前 0.2%
-阶段进行预热。λ设置为 0.5。&lt;/p&gt;
-&lt;h3 id=&quot;有监督微调&quot;&gt;4.2 有监督微调&lt;/h3&gt;
-&lt;p&gt;我们在多种有监督任务上进行实验，包括自然语言推理、问答、语义相似度和文本分类。其中一些任务包含在近期发布的
-GLUE 多任务基准测试[64]中，我们也对其进行了使用。图 1
-对所有任务和数据集进行了概述。&lt;/p&gt;
-&lt;p&gt;自然语言推理（NLI）任务，也称为识别文本蕴涵，涉及阅读一对句子并从蕴涵、矛盾或中立关系中判断它们之间的关系。尽管最近已经引起了很多关注[58,
-35,
-44]，但由于存在多种现象，如词汇蕴涵、共指、词汇和句法歧义等，这个任务仍然具有挑战性。我们在五个数据集上进行评估，这些数据集来源丰富，包括图像标题（SNLI）、转录语音、通俗小说和政府报告（MNLI）、维基百科文章（QNLI）、科学考试（SciTail）或新闻文章（RTE）。&lt;/p&gt;
-&lt;p&gt;表 2 详细展示了我们的模型在不同 NLI
-任务中与之前最先进方法的各种对比结果。在五个数据集中的四个上，我们的方法明显优于基准线，相较于之前的最佳结果，在
-MNLI 上绝对提升达到 1.5%，在 SciTail 上绝对提升达到 5%，在 QNLI
-上绝对提升达到 5.8%，在 SNLI 上绝对提升达到
-0.6%。这证明了我们的模型在处理多句子推理和应对语言歧义方面的优势。在
-RTE（一个较小的数据集，包含 2490 个示例）上，我们取得了 56%
-的准确率，低于多任务双向 LSTM 模型报告的 61.7%。鉴于我们的方法在更大的
-NLI
-数据集上的强大性能，很可能我们的模型也将从多任务训练中受益，但我们目前尚未探讨这一点。&lt;/p&gt;
-&lt;figure&gt;
-&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table2.jpg&quot;
-alt=&quot;表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&quot; /&gt;
-&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
-2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x
-表示 5 个模型的集成。所有数据集都使用准确率作为评估指标&lt;/figcaption&gt;
-&lt;/figure&gt;
-&lt;p&gt;问题回答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的
-RACE
-数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与 CNN
-[19] 或 SQuaD
-[47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了
-Story Cloze
-Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在
-Story Cloze 上最高提高了 8.9%，在 RACE 上整体提高了
-5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。&lt;/p&gt;
-&lt;figure&gt;
-&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table3.jpg&quot;
-alt=&quot;表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成&quot; /&gt;
-&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
-3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x
-表示 9 个模型的集成&lt;/figcaption&gt;
-&lt;/figure&gt;
-&lt;p&gt;语义相似度：语义相似度（或释义检测）任务包括预测两个句子在语义上是否等价。挑战在于识别概念的重新表述，理解否定语句以及处理句法歧义。我们在这个任务中使用了三个数据集——Microsoft
-Paraphrase 语料库（MRPC）[14]（来源于新闻报道），Quora
-问题对（QQP）数据集[9]，以及语义文本相似度基准（STS-B）[6]。我们在三个语义相似度任务的两个任务中取得了最佳成绩（表
-4），在 STS-B 上的绝对增益达到 1 分。在 QQP 上的性能差距显著，与单任务
-BiLSTM + ELMo + Attn 相比，绝对提高了 4.2%。&lt;/p&gt;
-&lt;p&gt;最后，我们在两个不同的文本分类任务上进行评估。语言可接受性语料库（CoLA）[65]
-包含了关于句子是否符合语法规则的专家评判，用以测试训练模型的固有语言偏差。另一方面，斯坦福情感树库（SST-2）[54]
-是一个标准的二分类任务。我们的模型在 CoLA 上获得了 45.4
-分，这比先前最好的结果 35.0
-有显著提高，展示了我们模型所学到的固有语言偏差。在 SST-2
-上，模型也取得了 91.3% 的准确率，与最佳结果相当。我们在 GLUE
-基准测试上也获得了 72.8 的总分，明显优于先前最好的 68.9。&lt;/p&gt;
-&lt;figure&gt;
-&lt;img src=&quot;http://static.wulfric.me/chatgpt/GPT1-table4.jpg&quot;
-alt=&quot;表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）&quot; /&gt;
-&lt;figcaption aria-hidden=&quot;true&quot;&gt;表
-4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用
-GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson
-相关系数）&lt;/figcaption&gt;
-&lt;/figure&gt;
-&lt;p&gt;总体来说，我们的方法在 12 个评估数据集中的 9
-个上取得了新的最佳成绩，很多情况下超过了集成模型。我们的结果还表明，我们的方法在不同规模的数据集上都表现良好，从较小的数据集如
-STS-B（约 5.7k 训练样本）到最大的数据集 SNLI（约 550k 训练样本）。&lt;/p&gt;
-&lt;h2 id=&quot;分析&quot;&gt;5. 分析&lt;/h2&gt;
-&lt;p&gt;迁移层数的影响：我们观察了从无监督预训练向有监督目标任务迁移不同数量层数的影响。图
-2（左）描绘了我们在 MultiNLI 和 RACE
-上的方法性能，作为迁移层数量的函数。我们观察到标准结果，即迁移嵌入可以提高性能，每个
-Transformer 层都能进一步带来好处，对于 MultiNLI 的完全转移，可以提高
-9%。这表明预训练模型中的每一层都包含解决目标任务的有用功能。&lt;/p&gt;
-&lt;figure&gt;
-&lt;img src=&quot;http://static.wulfric.me/chatgpt/gpt1-2.jpg&quot;
-alt=&quot;图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&quot; /&gt;
-&lt;figcaption aria-hidden=&quot;true&quot;&gt;图
-2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI
-的影响。（右）图表显示了 LM
-预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化&lt;/figcaption&gt;
-&lt;/figure&gt;
-&lt;p&gt;零样本表现：我们希望更好地了解为什么对 Transformer
-进行语言模型预训练是有效的。一个假设是底层生成模型为了提高其语言建模能力，学会了我们用于评估的许多任务，而
-Transformer 相比 LSTM
-的更结构化的注意力记忆有助于更好地迁移。我们设计了一系列启发式解决方案，使用底层生成模型在无监督微调的情况下执行任务。我们在图
-2（右）中显示了在生成预训练过程中这些启发式解决方案的有效性。我们观察到这些启发式方法的性能在训练过程中稳定且稳步提高，表明生成预训练支持学习各种与任务相关的功能。我们还观察到
-LSTM 在零样本性能方面波动较大，表明 Transformer
-架构的归纳偏差有助于迁移。&lt;/p&gt;
-&lt;p&gt;对于 CoLA（语言可接受性），将示例按照生成模型分配的平均 token
-对数概率进行评分，并通过阈值进行预测。对于 SST-2（情感分析），我们将
-very 这个 token 添加到每个示例后面，并将语言模型的输出分布仅限于单词
-positive 和 negative，认定被分配到的更高概率的 token 作为预测结果。对于
-RACE（问答），我们选择在给定文档和问题的条件下，生成模型分配的具有最高平均
-token 对数概率的答案。对于 DPRD [46]（Winograd
-模式），我们用两个可能的指代物替换定指代词（确定的指代词），并预测生成模型在替换后的序列其余部分分配较高平均
-token 对数概率的解析。&lt;/p&gt;
-&lt;table&gt;
-&lt;colgroup&gt;
-&lt;col style=&quot;width: 26%&quot; /&gt;
-&lt;col style=&quot;width: 9%&quot; /&gt;
-&lt;col style=&quot;width: 8%&quot; /&gt;
-&lt;col style=&quot;width: 8%&quot; /&gt;
-&lt;col style=&quot;width: 7%&quot; /&gt;
-&lt;col style=&quot;width: 7%&quot; /&gt;
-&lt;col style=&quot;width: 6%&quot; /&gt;
-&lt;col style=&quot;width: 8%&quot; /&gt;
-&lt;col style=&quot;width: 8%&quot; /&gt;
-&lt;col style=&quot;width: 7%&quot; /&gt;
-&lt;/colgroup&gt;
-&lt;thead&gt;
-&lt;tr class=&quot;header&quot;&gt;
-&lt;th&gt;Method&lt;/th&gt;
-&lt;th&gt;Avg. Score&lt;/th&gt;
-&lt;th&gt;CoLA (mc)&lt;/th&gt;
-&lt;th&gt;SST2(acc)&lt;/th&gt;
-&lt;th&gt;MRPC(F1)&lt;/th&gt;
-&lt;th&gt;STSB(pc)&lt;/th&gt;
-&lt;th&gt;QQP(F1)&lt;/th&gt;
-&lt;th&gt;MNLI(acc)&lt;/th&gt;
-&lt;th&gt;QNLI(acc)&lt;/th&gt;
-&lt;th&gt;RTE(acc)&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr class=&quot;odd&quot;&gt;
-&lt;td&gt;Transformer w/ aux LM (full)&lt;/td&gt;
-&lt;td&gt;74.7&lt;/td&gt;
-&lt;td&gt;45.4&lt;/td&gt;
-&lt;td&gt;91.3&lt;/td&gt;
-&lt;td&gt;82.3&lt;/td&gt;
-&lt;td&gt;82.0&lt;/td&gt;
-&lt;td&gt;70.3&lt;/td&gt;
-&lt;td&gt;81.8&lt;/td&gt;
-&lt;td&gt;88.1&lt;/td&gt;
-&lt;td&gt;56.0&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;even&quot;&gt;
-&lt;td&gt;Transformer w/o pre-training&lt;/td&gt;
-&lt;td&gt;59.9&lt;/td&gt;
-&lt;td&gt;18.9&lt;/td&gt;
-&lt;td&gt;84.0&lt;/td&gt;
-&lt;td&gt;79.4&lt;/td&gt;
-&lt;td&gt;30.9&lt;/td&gt;
-&lt;td&gt;65.5&lt;/td&gt;
-&lt;td&gt;75.7&lt;/td&gt;
-&lt;td&gt;71.2&lt;/td&gt;
-&lt;td&gt;53.8&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;odd&quot;&gt;
-&lt;td&gt;Transformer w/o aux LM&lt;/td&gt;
-&lt;td&gt;75.0&lt;/td&gt;
-&lt;td&gt;47.9&lt;/td&gt;
-&lt;td&gt;92.0&lt;/td&gt;
-&lt;td&gt;84.9&lt;/td&gt;
-&lt;td&gt;83.2&lt;/td&gt;
-&lt;td&gt;69.8&lt;/td&gt;
-&lt;td&gt;81.1&lt;/td&gt;
-&lt;td&gt;86.9&lt;/td&gt;
-&lt;td&gt;54.4&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr class=&quot;even&quot;&gt;
-&lt;td&gt;LSTM w/ aux LM&lt;/td&gt;
-&lt;td&gt;69.1&lt;/td&gt;
-&lt;td&gt;30.3&lt;/td&gt;
-&lt;td&gt;90.5&lt;/td&gt;
-&lt;td&gt;83.2&lt;/td&gt;
-&lt;td&gt;71.8&lt;/td&gt;
-&lt;td&gt;68.1&lt;/td&gt;
-&lt;td&gt;73.7&lt;/td&gt;
-&lt;td&gt;81.1&lt;/td&gt;
-&lt;td&gt;54.6&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;消融研究：我们进行了三种不同的消融研究（表
-5）。首先，我们在微调过程中检查没有辅助 LM
-目标的方法性能。我们观察到，辅助目标在 NLI 任务和 QQP
-上有所帮助。总体趋势表明，较大的数据集从辅助目标中受益，而较小的数据集则没有。其次，我们通过将
-Transformer 与使用相同框架的单层 2048 单元 LSTM 进行比较，分析了
-Transformer 的效果。我们观察到，在使用 LSTM 代替 Transformer
-时，平均分数下降了 5.6 分。LSTM 仅在一个数据集上胜过 Transformer ——
-MRPC。最后，我们还将直接在监督目标任务上训练的 Transformer
-架构与没有预训练的情况进行比较。我们观察到，缺乏预训练会影响所有任务的性能，与我们的完整模型相比，下降了
-14.8%。&lt;/p&gt;
-&lt;h2 id=&quot;结论&quot;&gt;6. 结论&lt;/h2&gt;
-&lt;p&gt;我们提出了一个框架，通过生成式预训练和判别式微调，让单一的任务无关模型具备强大的自然语言理解能力。通过在包含长篇连续文本的多样化语料库上进行预训练，我们的模型学会了丰富的世界知识和处理长距离依赖关系的能力。然后，将这些知识和能力成功地应用于解决判别性任务，例如问答、语义相似度评估、蕴含关系判断和文本分类，从而在我们研究的
-12 个数据集中，提高了其中 9
-个的最高技术水平。在机器学习研究中，利用无监督（预）训练来提高判别任务性能一直是一个重要的目标。我们的工作表明，确实可以实现显著的性能提升，并为哪些模型（如
-Transformer）和数据集（具有长距离依赖关系的文本）最适合这种方法提供了参考。我们希望这将有助于推动新的无监督学习研究，无论是在自然语言理解还是其他领域，进一步提高我们对无监督学习如何以及何时发挥作用的理解。&lt;/p&gt;
-&lt;aside id=&quot;footnotes&quot; class=&quot;footnotes footnotes-end-of-document&quot;
-role=&quot;doc-endnotes&quot;&gt;
-&lt;hr /&gt;
-&lt;ol&gt;
-&lt;li id=&quot;fn1&quot;&gt;&lt;p&gt;在自然语言处理（NLP）中，text
-representations（文本表示）是将文本转换为计算机可以处理的形式的过程。文本表示是
-NLP
-中的一个重要问题，因为计算机无法直接处理自然语言。因此，研究人员需要将文本转换为计算机可以理解的形式，以便进行下一步的处理，如分类、聚类、信息检索等。文本表示的目标是将文本转换为向量或矩阵的形式，使得计算机可以对其进行数学运算和统计分析。常用的文本表示方法包括以下几种：1)
-One-hot
-representation（独热表示）：将每个单词表示为一个向量，其中只有一个元素是
-1，其余元素均为
-0。该方法不考虑单词之间的语义和上下文信息，因此效果有限。2) Bag-of-words
-representation（词袋表示）：将文本表示为一个单词的集合，并统计每个单词出现的次数。该方法考虑了单词的出现频率，但忽略了单词之间的顺序和语义信息。3)
-Word
-embedding（词嵌入）：将每个单词表示为一个低维向量，使得单词之间的距离反映了它们之间的语义关系。Word
-embedding 通常使用神经网络模型进行训练，例如 Word2Vec 和 GloVe 等。4)
-Transformer-based representation（基于 Transformer
-的表示）：最近的文本表示方法中，基于 Transformer
-的表示方法已经成为主流。Transformer
-是一种使用自注意力机制的神经网络，可以将文本转换为一系列向量，每个向量代表一个单词或短语的语义信息。BERT、GPT
-等是基于 Transformer 的表示方法的代表。&lt;a href=&quot;#fnref1&quot;
-class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;li id=&quot;fn2&quot;&gt;&lt;p&gt;fine-tune 翻译成微调；adaption
-翻译成调整，有些翻译成适应性、适应，个人感觉在这里是调整的意思。后文也提到了，对于特定的任务，会把输入的词句做一些简单的调整（比如添加分隔符等）。&lt;a
-href=&quot;#fnref2&quot; class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;li id=&quot;fn3&quot;&gt;&lt;p&gt;在机器学习中，discriminatively trained
-model（判别式训练模型）是一种常见的模型训练方法。该方法的主要目标是学习一个函数，该函数可以将输入数据映射到其相应的输出。与生成式模型不同，判别式模型不是直接建模联合分布
-P(X,Y)，而是直接建模条件分布 &lt;span
-class=&quot;math inline&quot;&gt;&lt;em&gt;P&lt;/em&gt;(&lt;em&gt;Y&lt;/em&gt;|&lt;em&gt;X&lt;/em&gt;)&lt;/span&gt;，也就是在给定输入
-X 的情况下预测输出
-Y。判别式模型通常使用梯度下降等优化方法进行训练，优化目标是最大化对数据集的条件对数似然估计，或最小化分类误差等评价指标。在训练过程中，模型根据输入数据和其正确的标签来调整模型的权重和偏差，以便更准确地预测输出。相对于生成式模型，判别式模型在许多实际应用中具有更好的性能，特别是在分类、标注、聚类等任务中。因为判别式模型直接建模了输入和输出之间的映射关系，可以更好地适应不同的输入分布和输出分布。判别式模型还具有更快的训练速度和更高的泛化能力，这使得它们成为机器学习领域的重要工具之一。需要注意的是，判别式模型的性能取决于训练数据的质量和多样性，以及模型的选择和参数调整。因此，在应用判别式模型时，需要仔细选择训练数据和模型参数，以获得最佳的性能。&lt;a
-href=&quot;#fnref3&quot; class=&quot;footnote-back&quot; role=&quot;doc-backlink&quot;&gt;↩︎&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;/ol&gt;
-&lt;/aside&gt;
-
-&lt;/body&gt;
-&lt;/html&gt;
-</description>
-        <pubDate>Wed, 05 Apr 2023 00:00:00 +0000</pubDate>
-        <link>https://wulfric.me/2023/04/gpt1-ch/</link>
-        <guid isPermaLink="true">https://wulfric.me/2023/04/gpt1-ch/</guid>
-        
         
       </item>
     
@@ -3150,6 +2711,276 @@ Build performance summary:
         <category>agile</category>
         
         <category>敏捷</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
+    
+      <item>
+        <title>nginx 502 和 504 超时演示</title>
+        <description>&lt;p&gt;最近线上 nginx 遇到了一些较难排查的 502 和 504 错误，顺便了解了一下 nginx 的相关配置。我发现网上很多介绍 nginx 超时配置只是列了这几个配置的含义和数值，并没有解释什么原因会触发哪个配置。因此趁这个机会演示一下，如何让 nginx 符合预期正确出现 502 和 504。&lt;/p&gt;
+
+&lt;h2 id=&quot;502-和-504-的解释&quot;&gt;502 和 504 的解释&lt;/h2&gt;
+
+&lt;p&gt;在 http status 的 &lt;a href=&quot;https://www.wikiwand.com/en/List_of_HTTP_status_codes&quot;&gt;定义&lt;/a&gt; 中：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;502 Bad Gateway: The server was acting as a &lt;a href=&quot;https://www.wikiwand.com/en/Gateway_(telecommunications)&quot;&gt;gateway&lt;/a&gt; or proxy and received an invalid response from the upstream server.&lt;/li&gt;
+  &lt;li&gt;504: he server was acting as a gateway or proxy and did not receive a timely response from the upstream server.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;502 的错误原因是 Bad Gateway，一般是由于上游服务的故障引起的；而 504 则是 nginx 访问上游服务超时，二者完全是两个意思。但在某些情况下，上游服务的超时（触发 tcp reset）也可能引发 502，我们会在之后详述。&lt;/p&gt;
+
+&lt;h2 id=&quot;演示环境&quot;&gt;演示环境&lt;/h2&gt;
+
+&lt;p&gt;你需要 3 个逻辑组件：nginx 服务器，php-fpm，client 访问客户端。3 个组件可以在同一台机器中，我用的是 docker 来配置 PHP 和 nginx 环境，在宿主机上访问。如果你很熟悉这 3 个组件，这部分可以跳过。用 docker 来做各种测试和实验非常方便，这里就不展开了。docker-compose 的配置参考了这篇&lt;a href=&quot;http://geekyplatypus.com/dockerise-your-php-application-with-nginx-and-php7-fpm/&quot;&gt;文章&lt;/a&gt;。我的 docker composer 文件如下：&lt;/p&gt;
+
+&lt;div  class=&quot;language-yaml highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;na&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;3&apos;&lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;services&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;web&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;nginx:alpine&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;ports&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;8080:80&quot;&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;volumes&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;./code:/code&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;./nginx/site.conf:/etc/nginx/conf.d/site.conf&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;depends_on&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;php&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;php&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;php:7.1-fpm-alpine&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;volumes&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;./code:/code&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;./php/php-fpm.conf:/usr/local/etc/php-fpm.conf&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;使用的镜像都是基于 &lt;a href=&quot;https://hub.docker.com/_/alpine/&quot;&gt;alpine&lt;/a&gt; 制作的，非常小巧：&lt;/p&gt;
+
+&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;REPOSITORY  TAG               SIZE
+php         7.1-fpm-alpin     69.5MB
+nginx       alpine            18.6MB
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;nginx 的配置：&lt;/p&gt;
+
+&lt;div  class=&quot;language-nginx highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.php&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.html&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;server_name&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;php-docker.local&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;error_log&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;/var/log/nginx/error.log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;access_log&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;/var/log/nginx/access.log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;root&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;/code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;kn&quot;&gt;location&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;\.php$&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;try_files&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;404&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_split_path_info&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;^(.+&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.php)(/.+)&lt;/span&gt;$&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_pass&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;127.0.0.1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_index&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.php&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;include&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;fastcgi_params&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_param&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;SCRIPT_FILENAME&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$document_root$fastcgi_script_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_param&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;PATH_INFO&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$fastcgi_path_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_connect_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;5s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_read_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;8s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_send_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;10s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;php-fpm 的配置&lt;/p&gt;
+
+&lt;div  class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;global]
+&lt;span class=&quot;nv&quot;&gt;include&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;etc/php-fpm.d/&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.conf
+&lt;span class=&quot;nv&quot;&gt;request_terminate_timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;3s
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;代码放在 &lt;a href=&quot;https://github.com/wwulfric/nginx-timeout-demo&quot;&gt;github&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h2 id=&quot;关键参数&quot;&gt;关键参数&lt;/h2&gt;
+
+&lt;p&gt;在这个演示中，PHP 的关键参数有两个，一个是 PHP 脚本的 max_execution_time，这个配置在&lt;span class=&quot;codespan&quot;&gt;php.ini&lt;/span&gt;中；另一个是 php-fpm 的 request_terminate_timeout，在&lt;span class=&quot;codespan&quot;&gt;php-fpm.conf&lt;/span&gt;中。当以 php-fpm 提供服务时，request_terminate_timeout 设置会覆盖 max_execution_time 的设置，因此我们这里只测试 request_terminate_timeout。&lt;/p&gt;
+
+&lt;p&gt;request_terminate_timeout 的意思是 php-fpm 接受的请求的超时时间，超过这个时间 php-fpm 会 kill 掉执行脚本的 worker 进程。&lt;/p&gt;
+
+&lt;p&gt;nginx的关键参数是 fastcgi 相关的 timeout，即：fastcgi_connect_timeout，fastcgi_read_timeout，fastcgi_send_timeout。&lt;/p&gt;
+
+&lt;p&gt;这几个 nginx 参数的主语都是 nginx，所以 fastcgi_connect_timeout 的意思是 nginx 连接到 fastcgi 的超时时间，fastcgi_read_timeout 是 nginx 读取 fastcgi 的内容的超时时间，fastcgi_send_timeout 是 nginx 发送内容到 fastcgi 的超时时间。&lt;/p&gt;
+
+&lt;h2 id=&quot;演示过程&quot;&gt;演示过程&lt;/h2&gt;
+
+&lt;p&gt;首先启动 nginx 和 PHP：&lt;/p&gt;
+
+&lt;div  class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker-compose up
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在 code 文件夹下添加一个 index.php 文件：&lt;/p&gt;
+
+&lt;div  class=&quot;language-php highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;70&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;hello world&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;上游服务主动-reset&quot;&gt;上游服务主动 reset&lt;/h3&gt;
+
+&lt;p&gt;访问 php-docker.local:8080/index.php，报错 502 bad gateway。而且是在 3s 之后报的错，说明触发了 request_terminate_timeout 设置，php-fpm 关闭了连接。&lt;/p&gt;
+
+&lt;p&gt;通过观察 &lt;span class=&quot;codespan&quot;&gt;ps aux | grep php&lt;/span&gt; 可以发现，php-fpm 是通过杀掉超时的进程来解决进程超时问题的（pid 每次有一个会变化，说明一个进程杀掉了，并启动了另一个进程。这和 php-fpm 的进程池设定有关，你的设定未必会重新启动一个新的进程）。&lt;/p&gt;
+
+&lt;div  class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/var/www/html &lt;span class=&quot;c&quot;&gt;# ps aux | grep php&lt;/span&gt;
+    1 root       0:00 php-fpm: master process &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;/usr/local/etc/php-fpm.conf&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    6 www-data   0:00 php-fpm: pool www
+    7 www-data   0:00 php-fpm: pool www
+/var/www/html &lt;span class=&quot;c&quot;&gt;# ps aux | grep php&lt;/span&gt;
+    1 root       0:00 php-fpm: master process &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;/usr/local/etc/php-fpm.conf&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    7 www-data   0:00 php-fpm: pool www
+   17 www-data   0:00 php-fpm: pool www
+/var/www/html &lt;span class=&quot;c&quot;&gt;# ps aux | grep php&lt;/span&gt;
+    1 root       0:00 php-fpm: master process &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;/usr/local/etc/php-fpm.conf&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+   17 www-data   0:00 php-fpm: pool www
+   20 www-data   0:00 php-fpm: pool www
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在这种情况下，nginx 日志中的错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;recv() failed (104: Connection reset by peer) while reading response header from upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;即连接被服务端（PHP）reset 了，也就很好理解了。&lt;/p&gt;
+
+&lt;p&gt;注意，在这种情况下，php-fpm 的日志中也会记录的：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;php_1  | [18-Jul-2018 16:33:42] WARNING: [pool www] child 5, script &apos;/code/index.php&apos; (request: &quot;GET /index.php&quot;) execution timed out (3.040130 sec), terminating
+php_1  | [18-Jul-2018 16:33:42] WARNING: [pool www] child 5 exited on signal 15 (SIGTERM) after 30.035736 seconds from start
+php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这也是可以发现问题的一个地方。&lt;/p&gt;
+
+&lt;h3 id=&quot;nginx-读取上游服务超时&quot;&gt;nginx 读取上游服务超时&lt;/h3&gt;
+
+&lt;p&gt;删掉 request_terminate_timeout 配置，重启应用：&lt;/p&gt;
+
+&lt;div  class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker-compose down &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; docker-compose up
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;此时，PHP 脚本将要执行 70s，肯定超过 nginx 设置的超时时间，get 一下发现确实如此，8s 之后抛出 504 Gateway Time-out 错误，nginx 日志是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;upstream timed out (110: Operation timed out) while reading response header from upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;说明触发了 fastcgi_read_timeout 设置。&lt;/p&gt;
+
+&lt;h3 id=&quot;关闭上游服务&quot;&gt;关闭上游服务&lt;/h3&gt;
+
+&lt;p&gt;关掉 PHP 服务：&lt;/p&gt;
+
+&lt;div  class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker-composer stop php
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;PHP 服务停掉之后第一次访问，得到 504 错误，错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;upstream timed out (110: Operation timed out) while connecting to upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;超时时间为 fastcgi_connect_timeout 的设置。说明这个时候 tcp 连接还在，但是尝试连接的时候失败了。&lt;/p&gt;
+
+&lt;p&gt;再次访问，得到 502 错误，错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;connect() failed (113: Host is unreachable) while connecting to upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;502 的原因很容易理解，上游服务挂了，同时因为之前访问的时候发现连接不上就把连接断掉了，再次连接的时候便无法找到 host 了。&lt;/p&gt;
+
+&lt;p&gt;我曾怀疑第一次访问 504 是由于 keepalive。但我停掉 PHP 之后隔了好久才发第一个请求，仍然是这个结果。&lt;/p&gt;
+
+&lt;p&gt;如果将 nginx fastcgi_pass 配置为 127.0.0.1:9000（本地没有这个端口），则马上就会抛出 502 错误，错误为：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;connect() failed (111: Connection refused) while connecting to upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;登入 nginx 服务，使用 tcpdump 监控 9000 上的通信：&lt;/p&gt;
+
+&lt;div  class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;tcpdump &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; eth0 &lt;span class=&quot;nt&quot;&gt;-nnA&lt;/span&gt; tcp port 9000
+&lt;span class=&quot;c&quot;&gt;# 如果你的 PHP 在本地，eth0 应该改成 lo&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;我们发现，当 PHP 关闭之后第一次访问，nginx 会尝试向 PHP 发起若干次 TCP SYN 请求，但 PHP 显然不会响应，这个时候 nginx 就返回了 504。第二次访问的时候 nginx 根本不会发起任何请求，直接 502 了&lt;sup id=&quot;fnref:2&quot;&gt;&lt;a href=&quot;#fn:2&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;。如果我们这个时候执行&lt;span class=&quot;codespan&quot;&gt;nginx -t&lt;/span&gt;会发现，nginx 已经认为配置文件有问题了：nginx: configuration file /etc/nginx/nginx.conf test failed。&lt;/p&gt;
+
+&lt;h3 id=&quot;换一种配置&quot;&gt;换一种配置&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/&quot;&gt;这篇文章&lt;/a&gt; 提到，我们之前的 nginx 配置并不合理&lt;sup id=&quot;fnref:1&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;，我们重新设置 nginx：&lt;/p&gt;
+
+&lt;div  class=&quot;language-nginx highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.php&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.html&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;server_name&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;php-docker.local&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;error_log&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;/var/log/nginx/error.log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;access_log&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;/var/log/nginx/access.log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;root&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;/code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;resolver&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;127.0&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.0.11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;# here&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;location&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;\.php$&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$upstream&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;php&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# here&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;try_files&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;404&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_split_path_info&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;^(.+&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.php)(/.+)&lt;/span&gt;$&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_pass&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$upstream&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;# here&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_index&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;index.php&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;include&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;fastcgi_params&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_param&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;SCRIPT_FILENAME&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$document_root$fastcgi_script_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_param&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;PATH_INFO&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$fastcgi_path_info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_connect_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;5s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_read_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;8s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;fastcgi_send_timeout&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;10s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;其中 127.0.0.11 是 docker 的内网 dns resolver。该配置动态指定 fastcgi pass，所以 nginx 不会检查该连接能否建立起来。&lt;/p&gt;
+
+&lt;p&gt;按照这个配置启动，先访问 index.php 建立连接，然后关闭 PHP，表现为：&lt;/p&gt;
+
+&lt;p&gt;在 keepalive 期间，抛出 504 错误，超时时间为 fastcgi_connect_timeout，错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;upstream timed out (110: Operation timed out) while connecting to upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;keepalive 断线之后，抛出 502 错误，超时时间不定，错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;connect() failed (113: Host is unreachable) while connecting to upstream
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;按照&lt;a href=&quot;https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/&quot;&gt;这篇文章&lt;/a&gt;所说，这种配置 nginx 不会认为有问题，执行&lt;span class=&quot;codespan&quot;&gt;nginx -t&lt;/span&gt;确实如此。在 &lt;strong&gt;一段时间&lt;/strong&gt; 内，每次请求 nginx 都会向 upstream 发送 SYN，这段时间的状态码都是 504，之后再访问就不再发 TCP 包，状态码也变成 502。&lt;/p&gt;
+
+&lt;h3 id=&quot;其他&quot;&gt;其他&lt;/h3&gt;
+
+&lt;p&gt;除此之外，PHP 脚本还有一个超时时间的设置：max_execution_time。它是限制 PHP 脚本的执行时间，但这个时间不会计算系统调用（比如 sleep，io，等）。因为该原因导致 PHP 杀掉进程时，会抛出 fatal error，而 php-fpm 不会有 fatal error。&lt;/p&gt;
+
+&lt;p&gt;这里实验使用的是 PHP 的 fastcgi 工作方式，如果是 nginx 通过代理的方式连接上游服务的话，fastcgi_connect_timeout，fastcgi_read_timeout，fastcgi_send_timeout 都需要替换成对应的 proxy_connect_timeout，proxy_read_timeout，proxy_send_timeout。&lt;/p&gt;
+
+&lt;h2 id=&quot;结论&quot;&gt;结论&lt;/h2&gt;
+
+&lt;p&gt;504 的原因比较简单，一般都是上游服务的执行时间超过了 nginx 的等待时间，这种情况是由于上游服务的业务太过耗时导致的，或者连接到上游服务器超时。从上面的实验来看，后者的原因比较难以追踪，因为这种情况下连接是存在的，但是却连不上，好在这种 504 一般都会在一段时间后转为 502。&lt;/p&gt;
+
+&lt;p&gt;502 的原因是由于上游服务器的故障，比如停机，进程被杀死，上游服务 reset 了连接，进程僵死等各种原因。在 nginx 的日志中我们能够发现 502 错误的具体原因，分别为：&lt;span class=&quot;codespan&quot;&gt;104: Connection reset by peer&lt;/span&gt;，&lt;span class=&quot;codespan&quot;&gt;113: Host is unreachable&lt;/span&gt;，&lt;span class=&quot;codespan&quot;&gt;111: Connection refused&lt;/span&gt;。&lt;/p&gt;
+
+&lt;p&gt;有一些细节上的差别和 nginx 的工作原理有关，这部分尚未深挖。&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:2&quot;&gt;
+      &lt;p&gt;按理说，既然 nginx 已经知道 PHP 不可达，不去发 TCP 请求了，那么应该立即 502 才是。实验中发现，这种情况下的 502 有 3s 左右的延时，不知何故。 &lt;a href=&quot;#fnref:2&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:1&quot;&gt;
+      &lt;p&gt;&lt;a href=&quot;https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/&quot;&gt;这篇文章&lt;/a&gt; 表明，我们之前的设置中，如果 PHP 没有先启动起来，那么 nginx 也是启动不起来的，这种设置并不合理：nginx 的一台上游服务有问题，结果 nginx 就无法提供服务了。但这和我们的演示关系不大，因此并没有在正文中过多描述。 &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Thu, 19 Jul 2018 19:26:00 +0000</pubDate>
+        <link>https://wulfric.me/2018/07/nginx-demo/</link>
+        <guid isPermaLink="true">https://wulfric.me/2018/07/nginx-demo/</guid>
+        
+        <category>nginx</category>
+        
+        <category>php-fpm</category>
+        
+        <category>php</category>
         
         
         <category>技术</category>

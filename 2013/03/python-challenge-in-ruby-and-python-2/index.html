@@ -15,7 +15,6 @@
 
   <title>python challenge in ruby and python 13~23</title>
   <meta name="description" content="Python Challenge 是一个非常有趣的闯关游戏，通过猜谜和编程得到关键词，并使用关键词更改网页的 URL 进入到下一关。现在共有 33 关。这篇文章（或者更多）将会专注于使用 python 和 ruby 解决这些问题。继续 python challenge 游戏。这篇文章将努力更新到 23 题。
-
 ">
   <meta name="keywords" content="ruby,python,pythonchallenge">
   <link rel="canonical" href="https://wulfric.me/2013/03/python-challenge-in-ruby-and-python-2/">
@@ -70,7 +69,14 @@
   <article class="post-content">
     <p><a href="http://www.pythonchallenge.com/">Python Challenge</a> 是一个非常有趣的闯关游戏，通过猜谜和编程得到关键词，并使用关键词更改网页的 URL 进入到下一关。现在共有 33 关。这篇文章（或者更多）将会专注于使用 python 和 ruby 解决这些问题。继续 python challenge 游戏。这篇文章将努力更新到 23 题。</p>
 
-<p><img src="/images/python-challenge.png" alt="python challenge" title="python challenge" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/python-challenge.png" alt="python challenge" title="python challenge" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>python challenge</figcaption>
+        </figure></p>
 
 <h2 id="第-13-17-题">第 13-17 题</h2>
 
@@ -86,12 +92,12 @@
 
 <p>提示：这里需要用到 12 题的 evil: Bert。打电话给它吧！</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">import</span> <span class="nn">xmlrpclib</span>
-<span class="n">xmlrpclib</span><span class="p">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">'http://www.pythonchallenge.com/pc/phonebook.php'</span><span class="p">).</span><span class="n">phone</span><span class="p">(</span><span class="s">'Bert'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">import</span> <span class="n">xmlrpclib</span>
+<span class="n">xmlrpclib</span><span class="p">.</span><span class="nc">ServerProxy</span><span class="p">(</span><span class="sh">'</span><span class="s">http://www.pythonchallenge.com/pc/phonebook.php</span><span class="sh">'</span><span class="p">).</span><span class="nf">phone</span><span class="p">(</span><span class="sh">'</span><span class="s">Bert</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"xmlrpc/client"</span>
 <span class="n">phonebook</span> <span class="o">=</span> <span class="no">XMLRPC</span><span class="o">::</span><span class="no">Client</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="s2">"www.pythonchallenge.com"</span><span class="p">,</span> <span class="s2">"/pc/phonebook.php"</span><span class="p">).</span><span class="nf">proxy</span>
 <span class="nb">puts</span> <span class="n">phonebook</span><span class="p">.</span><span class="nf">phone</span><span class="p">(</span><span class="s1">'Bert'</span><span class="p">)</span>
@@ -99,33 +105,33 @@
 
 <h3 id="第-14-题">第 14 题</h3>
 
-<p>title 是 walk around，图片是绕来绕去的翔一样的面包，下面是由原始图片为<code class="language-plaintext highlighter-rouge">10000*1</code>组成的<code class="language-plaintext highlighter-rouge">100*100</code>的图片，源码里还告诉我们 10000=100+99+99+98+…</p>
+<p>title 是 walk around，图片是绕来绕去的翔一样的面包，下面是由原始图片为<span class="codespan">10000*1</span>组成的<span class="codespan">100*100</span>的图片，源码里还告诉我们 10000=100+99+99+98+…</p>
 
-<p>提示：将这张<code class="language-plaintext highlighter-rouge">10000*1</code>的图片按照面包那样绕来绕去的方式重新组成一张<code class="language-plaintext highlighter-rouge">100*100</code>的图片。</p>
+<p>提示：将这张<span class="codespan">10000*1</span>的图片按照面包那样绕来绕去的方式重新组成一张<span class="codespan">100*100</span>的图片。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="n">im</span><span class="o">=</span><span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="sa">r</span><span class="s">'wire.png'</span><span class="p">)</span>
-<span class="n">new</span><span class="o">=</span><span class="n">Image</span><span class="p">.</span><span class="n">new</span><span class="p">(</span><span class="n">im</span><span class="p">.</span><span class="n">mode</span><span class="p">,[</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">])</span>
-<span class="n">l</span> <span class="o">=</span> <span class="p">[[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)]</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">from</span> <span class="n">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+<span class="n">im</span><span class="o">=</span><span class="n">Image</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">wire.png</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">new</span><span class="o">=</span><span class="n">Image</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">im</span><span class="p">.</span><span class="n">mode</span><span class="p">,[</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">])</span>
+<span class="n">l</span> <span class="o">=</span> <span class="p">[[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)]</span>
 <span class="n">tmp</span><span class="o">=</span><span class="n">tmp1</span><span class="o">=</span><span class="mi">0</span>
-<span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
-  <span class="k">for</span> <span class="n">dn</span><span class="p">,</span><span class="n">dd</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="k">for</span> <span class="n">n</span><span class="p">,</span><span class="n">data</span> <span class="ow">in</span> <span class="nf">enumerate</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">dn</span><span class="p">,</span><span class="n">dd</span> <span class="ow">in</span> <span class="nf">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
       <span class="n">tmp</span><span class="o">=</span><span class="n">tmp1</span>
       <span class="n">tmp1</span><span class="o">+=</span><span class="n">dd</span>
-      <span class="k">if</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+      <span class="nf">if</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
           <span class="n">direc</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="mi">99</span><span class="o">-</span><span class="n">n</span><span class="p">)</span>
-      <span class="k">elif</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+      <span class="nf">elif</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
           <span class="n">direc</span><span class="o">=</span><span class="p">(</span><span class="mi">99</span><span class="o">-</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
-      <span class="k">elif</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">2</span><span class="p">):</span>
+      <span class="nf">elif</span><span class="p">(</span><span class="n">dn</span><span class="o">==</span><span class="mi">2</span><span class="p">):</span>
           <span class="n">direc</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
       <span class="k">else</span><span class="p">:</span>
           <span class="n">direc</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
-      <span class="n">new</span><span class="p">.</span><span class="n">paste</span><span class="p">(</span><span class="n">im</span><span class="p">.</span><span class="n">crop</span><span class="p">((</span><span class="n">tmp</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">tmp1</span><span class="p">,</span><span class="mi">1</span><span class="p">)).</span><span class="n">rotate</span><span class="p">(</span><span class="mi">90</span><span class="o">*</span><span class="n">dn</span><span class="p">),</span><span class="n">direc</span><span class="p">)</span>
-<span class="n">new</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="mi">180</span><span class="p">).</span><span class="n">show</span><span class="p">()</span>
+      <span class="n">new</span><span class="p">.</span><span class="nf">paste</span><span class="p">(</span><span class="n">im</span><span class="p">.</span><span class="nf">crop</span><span class="p">((</span><span class="n">tmp</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">tmp1</span><span class="p">,</span><span class="mi">1</span><span class="p">)).</span><span class="nf">rotate</span><span class="p">(</span><span class="mi">90</span><span class="o">*</span><span class="n">dn</span><span class="p">),</span><span class="n">direc</span><span class="p">)</span>
+<span class="n">new</span><span class="p">.</span><span class="nf">rotate</span><span class="p">(</span><span class="mi">180</span><span class="p">).</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s1">'RMagick'</span>
 <span class="n">input</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="s2">"wire.png"</span><span class="p">)</span>
 <span class="n">output</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">Image</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
@@ -155,13 +161,13 @@
 <p>根据源码的提示，第二小的人，且重要时间是 1 月 27 日（这一点一直没注意到，标了 TODO 我以为和下一题有关呢）。
 提示：符合要求的年份中第二大的那一年 1 月 27 日，<a href="http://en.wikipedia.org/wiki/Wolfgang_Amadeus_Mozart">莫扎特</a>诞生了。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">from</span> <span class="nn">calendar</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1006</span><span class="p">,</span><span class="mi">2000</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span> <span class="k">if</span><span class="p">(</span><span class="n">isleap</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">and</span> <span class="n">weekday</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">)]</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">from</span> <span class="n">calendar</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">1006</span><span class="p">,</span><span class="mi">2000</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span> <span class="nf">if</span><span class="p">(</span><span class="nf">isleap</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">and</span> <span class="nf">weekday</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">)]</span>
 <span class="c1">#result: [1176, 1356, 1576, 1756, 1976]
 </span></code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"date"</span>
 <span class="p">(</span><span class="mi">1006</span><span class="o">..</span><span class="mi">1996</span><span class="p">).</span><span class="nf">step</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">i</span><span class="o">|</span>
   <span class="n">t</span> <span class="o">=</span> <span class="no">Date</span><span class="o">::</span><span class="n">new</span> <span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">26</span>
@@ -175,37 +181,37 @@
 
 <p>提示：好吧，我是没想到还可以这样搞……不过即使知道方法，要解决它还是需要花费些功夫的。方法有两种，一种是使用自带的图像库，按照要求移动每一行子图，然后拼接成一幅图。二是将图像转成字符串，然后按照要求移动字符串。ps: 调用 PhotoShop 或 GIMP 的颜色表，可以知道粉色的索引值是 195。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 移动子图法
-</span><span class="kn">import</span> <span class="nn">Image</span><span class="p">,</span> <span class="n">ImageChops</span>
-<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="s">"mozart.gif"</span><span class="p">)</span>
+</span><span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageChops</span>
+<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sh">"</span><span class="s">mozart.gif</span><span class="sh">"</span><span class="p">)</span>
 <span class="n">c</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="n">size</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
     <span class="n">box</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span>
-    <span class="n">row</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="n">crop</span><span class="p">(</span><span class="n">box</span><span class="p">)</span>
-    <span class="n">rowstr</span> <span class="o">=</span> <span class="n">row</span><span class="p">.</span><span class="n">tostring</span><span class="p">()</span>
-    <span class="n">index</span> <span class="o">=</span> <span class="n">rowstr</span><span class="p">.</span><span class="n">index</span><span class="p">(</span><span class="nb">chr</span><span class="p">(</span><span class="mi">195</span><span class="p">))</span>
-    <span class="n">im</span><span class="p">.</span><span class="n">paste</span><span class="p">(</span><span class="n">ImageChops</span><span class="p">.</span><span class="n">offset</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="o">-</span><span class="n">index</span><span class="p">),</span> <span class="n">box</span><span class="p">)</span>
-<span class="n">im</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="nf">crop</span><span class="p">(</span><span class="n">box</span><span class="p">)</span>
+    <span class="n">rowstr</span> <span class="o">=</span> <span class="n">row</span><span class="p">.</span><span class="nf">tostring</span><span class="p">()</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">rowstr</span><span class="p">.</span><span class="nf">index</span><span class="p">(</span><span class="nf">chr</span><span class="p">(</span><span class="mi">195</span><span class="p">))</span>
+    <span class="n">im</span><span class="p">.</span><span class="nf">paste</span><span class="p">(</span><span class="n">ImageChops</span><span class="p">.</span><span class="nf">offset</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="o">-</span><span class="n">index</span><span class="p">),</span> <span class="n">box</span><span class="p">)</span>
+<span class="n">im</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># -*- coding: utf-8 -*-
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># -*- coding: utf-8 -*-
 # 这里的编码声明很重要，必不可少
 # python
 # 移动字符串法
-</span><span class="kn">import</span> <span class="nn">Image</span><span class="p">,</span> <span class="n">re</span>
-<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="s">"mozart.gif"</span><span class="p">)</span>
+</span><span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">re</span>
+<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sh">"</span><span class="s">mozart.gif</span><span class="sh">"</span><span class="p">)</span>
 <span class="n">c</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="n">size</span>
-<span class="n">imstr</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="n">tostring</span><span class="p">()</span>
+<span class="n">imstr</span> <span class="o">=</span> <span class="n">im</span><span class="p">.</span><span class="nf">tostring</span><span class="p">()</span>
 <span class="c1"># 重新按行整理 image string
-</span><span class="n">imstr</span> <span class="o">=</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">.</span><span class="n">join</span><span class="p">([</span><span class="n">imstr</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">c</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">r</span><span class="p">)])</span>
-<span class="n">magic</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">195</span><span class="p">)</span>
-<span class="n">imstr</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nb">compile</span><span class="p">(</span><span class="sa">r</span><span class="s">"^(.*?)(%s{5}.*?)$"</span><span class="o">%</span><span class="n">magic</span><span class="p">,</span> <span class="n">re</span><span class="p">.</span><span class="n">M</span><span class="p">).</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s">"\2\1"</span><span class="p">,</span> <span class="n">imstr</span><span class="p">).</span><span class="n">replace</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="s">""</span><span class="p">)</span>
-<span class="n">im</span><span class="p">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">imstr</span><span class="p">)</span>
-<span class="n">im</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+</span><span class="n">imstr</span> <span class="o">=</span> <span class="sh">"</span><span class="se">\n</span><span class="sh">"</span><span class="p">.</span><span class="nf">join</span><span class="p">([</span><span class="n">imstr</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">c</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">xrange</span><span class="p">(</span><span class="n">r</span><span class="p">)])</span>
+<span class="n">magic</span> <span class="o">=</span> <span class="nf">chr</span><span class="p">(</span><span class="mi">195</span><span class="p">)</span>
+<span class="n">imstr</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">compile</span><span class="p">(</span><span class="sa">r</span><span class="sh">"</span><span class="s">^(.*?)(%s{5}.*?)$</span><span class="sh">"</span><span class="o">%</span><span class="n">magic</span><span class="p">,</span> <span class="n">re</span><span class="p">.</span><span class="n">M</span><span class="p">).</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">"</span><span class="s">\2\1</span><span class="sh">"</span><span class="p">,</span> <span class="n">imstr</span><span class="p">).</span><span class="nf">replace</span><span class="p">(</span><span class="sh">"</span><span class="se">\n</span><span class="sh">"</span><span class="p">,</span><span class="sh">""</span><span class="p">)</span>
+<span class="n">im</span><span class="p">.</span><span class="nf">fromstring</span><span class="p">(</span><span class="n">imstr</span><span class="p">)</span>
+<span class="n">im</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="c1"># 移动子图法</span>
 <span class="nb">require</span> <span class="s1">'RMagick'</span>
 <span class="n">im</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="s2">"mozart.gif"</span><span class="p">)</span>
@@ -219,7 +225,7 @@
 <span class="n">im</span><span class="p">.</span><span class="nf">display</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="c1"># 移动字符串法</span>
 <span class="nb">require</span> <span class="s1">'RMagick'</span>
 <span class="n">im</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="s2">"mozart.gif"</span><span class="p">)</span>
@@ -246,42 +252,42 @@
   <li>给该网址设置 cookie：info=<em>**</em>，info 的内容就是第一步得到的内容。</li>
 </ol>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # step 1
-</span><span class="kn">import</span> <span class="nn">urllib</span><span class="p">,</span><span class="n">re</span><span class="p">,</span><span class="n">bz2</span>
-<span class="n">url</span>  <span class="o">=</span> <span class="s">'http://www.pythonchallenge.com/pc/def/linkedlist.php?busynothing='</span>
-<span class="n">seed</span> <span class="o">=</span> <span class="s">"12345"</span>
-<span class="n">info</span> <span class="o">=</span> <span class="s">''</span>
+</span><span class="kn">import</span> <span class="n">urllib</span><span class="p">,</span><span class="n">re</span><span class="p">,</span><span class="n">bz2</span>
+<span class="n">url</span>  <span class="o">=</span> <span class="sh">'</span><span class="s">http://www.pythonchallenge.com/pc/def/linkedlist.php?busynothing=</span><span class="sh">'</span>
+<span class="n">seed</span> <span class="o">=</span> <span class="sh">"</span><span class="s">12345</span><span class="sh">"</span>
+<span class="n">info</span> <span class="o">=</span> <span class="sh">''</span>
 <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-    <span class="n">req</span>  <span class="o">=</span> <span class="n">urllib</span><span class="p">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="o">+</span><span class="n">seed</span><span class="p">)</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">req</span><span class="p">.</span><span class="n">read</span><span class="p">()</span>
-    <span class="n">seed</span> <span class="o">=</span> <span class="s">''</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="p">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s">"busynothing is (\d+)"</span><span class="p">,</span><span class="n">text</span><span class="p">))</span>
-    <span class="n">cookies</span> <span class="o">=</span> <span class="n">req</span><span class="p">.</span><span class="n">info</span><span class="p">().</span><span class="n">getheaders</span><span class="p">(</span><span class="s">'Set-Cookie'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">byte</span> <span class="o">=</span> <span class="n">cookies</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">';'</span><span class="p">)[</span><span class="mi">0</span><span class="p">].</span><span class="n">split</span><span class="p">(</span><span class="s">'='</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">req</span>  <span class="o">=</span> <span class="n">urllib</span><span class="p">.</span><span class="nf">urlopen</span><span class="p">(</span><span class="n">url</span><span class="o">+</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">req</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
+    <span class="n">seed</span> <span class="o">=</span> <span class="sh">''</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">re</span><span class="p">.</span><span class="nf">findall</span><span class="p">(</span><span class="sa">r</span><span class="sh">"</span><span class="s">busynothing is (\d+)</span><span class="sh">"</span><span class="p">,</span><span class="n">text</span><span class="p">))</span>
+    <span class="n">cookies</span> <span class="o">=</span> <span class="n">req</span><span class="p">.</span><span class="nf">info</span><span class="p">().</span><span class="nf">getheaders</span><span class="p">(</span><span class="sh">'</span><span class="s">Set-Cookie</span><span class="sh">'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">byte</span> <span class="o">=</span> <span class="n">cookies</span><span class="p">.</span><span class="nf">split</span><span class="p">(</span><span class="sh">'</span><span class="s">;</span><span class="sh">'</span><span class="p">)[</span><span class="mi">0</span><span class="p">].</span><span class="nf">split</span><span class="p">(</span><span class="sh">'</span><span class="s">=</span><span class="sh">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">info</span> <span class="o">+=</span> <span class="n">byte</span>
     <span class="k">try</span> <span class="p">:</span>
-        <span class="nb">int</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-        <span class="k">print</span> <span class="s">"   Info:"</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="s">"  the Next seed:"</span><span class="p">,</span><span class="n">seed</span>
+        <span class="nf">int</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="k">print</span> <span class="sh">"</span><span class="s">   Info:</span><span class="sh">"</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="sh">"</span><span class="s">  the Next seed:</span><span class="sh">"</span><span class="p">,</span><span class="n">seed</span>
     <span class="k">except</span> <span class="p">:</span>
-        <span class="k">print</span> <span class="s">"   Info:"</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="s">"  the Last seed:"</span><span class="p">,</span><span class="n">text</span>
+        <span class="k">print</span> <span class="sh">"</span><span class="s">   Info:</span><span class="sh">"</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="sh">"</span><span class="s">  the Last seed:</span><span class="sh">"</span><span class="p">,</span><span class="n">text</span>
         <span class="k">break</span>
-<span class="k">print</span> <span class="s">"info:"</span><span class="p">,</span> <span class="n">bz2</span><span class="p">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">urllib</span><span class="p">.</span><span class="n">unquote_plus</span><span class="p">(</span><span class="n">info</span><span class="p">))</span>
+<span class="k">print</span> <span class="sh">"</span><span class="s">info:</span><span class="sh">"</span><span class="p">,</span> <span class="n">bz2</span><span class="p">.</span><span class="nf">decompress</span><span class="p">(</span><span class="n">urllib</span><span class="p">.</span><span class="nf">unquote_plus</span><span class="p">(</span><span class="n">info</span><span class="p">))</span>
 
 <span class="c1"># step 2
-</span><span class="kn">import</span> <span class="nn">xmlrpclib</span>
-<span class="n">phonebook</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="p">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">'http://www.pythonchallenge.com/pc/phonebook.php'</span><span class="p">)</span>
-<span class="k">print</span> <span class="n">phonebook</span><span class="p">.</span><span class="n">phone</span><span class="p">(</span><span class="s">'Leopold'</span><span class="p">)</span>
+</span><span class="kn">import</span> <span class="n">xmlrpclib</span>
+<span class="n">phonebook</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="p">.</span><span class="nc">ServerProxy</span><span class="p">(</span><span class="sh">'</span><span class="s">http://www.pythonchallenge.com/pc/phonebook.php</span><span class="sh">'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">phonebook</span><span class="p">.</span><span class="nf">phone</span><span class="p">(</span><span class="sh">'</span><span class="s">Leopold</span><span class="sh">'</span><span class="p">)</span>
 
 <span class="c1"># step 3
-</span><span class="kn">from</span> <span class="nn">urllib2</span> <span class="kn">import</span> <span class="n">Request</span><span class="p">,</span><span class="n">urlopen</span>
-<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">quote_plus</span>
-<span class="n">info</span> <span class="o">=</span> <span class="s">"the flowers are on their way"</span>
-<span class="n">url</span> <span class="o">=</span> <span class="s">"http://www.pythonchallenge.com/pc/stuff/violin.php"</span>
-<span class="n">req</span> <span class="o">=</span> <span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s">'Cookie'</span><span class="p">:</span> <span class="s">'info='</span> <span class="o">+</span> <span class="n">quote_plus</span><span class="p">(</span><span class="n">info</span><span class="p">)})</span>
-<span class="k">print</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">).</span><span class="n">read</span><span class="p">()</span>
+</span><span class="kn">from</span> <span class="n">urllib2</span> <span class="kn">import</span> <span class="n">Request</span><span class="p">,</span><span class="n">urlopen</span>
+<span class="kn">from</span> <span class="n">urllib</span> <span class="kn">import</span> <span class="n">quote_plus</span>
+<span class="n">info</span> <span class="o">=</span> <span class="sh">"</span><span class="s">the flowers are on their way</span><span class="sh">"</span>
+<span class="n">url</span> <span class="o">=</span> <span class="sh">"</span><span class="s">http://www.pythonchallenge.com/pc/stuff/violin.php</span><span class="sh">"</span>
+<span class="n">req</span> <span class="o">=</span> <span class="nc">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="sh">'</span><span class="s">Cookie</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">info=</span><span class="sh">'</span> <span class="o">+</span> <span class="nf">quote_plus</span><span class="p">(</span><span class="n">info</span><span class="p">)})</span>
+<span class="k">print</span> <span class="nf">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">).</span><span class="nf">read</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="c1"># first step</span>
 <span class="nb">require</span> <span class="s2">"open-uri"</span>
 <span class="nb">require</span> <span class="s2">"cgi"</span>
@@ -320,7 +326,7 @@
 
 <p>看源码，让我们找出图片的区别。一眼能看出来是亮度不同，于是逐一试验：dark, darkness, bright, brightness。Got it!</p>
 
-<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">&lt;!-- maybe consider deltas.gz --&gt;</span>
+<div  class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">&lt;!-- maybe consider deltas.gz --&gt;</span>
 </code></pre></div></div>
 
 <p>什么意思呢？把 url 改成这个，即可下载该 gz 文件。解压之，是个纯文本文件。粗略看一下，应该是左右两个文件。分开，求 diff，观察。</p>

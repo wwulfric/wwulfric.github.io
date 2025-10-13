@@ -15,7 +15,6 @@
 
   <title>Git 团队协作实践</title>
   <meta name="description" content="本文是关于使用 Git 进行团队协作的一种实践，目的是使得 Git 的历史清晰明了，团队成员责任明确。
-
 ">
   <meta name="keywords" content="git,协作,rebase,merge">
   <link rel="canonical" href="https://wulfric.me/2014/03/git-team-cooperate/">
@@ -74,7 +73,7 @@
 
 <h2 id="编辑">编辑</h2>
 
-<p>从 master 分支上新建分支，通过<code class="language-plaintext highlighter-rouge">git checkout -b new-feature</code>创建<code class="language-plaintext highlighter-rouge">new-feature</code>分支，开始工作</p>
+<p>从 master 分支上新建分支，通过<span class="codespan">git checkout -b new-feature</span>创建<span class="codespan">new-feature</span>分支，开始工作</p>
 
 <ul>
   <li>编辑</li>
@@ -82,19 +81,26 @@
   <li>重复上述步骤</li>
 </ul>
 
-<p>完成之后，提交到仓库<code class="language-plaintext highlighter-rouge">git push origin new-feature</code>。</p>
+<p>完成之后，提交到仓库<span class="codespan">git push origin new-feature</span>。</p>
 
 <h2 id="code-review">Code Review</h2>
 
-<p>提交之后，发 pull request，拉同事来做 code review。Code review 完成之后，在本地执行<code class="language-plaintext highlighter-rouge">git fetch</code>，从远端下载最新的更新。</p>
+<p>提交之后，发 pull request，拉同事来做 code review。Code review 完成之后，在本地执行<span class="codespan">git fetch</span>，从远端下载最新的更新。</p>
 
 <h2 id="合并与提交">合并与提交</h2>
 
 <p>开始合并工作—使用 rebase 而不是 merge：使用 rebase 将自己的更改提交合并成一个功能性的提交，这样在 master 分支的历史就会清晰明了，而 merge 会将每一个 commit 插入到历史里，增加了 review 的复杂度。如图所示，merge 提交之后，commit b 插入到 master 的历史纪录里；而 rebase 不会破坏 master 的提交记录。</p>
 
-<p><img src="/images/R-git-merge-and-rebase.png" alt="git merge and rebase" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-git-merge-and-rebase.png" alt="git merge and rebase" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>git merge and rebase</figcaption>
+        </figure></p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git rebase <span class="nt">-i</span> origin/master
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git rebase <span class="nt">-i</span> origin/master
 <span class="c"># 该命令会新建一个未命名的分支，在该分支上执行合并</span>
 <span class="c"># 执行后会跳到编辑页面，保留第一个 pick，其他 pick 改成 squash，保存退出</span>
 git status
@@ -123,7 +129,7 @@ git push origin master
 
 <p>在做衍合的时候，先衍合到共同的历史记录，然后再衍合</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># a--b--c</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># a--b--c</span>
 <span class="c"># \--d--e</span>
 git rebase <span class="nt">-i</span> a
 git rebase <span class="nt">-i</span> origin/master

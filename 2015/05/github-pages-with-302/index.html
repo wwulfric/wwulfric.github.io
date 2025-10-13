@@ -15,7 +15,6 @@
 
   <title>github pages 302 redirect 跳转</title>
   <meta name="description" content="使用静态博客，部署在 github pages，再绑定一个域名，是现在比较流行的博客撰写方案。github 官网和网上的教程都是在域名管理中把域名的 A 记录指向 github 给的 IP 地址。
-
 ">
   <meta name="keywords" content="github pages,302 redirect">
   <link rel="canonical" href="https://wulfric.me/2015/05/github-pages-with-302/">
@@ -74,14 +73,21 @@
 
 <p>解决方法是，换用可以支持 ALIAS 的 DNS 服务。注意这里的 ALIAS 不是 CNAME(ALIAS)，大多数域名服务不提供 ALIAS，所以需要好好选择，推荐的有<a href="https://pointhq.com/">Pointhq</a>，支持一个免费域名；<a href="https://dnsimple.com/">DNSimple</a>，ALIAS 需要收费。</p>
 
-<p><img src="/images/conf.png" alt="ALIAS 配置" title="ALIAS 配置" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/conf.png" alt="ALIAS 配置" title="ALIAS 配置" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ALIAS 配置</figcaption>
+        </figure></p>
 
 <p>改完之后再看一下：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig wulfric.me +nocomments +nocmd +nostats
 </code></pre></div></div>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>; &lt;&lt;&gt;&gt; DiG 9.8.3-P1 &lt;&lt;&gt;&gt; wulfric.me +nocomments +nocmd +nostats
 ;; global options: +cmd
 ;wulfric.me.      IN A
 wulfric.me.  3600 IN A xxx.xxx.xxx.xxx
@@ -89,10 +95,10 @@ wulfric.me.  3600 IN A xxx.xxx.xxx.xxx
 
 <p>这里的 IP 地址不再是 Github 给出的 IP 了</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-I</span> wulfric.me/archive/
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-I</span> wulfric.me/archive/
 </code></pre></div></div>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
 Server: GitHub.com
 Content-Type: text/html; charset=utf-8
 Last-Modified: Fri, 17 Oct 2014 16:29:11 GMT

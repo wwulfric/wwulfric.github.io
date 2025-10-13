@@ -15,7 +15,6 @@
 
   <title>dubbo 简介与 dubbo demo 运行</title>
   <meta name="description" content="dubbo是阿里巴巴推出的分布式服务治理框架，是国内实现微服务较为常见的框架。关于微服务的介绍可以参见原文，infoq 文章，dubbo 架构设计详解。
-
 ">
   <meta name="keywords" content="分布式,微服务,dubbo,zookeeper,dubbo-admin,dubbo-monitor,dubbo-demo">
   <link rel="canonical" href="https://wulfric.me/2017/03/intro-dubbo/">
@@ -70,13 +69,20 @@
   <article class="post-content">
     <p>dubbo是阿里巴巴推出的分布式服务治理框架，是国内实现微服务较为常见的框架。关于微服务的介绍可以参见<a href="http://martinfowler.com/articles/microservices.html">原文</a>，<a href="http://www.infoq.com/cn/articles/basis-frameworkto-implement-micro-service">infoq 文章</a>，<a href="http://shiyanjun.cn/archives/325.html">dubbo 架构设计详解</a>。</p>
 
-<p>dubbo 的架构图如下<sup id="fnref:dubbo-architecture" role="doc-noteref"><a href="#fn:dubbo-architecture" class="footnote" rel="footnote">1</a></sup>：</p>
+<p>dubbo 的架构图如下<sup id="fnref:dubbo-architecture"><a href="#fn:dubbo-architecture" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>：</p>
 
-<p><img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dubbo 架构</figcaption>
+        </figure></p>
 
 <p>如上图所示，简单来说 dubbo 架构包括如下几部分：服务注册和服务发现中心，对外暴露服务的服务提供方和运行该服务的容器，调用远程服务的服务消费方，统计服务调用时间和次数的监控中心（非必需）。其调用关系为：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0. 服务方的容器启动服务
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0. 服务方的容器启动服务
 1. 服务提供方向注册中心注册自己的地址
 2. 访问消费方向注册中心订阅所需的服务
 3. 注册中心通知服务消费方所订阅服务的变更
@@ -107,7 +113,7 @@
 
 <p>clone 下当当的 <a href="https://github.com/dangdangdotcom/dubbox">dubbox 项目</a>，执行：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mvn <span class="nb">install</span> <span class="nt">-Dmaven</span>.test.skip<span class="o">=</span><span class="nb">true</span> <span class="c">#dubbox 的测试 url 无法访问</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mvn <span class="nb">install</span> <span class="nt">-Dmaven</span>.test.skip<span class="o">=</span><span class="nb">true</span> <span class="c">#dubbox 的测试 url 无法访问</span>
 </code></pre></div></div>
 
 <p>安装。</p>
@@ -120,7 +126,7 @@
 
 <p>进入解压后的 zookeeper 目录，创建 conf/zoo.cfg（可参考同目录下的 sample 文件），其内容如下：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">tickTime</span><span class="o">=</span>2000
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">tickTime</span><span class="o">=</span>2000
 <span class="nv">initLimit</span><span class="o">=</span>10
 <span class="nv">syncLimit</span><span class="o">=</span>5
 <span class="nv">dataDir</span><span class="o">=</span>/tmp/zookeeper/tmp/data <span class="c"># 自己定义</span>
@@ -129,23 +135,30 @@
 server.1<span class="o">=</span>localhost:2287:3387
 </code></pre></div></div>
 
-<p>执行<code class="language-plaintext highlighter-rouge">bin/zkServer.sh start</code>启动 zookeeper，执行<code class="language-plaintext highlighter-rouge">bin/zkCli.sh -server 127.0.0.1:2181</code>查看是否启动成功。</p>
+<p>执行<span class="codespan">bin/zkServer.sh start</span>启动 zookeeper，执行<span class="codespan">bin/zkCli.sh -server 127.0.0.1:2181</span>查看是否启动成功。</p>
 
 <h3 id="dubbo-提供者和消费者服务">dubbo 提供者和消费者服务</h3>
 
 <p>Demo 在 dubbo-demo 文件夹下，因为前面在 dubbox 下执行过 mvn install，都已经打包好了，这里可以直接执行来启动 demo provider, consumer，如下图所示。</p>
 
-<p><img src="/images/dubbo/R-dubbo-demo-consumer.png" alt="dubbo demo consumer" title="dubbo demo consumer" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/dubbo/R-dubbo-demo-consumer.png" alt="dubbo demo consumer" title="dubbo demo consumer" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dubbo demo consumer</figcaption>
+        </figure></p>
 
 <p>当 provider 执行后看到</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>01/03/17 06:16:26:026 CST] main  INFO container.Main:  <span class="o">[</span>DUBBO] Dubbo SpringContainer started!, dubbo version: 2.0.0, current host: 127.0.0.1
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>01/03/17 06:16:26:026 CST] main  INFO container.Main:  <span class="o">[</span>DUBBO] Dubbo SpringContainer started!, dubbo version: 2.0.0, current host: 127.0.0.1
 <span class="o">[</span>2017-03-01 18:16:26] Dubbo service server started!
 </code></pre></div></div>
 
 <p>consumer 执行后看到</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Client response filter invoked
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Client response filter invoked
 Reader interceptor invoked
 Dynamic reader interceptor invoked
 <span class="o">[</span>01/03/17 06:18:11:011 CST] main  INFO support.LoggingFilter:  <span class="o">[</span>DUBBO] The contents of request body is: 
@@ -162,23 +175,23 @@ SUCCESS: got user User <span class="o">(</span><span class="nb">id</span><span c
 
 <p>在 dubbo-admin 的 target 目录下找到 war 包（没有的话就 mvn package 一下），放到 tomcat 目录下的webapps 下。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
 
 <span class="o">&gt;</span> <span class="nb">ls </span>webapps
 
 ROOT                  docs                  dubbo-admin-2.8.4     dubbo-admin-2.8.4.war examples              host-manager          manager
 </code></pre></div></div>
 
-<p>执行<code class="language-plaintext highlighter-rouge">bin/startup.sh</code>启动 tomcat，打开 localhost:8080，一开始会有点慢，tomcat 要解压 war 文件，解压完毕后 webapps 下出现对应的文件夹（如上面 ls 所示），进入该文件夹，</p>
+<p>执行<span class="codespan">bin/startup.sh</span>启动 tomcat，打开 localhost:8080，一开始会有点慢，tomcat 要解压 war 文件，解压完毕后 webapps 下出现对应的文件夹（如上面 ls 所示），进入该文件夹，</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/tmp/zookeeper/apache-tomcat-8.5.11
 
 <span class="o">&gt;</span> vim webapps/dubbo-admin-2.8.4/WEB-INF/dubbo.properties
 </code></pre></div></div>
 
 <p>编辑 dubbo-admin 的 zookeeper 配置。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.registry.address<span class="o">=</span>zookeeper://127.0.0.1:2181
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.registry.address<span class="o">=</span>zookeeper://127.0.0.1:2181
 <span class="c"># 帐号对应的密码，初次访问的时候需要用到</span>
 dubbo.admin.root.password<span class="o">=</span>root
 dubbo.admin.guest.password<span class="o">=</span>guest
@@ -186,15 +199,22 @@ dubbo.admin.guest.password<span class="o">=</span>guest
 
 <p>重启 tomcat，打开 http://localhost:8080/dubbo-admin-2.8.4，输入帐号密码即可看到 dubbo-admin 的管理页面。上面运行的 provider 和 consumer demo 在服务治理下。</p>
 
-<p><img src="/images/dubbo/dubbo-admin.png" alt="dubbo admin" title="dubbo admin" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/dubbo/dubbo-admin.png" alt="dubbo admin" title="dubbo admin" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dubbo admin</figcaption>
+        </figure></p>
 
-<p>注意：有些链接可能 404，因为 dubbo-admin 默认使用了<code class="language-plaintext highlighter-rouge">/</code>路径，而挂在 tomcat 下的时候路径中包含了<code class="language-plaintext highlighter-rouge">/dubbo-admin-2.8.4</code>。</p>
+<p>注意：有些链接可能 404，因为 dubbo-admin 默认使用了<span class="codespan">/</span>路径，而挂在 tomcat 下的时候路径中包含了<span class="codespan">/dubbo-admin-2.8.4</span>。</p>
 
 <h3 id="启动-dubbo-monitor">启动 dubbo monitor</h3>
 
 <p>除了这三者之外，dubbo 还提供了监控面板。在 dubbo-simple/dubbo-monitor-simple 的 target 目录下，解压 .tar.gz 文件，得到 dubbo-monitor-simple-2.8.4 文件夹，编辑其中的 conf/dubbo.properties 文件。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.container<span class="o">=</span>log4j,spring,registry,jetty
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dubbo.container<span class="o">=</span>log4j,spring,registry,jetty
 dubbo.application.name<span class="o">=</span>simple-monitor
 dubbo.application.owner<span class="o">=</span>
 <span class="c"># 选择 zookeeper 作为注册中心</span>
@@ -214,18 +234,25 @@ dubbo.log4j.level<span class="o">=</span>WARN
 
 <p>需要修改的是 registry，端口号和各种文件的保存位置。</p>
 
-<p>执行<code class="language-plaintext highlighter-rouge">bin/start.sh</code>，当看到</p>
+<p>执行<span class="codespan">bin/start.sh</span>，当看到</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting the simple-monitor .........................OK!
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting the simple-monitor .........................OK!
 PID: 21032
 STDOUT: logs/stdout.log
 </code></pre></div></div>
 
 <p>即执行成功，打开 http://localhost:8083/ 即可看到监控面板。</p>
 
-<p><img src="/images/dubbo/dubbo-monitor.png" alt="dubbo monitor" title="dubbo monitor" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/dubbo/dubbo-monitor.png" alt="dubbo monitor" title="dubbo monitor" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>dubbo monitor</figcaption>
+        </figure></p>
 
-<p>如果看不到 charts 和 statitics，检查下配置中的<code class="language-plaintext highlighter-rouge">dubbo.charts.directory</code>和<code class="language-plaintext highlighter-rouge">dubbo.statistics.directory</code>是否提前创建成功，dubbo-monitor 可能不会自动创建该目录的。</p>
+<p>如果看不到 charts 和 statitics，检查下配置中的<span class="codespan">dubbo.charts.directory</span>和<span class="codespan">dubbo.statistics.directory</span>是否提前创建成功，dubbo-monitor 可能不会自动创建该目录的。</p>
 
 <p>自带 monitor 比较简单，可以参见 monitor 的其他实现：<a href="http://git.oschina.net/handu/dubbo-monitor">韩都衣舍/dubbo-monitor</a>，<a href="https://github.com/dubboclub/dubbokeeper">dubboclub/dubbokeeper</a>。</p>
 
@@ -233,7 +260,7 @@ STDOUT: logs/stdout.log
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:dubbo-architecture" role="doc-endnote">
+    <li id="fn:dubbo-architecture">
       <p>见官方<a href="http://dubbo.io/dubbo-architecture.jpg-version=1&amp;modificationDate=1330892870000.jpg">原图</a> <a href="#fnref:dubbo-architecture" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

@@ -15,7 +15,6 @@
 
   <title>批量取关 instagram 好友</title>
   <meta name="description" content="前段时间由于帐号密码被撞库，instagram 被人盗去关注了好多广告帐号，大概有 1000 多个。登录进去一看吓了一跳，赶紧改了密码。可是怎么把这 1000 多号人取消关注，却犯了难。
-
 ">
   <meta name="keywords" content="instagram,javascript,unfollowgram">
   <link rel="canonical" href="https://wulfric.me/2016/02/unfollow-instagram/">
@@ -70,48 +69,48 @@
   <article class="post-content">
     <p>前段时间由于帐号密码被撞库，instagram 被人盗去关注了好多广告帐号，大概有 1000 多个。登录进去一看吓了一跳，赶紧改了密码。可是怎么把这 1000 多号人取消关注，却犯了难。</p>
 
-<p>首先我想借助官方的力量，可是并没有在 instagram 里找到人工服务的地方，也没有发现提交工单的表单；去 twitter @ 也没人理。要是 instagram 的 web 页面能够有 unfollow 的按钮，那倒还好办，异步发一堆 unfollow 请求就行了（被盗的 twitter 就是这样取消所有关注的，其实就是简单的<code class="language-plaintext highlighter-rouge">$(something).click()</code>），可惜没有。移动端不是很了解，不知道如何将一堆点击操作换成代码。也曾经想利用 instagram 的 API 自己写一个批量 unfollow 的脚本，然而 instagram 的安全等级太高，给出的权限很少，申请高级的权限还被拒了，所以这条路也走不通了。只好另寻他法了。</p>
+<p>首先我想借助官方的力量，可是并没有在 instagram 里找到人工服务的地方，也没有发现提交工单的表单；去 twitter @ 也没人理。要是 instagram 的 web 页面能够有 unfollow 的按钮，那倒还好办，异步发一堆 unfollow 请求就行了（被盗的 twitter 就是这样取消所有关注的，其实就是简单的<span class="codespan">$(something).click()</span>），可惜没有。移动端不是很了解，不知道如何将一堆点击操作换成代码。也曾经想利用 instagram 的 API 自己写一个批量 unfollow 的脚本，然而 instagram 的安全等级太高，给出的权限很少，申请高级的权限还被拒了，所以这条路也走不通了。只好另寻他法了。</p>
 
 <p>于是在 quora 的帮助下找到了 <a href="http://unfollowgram.com/">unfollowgram</a>。</p>
 
 <p>进入 unfollowgram 主页，按照要求使用 instagram 的帐号登录之后，选择「who doesn’t follow me back」选项，然后执行如下代码，获取所有的将要 unfollow 的用户的 id。</p>
 
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">uids</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#thelist li a.unfollow</span><span class="dl">"</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">val</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">$</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">);</span>
-<span class="p">}).</span><span class="nx">toArray</span><span class="p">()</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">uids</span> <span class="o">=</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#thelist li a.unfollow</span><span class="dl">"</span><span class="p">).</span><span class="nf">map</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">val</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nf">$</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">);</span>
+<span class="p">}).</span><span class="nf">toArray</span><span class="p">()</span>
 </code></pre></div></div>
 
 <p>unfollowgram 没有提供批量 unfollow 的功能，接下来就要一个个的 unfollow 这些 users。</p>
 
 <p>注意请求的频率，instagram 对每个 client 的限速是每小时 60 个 relationship 请求，但是 unfollowgram 似乎自己也有限制，每次超过 20 个就会出错，所以我改成每 3 分钟一个请求。代码如下。</p>
 
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
-  <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nf">shift</span><span class="p">();</span>
+  <span class="nx">$</span><span class="p">.</span><span class="nf">ajax</span><span class="p">({</span>
     <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
     <span class="na">url</span><span class="p">:</span> <span class="dl">'</span><span class="s1">http://unfollowgram.com/en/unfollow.ajax</span><span class="dl">'</span><span class="p">,</span>
     <span class="na">data</span><span class="p">:</span> <span class="dl">'</span><span class="s1">uid=</span><span class="dl">'</span> <span class="o">+</span> <span class="nx">uid</span><span class="p">,</span>
     <span class="c1">// async: false</span>
   <span class="p">});</span>
-  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">180000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">180000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
   <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>接下来执行<code class="language-plaintext highlighter-rouge">unfollow(uids)</code>即可。1000 个请求，每 3 分钟执行一个，没办法，只能放那儿跑了，还得注意 unfollowgram 可能会被登出。</p>
+<p>接下来执行<span class="codespan">unfollow(uids)</span>即可。1000 个请求，每 3 分钟执行一个，没办法，只能放那儿跑了，还得注意 unfollowgram 可能会被登出。</p>
 
 <p>仍然不够完美，如果你有更好的方法，请务必告诉我。</p>
 
 <p>PS: 在 instagram web 端找到了 unfollow 的方法，但是官网也有速度限制，目前来看每分钟一个问题不大，6s 一个经常遇到速度限制。</p>
 
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
-    <span class="nx">$</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://www.instagram.com/web/friendships/</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">uid</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">/unfollow/</span><span class="dl">"</span><span class="p">);</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
-    <span class="k">if</span> <span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">60000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
+<div  class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">uids</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">uid</span> <span class="o">=</span> <span class="nx">uids</span><span class="p">.</span><span class="nf">shift</span><span class="p">();</span>
+    <span class="nx">$</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://www.instagram.com/web/friendships/</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">uid</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">/unfollow/</span><span class="dl">"</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">uids</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nf">setTimeout</span><span class="p">(</span><span class="nx">unfollow</span><span class="p">,</span> <span class="mi">60000</span><span class="p">,</span> <span class="nx">uids</span><span class="p">);</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>

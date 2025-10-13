@@ -15,7 +15,6 @@
 
   <title>python challenge in ruby and python 0~12</title>
   <meta name="description" content="Python Challenge 是一个非常有趣的闯关游戏，通过猜谜和编程得到关键词，并使用关键词更改网页的 URL 进入到下一关。现在共有 33 关。这篇文章（或者更多）将会专注于使用 python 和 ruby 解决这些问题。
-
 ">
   <meta name="keywords" content="ruby,python,pythonchallenge">
   <link rel="canonical" href="https://wulfric.me/2013/03/python-challenge-in-ruby-and-python-1/">
@@ -70,7 +69,14 @@
   <article class="post-content">
     <p><a href="http://www.pythonchallenge.com/">Python Challenge</a> 是一个非常有趣的闯关游戏，通过猜谜和编程得到关键词，并使用关键词更改网页的 URL 进入到下一关。现在共有 33 关。这篇文章（或者更多）将会专注于使用 python 和 ruby 解决这些问题。</p>
 
-<p><img src="/images/python-challenge.png" alt="python challenge" title="python challenge" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/python-challenge.png" alt="python challenge" title="python challenge" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>python challenge</figcaption>
+        </figure></p>
 
 <!--more-->
 
@@ -83,36 +89,36 @@
 <p>从这一题开始就需要一些编程的技能了。请仔细观察<a href="http://www.pythonchallenge.com/pc/def/map.jpg">图中</a>的 6 个字母的关系。 
 提示：将题目给出的每一个字母向后移动两个位置。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 这是我的 python 解法，相当的 C 呢
-</span><span class="n">astring</span><span class="o">=</span><span class="s">'''g fmnc wms bgblr rpylqjyrc gr zw fylb. rfyrq ufyr amknsrcpq ypc dmp.
- bmgle gr gl zw fylb gq glcddgagclr ylb rfyr'q ufw rfgq rcvr gq qm jmle. sqgle
- qrpgle.kyicrpylq() gq pcamkkclbcb. lmu ynnjw ml rfc spj.'''</span>
-<span class="kn">import</span> <span class="nn">re</span>
-<span class="n">bstring</span><span class="o">=</span><span class="s">''</span>
+</span><span class="n">astring</span><span class="o">=</span><span class="sh">'''</span><span class="s">g fmnc wms bgblr rpylqjyrc gr zw fylb. rfyrq ufyr amknsrcpq ypc dmp.
+ bmgle gr gl zw fylb gq glcddgagclr ylb rfyr</span><span class="sh">'</span><span class="s">q ufw rfgq rcvr gq qm jmle. sqgle
+ qrpgle.kyicrpylq() gq pcamkkclbcb. lmu ynnjw ml rfc spj.</span><span class="sh">'''</span>
+<span class="kn">import</span> <span class="n">re</span>
+<span class="n">bstring</span><span class="o">=</span><span class="sh">''</span>
 <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">astring</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">re</span><span class="p">.</span><span class="n">match</span><span class="p">(</span><span class="s">'\w'</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
-        <span class="n">a</span><span class="o">=</span><span class="nb">chr</span><span class="p">((</span><span class="nb">ord</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-</span><span class="mi">95</span><span class="p">)</span><span class="o">%</span><span class="mi">26</span><span class="o">+</span><span class="mi">97</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">re</span><span class="p">.</span><span class="nf">match</span><span class="p">(</span><span class="sh">'</span><span class="s">\w</span><span class="sh">'</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+        <span class="n">a</span><span class="o">=</span><span class="nf">chr</span><span class="p">((</span><span class="nf">ord</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-</span><span class="mi">95</span><span class="p">)</span><span class="o">%</span><span class="mi">26</span><span class="o">+</span><span class="mi">97</span><span class="p">)</span>
     <span class="n">bstring</span><span class="o">=</span><span class="n">bstring</span><span class="o">+</span><span class="n">a</span>
-<span class="k">print</span> <span class="p">(</span><span class="n">bstring</span><span class="p">)</span>
+<span class="nf">print </span><span class="p">(</span><span class="n">bstring</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 推荐的做法
-</span><span class="kn">import</span> <span class="nn">string</span>
-<span class="n">text</span><span class="o">=</span><span class="s">'''g fmnc wms bgblr rpylqjyrc gr zw fylb. rfyrq ufyr amknsrcpq ypc dmp.
- bmgle gr gl zw fylb gq glcddgagclr ylb rfyr'q ufw rfgq rcvr gq qm jmle.
- sqgle qrpgle.kyicrpylq() gq pcamkkclbcb. lmu ynnjw ml rfc spj.'''</span>
-<span class="n">table</span> <span class="o">=</span> <span class="n">string</span><span class="p">.</span><span class="n">maketrans</span><span class="p">(</span><span class="n">string</span><span class="p">.</span><span class="n">ascii_lowercase</span><span class="p">,</span>
+</span><span class="kn">import</span> <span class="n">string</span>
+<span class="n">text</span><span class="o">=</span><span class="sh">'''</span><span class="s">g fmnc wms bgblr rpylqjyrc gr zw fylb. rfyrq ufyr amknsrcpq ypc dmp.
+ bmgle gr gl zw fylb gq glcddgagclr ylb rfyr</span><span class="sh">'</span><span class="s">q ufw rfgq rcvr gq qm jmle.
+ sqgle qrpgle.kyicrpylq() gq pcamkkclbcb. lmu ynnjw ml rfc spj.</span><span class="sh">'''</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">string</span><span class="p">.</span><span class="nf">maketrans</span><span class="p">(</span><span class="n">string</span><span class="p">.</span><span class="n">ascii_lowercase</span><span class="p">,</span>
                          <span class="n">string</span><span class="p">.</span><span class="n">ascii_lowercase</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">+</span><span class="n">string</span><span class="p">.</span><span class="n">ascii_lowercase</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
-<span class="n">text</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+<span class="n">text</span><span class="p">.</span><span class="nf">translate</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
 </code></pre></div></div>
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">gets</span><span class="p">.</span><span class="nf">tr</span> <span class="s2">"a-z"</span><span class="p">,</span> <span class="s2">"c-zab"</span>
 <span class="c1"># 就这么简单！然后输入字符串就好了！真教人喜欢！</span>
 </code></pre></div></div>
 
-<p>在官网的解答上还有利用 *nix 系统的 tr 函数的方法，本质上和 ruby 的方法是一样的：<code class="language-plaintext highlighter-rouge">curl http://www.pythonchallenge.com/pc/def/map.html | tr a-z c-za-b</code>。</p>
+<p>在官网的解答上还有利用 *nix 系统的 tr 函数的方法，本质上和 ruby 的方法是一样的：<span class="codespan">curl http://www.pythonchallenge.com/pc/def/map.html | tr a-z c-za-b</span>。</p>
 
 <h3 id="第-2-题">第 2 题</h3>
 
@@ -122,19 +128,19 @@
 
 <p>我选取的代码都是识别字母的方法，判断频率的方法也类似，不再赘述。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 我的代码，判断每个字符是否是字母
-</span><span class="kn">import</span> <span class="nn">re</span>
-<span class="n">astring</span> <span class="o">=</span> <span class="s">'''copy from the source page'''</span>
-<span class="n">bstring</span> <span class="o">=</span> <span class="s">''</span>
+</span><span class="kn">import</span> <span class="n">re</span>
+<span class="n">astring</span> <span class="o">=</span> <span class="sh">'''</span><span class="s">copy from the source page</span><span class="sh">'''</span>
+<span class="n">bstring</span> <span class="o">=</span> <span class="sh">''</span>
 <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">astring</span><span class="p">:</span>
-<span class="k">if</span> <span class="n">re</span><span class="p">.</span><span class="n">match</span><span class="p">(</span><span class="s">'[a-zA-Z]'</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+<span class="k">if</span> <span class="n">re</span><span class="p">.</span><span class="nf">match</span><span class="p">(</span><span class="sh">'</span><span class="s">[a-zA-Z]</span><span class="sh">'</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
     <span class="n">bstring</span> <span class="o">=</span> <span class="n">bstring</span><span class="o">+</span><span class="n">a</span>
 </code></pre></div></div>
 
-<p>其中最后判断的部分可以换成<code class="language-plaintext highlighter-rouge">print re.sub('[^a-z]','', s)</code>。</p>
+<p>其中最后判断的部分可以换成<span class="codespan">print re.sub('[^a-z]','', s)</span>。</p>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="n">s</span> <span class="o">=</span> <span class="o">&lt;&lt;</span><span class="no">'EOF'</span><span class="sh">
 # copy from the source page
 </span><span class="no">EOF</span>
@@ -147,16 +153,16 @@
 
 <p>提示：用正则表达式查找更方便。前面虽然也用到了正则，但是这里不用正则的话就会很麻烦。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 我的代码比较笨，但是方法是一样的，就不贴上来了。
-</span><span class="kn">import</span> <span class="nn">re</span>
-<span class="n">s</span> <span class="o">=</span> <span class="s">'''
+</span><span class="kn">import</span> <span class="n">re</span>
+<span class="n">s</span> <span class="o">=</span> <span class="sh">'''</span><span class="s">
 copy from the source page
-'''</span>
-<span class="k">print</span> <span class="s">''</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="p">.</span><span class="n">findall</span><span class="p">(</span><span class="s">'[^A-Z][A-Z]{3}([a-z])[A-Z]{3}[^A-Z]'</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span>
+</span><span class="sh">'''</span>
+<span class="k">print</span> <span class="sh">''</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">re</span><span class="p">.</span><span class="nf">findall</span><span class="p">(</span><span class="sh">'</span><span class="s">[^A-Z][A-Z]{3}([a-z])[A-Z]{3}[^A-Z]</span><span class="sh">'</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="n">s</span> <span class="o">=</span> <span class="o">&lt;&lt;</span><span class="no">'EOF'</span><span class="sh">
 copy from the source page
 </span><span class="no">EOF</span>
@@ -171,22 +177,22 @@ copy from the source page
 
 <p>请记住这一题的图片的样子，以后会用到~</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">urlopen</span>
-<span class="n">astring</span><span class="o">=</span><span class="s">'http://www.pythonchallenge.com/pc/def/linkedlist.php?nothing='</span>
-<span class="n">temp</span><span class="o">=</span><span class="s">'12345'</span>
-<span class="n">f</span> <span class="o">=</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">astring</span><span class="o">+</span><span class="n">temp</span><span class="p">)</span>
-<span class="n">a</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">read</span><span class="p">()</span>
-<span class="n">restring</span><span class="o">=</span><span class="n">re</span><span class="p">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">'and the next nothing is (\d{3,5})'</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">400</span><span class="p">):</span>
-    <span class="n">temp</span><span class="o">=</span><span class="n">re</span><span class="p">.</span><span class="n">findall</span><span class="p">(</span><span class="n">restring</span><span class="p">,</span><span class="n">a</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
-    <span class="n">f</span><span class="o">=</span><span class="n">urlopen</span><span class="p">(</span><span class="n">astring</span><span class="o">+</span><span class="n">temp</span><span class="p">)</span>
-    <span class="n">a</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="n">read</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">import</span> <span class="n">re</span>
+<span class="kn">from</span> <span class="n">urllib</span> <span class="kn">import</span> <span class="n">urlopen</span>
+<span class="n">astring</span><span class="o">=</span><span class="sh">'</span><span class="s">http://www.pythonchallenge.com/pc/def/linkedlist.php?nothing=</span><span class="sh">'</span>
+<span class="n">temp</span><span class="o">=</span><span class="sh">'</span><span class="s">12345</span><span class="sh">'</span>
+<span class="n">f</span> <span class="o">=</span> <span class="nf">urlopen</span><span class="p">(</span><span class="n">astring</span><span class="o">+</span><span class="n">temp</span><span class="p">)</span>
+<span class="n">a</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
+<span class="n">restring</span><span class="o">=</span><span class="n">re</span><span class="p">.</span><span class="nf">compile</span><span class="p">(</span><span class="sh">'</span><span class="s">and the next nothing is (\d{3,5})</span><span class="sh">'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">400</span><span class="p">):</span>
+    <span class="n">temp</span><span class="o">=</span><span class="n">re</span><span class="p">.</span><span class="nf">findall</span><span class="p">(</span><span class="n">restring</span><span class="p">,</span><span class="n">a</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nf">print</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">=</span><span class="nf">urlopen</span><span class="p">(</span><span class="n">astring</span><span class="o">+</span><span class="n">temp</span><span class="p">)</span>
+    <span class="n">a</span><span class="o">=</span><span class="n">f</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"open-uri"</span>
 <span class="n">n</span><span class="o">=</span><span class="mi">12345</span>
 <span class="kp">loop</span> <span class="k">do</span>
@@ -208,7 +214,7 @@ copy from the source page
 
 <p>或者同时借助 ruby 和 bash 命令，在 命令行如下输入，也可以得到需要的结果。</p>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="n">ruby</span> <span class="o">-</span><span class="n">wle</span> <span class="s1">'n = 12345; print n = $1 while 
           `GET "http://www.pythonchallenge.com/pc/def/linkedlist.php?nothing=#{n}"`
           =~ /(\d+)$/'</span>
@@ -220,14 +226,14 @@ copy from the source page
 
 <p>提示：将该对象通过 pickle 模块 load 出来后，仔细观察，不妨把 data 按行打印出来看看。每一行的数字加起来都是 95，猜测每一行由 95 个字符构成，剩下的事情就简单了。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
 # 推荐的做法
-</span><span class="kn">import</span> <span class="nn">urllib2</span><span class="p">,</span> <span class="n">sys</span><span class="p">,</span> <span class="n">pickle</span>
-<span class="n">pickle_data</span> <span class="o">=</span> <span class="n">urllib2</span><span class="p">.</span><span class="n">urlopen</span><span class="p">(</span><span class="s">'http://www.pythonchallenge.com/pc/def/banner.p'</span><span class="p">).</span><span class="n">read</span><span class="p">()</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">pickle_data</span><span class="p">)</span>
+</span><span class="kn">import</span> <span class="n">urllib2</span><span class="p">,</span> <span class="n">sys</span><span class="p">,</span> <span class="n">pickle</span>
+<span class="n">pickle_data</span> <span class="o">=</span> <span class="n">urllib2</span><span class="p">.</span><span class="nf">urlopen</span><span class="p">(</span><span class="sh">'</span><span class="s">http://www.pythonchallenge.com/pc/def/banner.p</span><span class="sh">'</span><span class="p">).</span><span class="nf">read</span><span class="p">()</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="p">.</span><span class="nf">loads</span><span class="p">(</span><span class="n">pickle_data</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">char</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">stdout</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">char</span> <span class="o">*</span> <span class="n">count</span><span class="p">)</span>
-    <span class="n">sys</span><span class="p">.</span><span class="n">stdout</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">char</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">stdout</span><span class="p">.</span><span class="nf">write</span><span class="p">(</span><span class="n">char</span> <span class="o">*</span> <span class="n">count</span><span class="p">)</span>
+    <span class="n">sys</span><span class="p">.</span><span class="n">stdout</span><span class="p">.</span><span class="nf">write</span><span class="p">(</span><span class="sh">"</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>这个真的就只能 python 做了……</p>
@@ -240,16 +246,16 @@ copy from the source page
 
 <p>进入 zip，首先看到的就是 readme.txt，它告诉我们从 90052 开始。那就开始吧，和第 4 题一样。直到找不到数字的时候，输出最后一个文件的内容，它告诉我们去收集 comment，OK！收集 comment 然后输出就行了！</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="n">f</span> <span class="o">=</span> <span class="s">"channel.zip"</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">zipfile</span><span class="p">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-<span class="n">name</span> <span class="o">=</span> <span class="s">'90052.txt'</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="n">f</span> <span class="o">=</span> <span class="sh">"</span><span class="s">channel.zip</span><span class="sh">"</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">zipfile</span><span class="p">.</span><span class="nc">ZipFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="n">name</span> <span class="o">=</span> <span class="sh">'</span><span class="s">90052.txt</span><span class="sh">'</span>
 <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
-    <span class="k">print</span> <span class="n">z</span><span class="p">.</span><span class="n">getinfo</span><span class="p">(</span><span class="n">name</span><span class="p">).</span><span class="n">comment</span><span class="p">,</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">z</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">name</span><span class="p">).</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s">'.txt'</span>
+    <span class="k">print</span> <span class="n">z</span><span class="p">.</span><span class="nf">getinfo</span><span class="p">(</span><span class="n">name</span><span class="p">).</span><span class="n">comment</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">z</span><span class="p">.</span><span class="nf">read</span><span class="p">(</span><span class="n">name</span><span class="p">).</span><span class="nf">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="sh">'</span><span class="s">.txt</span><span class="sh">'</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"zip/zip"</span>
 <span class="n">zipfilename</span> <span class="o">=</span> <span class="s2">"/home/haidao/Downloads/channel.zip"</span>
 <span class="no">Zip</span><span class="o">::</span><span class="no">ZipFile</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="n">zipfilename</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">zipfile</span><span class="o">|</span>
@@ -277,18 +283,18 @@ copy from the source page
 
 <p>一进去就感到中间那条线很可疑！全是灰色的块块，我们知道灰色的 RGB 是相等的，且从 0-255，不正是 ASCII 码吗。好的，把这些灰色块块换成数字，再换成 ASCII 码吧。</p>
 
-<p>提示：python 需要 PIL 模块，ruby 需要 Rmagick 模块。python 通过 pip 安装 PIL；ruby 安装 Rmagick 需要先安装<code class="language-plaintext highlighter-rouge">sudo apt-get install libmagickwand-dev</code>，然后直接<code class="language-plaintext highlighter-rouge">gem install rmagick</code>。</p>
+<p>提示：python 需要 PIL 模块，ruby 需要 Rmagick 模块。python 通过 pip 安装 PIL；ruby 安装 Rmagick 需要先安装<span class="codespan">sudo apt-get install libmagickwand-dev</span>，然后直接<span class="codespan">gem install rmagick</span>。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">import</span> <span class="nn">re</span><span class="p">,</span> <span class="n">Image</span>
-<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="s">"oxygen.png"</span><span class="p">)</span>
-<span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="p">.</span><span class="n">getpixel</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="mi">47</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">im</span><span class="p">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">7</span><span class="p">)]</span>
-<span class="n">chrs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">chr</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">row</span> <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="n">g</span> <span class="o">==</span> <span class="n">b</span><span class="p">]</span>
-<span class="n">s</span> <span class="o">=</span> <span class="s">''</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">chrs</span><span class="p">)</span>
-<span class="k">print</span> <span class="s">''</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">chr</span><span class="p">,</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">re</span><span class="p">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s">'\d+'</span><span class="p">,</span><span class="n">s</span><span class="p">))))</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">import</span> <span class="n">re</span><span class="p">,</span> <span class="n">Image</span>
+<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sh">"</span><span class="s">oxygen.png</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="p">.</span><span class="nf">getpixel</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="mi">47</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">im</span><span class="p">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">7</span><span class="p">)]</span>
+<span class="n">chrs</span> <span class="o">=</span> <span class="p">[</span><span class="nf">chr</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">row</span> <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="n">g</span> <span class="o">==</span> <span class="n">b</span><span class="p">]</span>
+<span class="n">s</span> <span class="o">=</span> <span class="sh">''</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">chrs</span><span class="p">)</span>
+<span class="k">print</span> <span class="sh">''</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="nf">map</span><span class="p">(</span><span class="nb">chr</span><span class="p">,</span> <span class="nf">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">re</span><span class="p">.</span><span class="nf">findall</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">\d+</span><span class="sh">'</span><span class="p">,</span><span class="n">s</span><span class="p">))))</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"RMagick"</span>
 <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="s2">"oxygen.png"</span><span class="p">).</span><span class="nf">get_pixels</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">45</span><span class="p">,</span><span class="mi">629</span><span class="p">,</span><span class="mi">1</span><span class="p">).</span><span class="nf">map</span><span class="p">.</span><span class="nf">with_index</span>
   <span class="p">{</span><span class="o">|</span><span class="nb">p</span><span class="p">,</span><span class="n">i</span><span class="o">|</span> <span class="p">(</span><span class="nb">p</span><span class="p">.</span><span class="nf">red</span><span class="o">/</span><span class="mi">255</span><span class="p">).</span><span class="nf">chr</span> <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">7</span><span class="o">==</span><span class="mi">0</span><span class="p">)}.</span><span class="nf">join</span><span class="p">.</span><span class="nf">scan</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">){</span><span class="o">|</span><span class="n">c</span><span class="o">|</span> <span class="nb">print</span> <span class="n">c</span><span class="p">.</span><span class="nf">to_i</span><span class="p">.</span><span class="nf">chr</span> <span class="p">}</span>
@@ -298,16 +304,16 @@ copy from the source page
 
 <p>蜜蜂（bee）！源代码中一串可疑的字符串（BZ 开头）！其实我也是看提示才知道用到了 python 的 bz2 模块……</p>
 
-<p>python 中的模块叫 bz2，是内置的；ruby 的需要先下载：<code class="language-plaintext highlighter-rouge">gem install bzip2-ruby</code>。</p>
+<p>python 中的模块叫 bz2，是内置的；ruby 的需要先下载：<span class="codespan">gem install bzip2-ruby</span>。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">import</span> <span class="nn">bz2</span>
-<span class="n">un</span> <span class="o">=</span> <span class="s">"un 的字符串内容，表示 user name"</span>
-<span class="n">pw</span> <span class="o">=</span> <span class="s">"pw 的字符串内容，表示 password"</span>
-<span class="k">print</span> <span class="n">bz2</span><span class="p">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">un</span><span class="p">),</span> <span class="n">bz2</span><span class="p">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">pw</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">import</span> <span class="n">bz2</span>
+<span class="n">un</span> <span class="o">=</span> <span class="sh">"</span><span class="s">un 的字符串内容，表示 user name</span><span class="sh">"</span>
+<span class="n">pw</span> <span class="o">=</span> <span class="sh">"</span><span class="s">pw 的字符串内容，表示 password</span><span class="sh">"</span>
+<span class="k">print</span> <span class="n">bz2</span><span class="p">.</span><span class="nf">decompress</span><span class="p">(</span><span class="n">un</span><span class="p">),</span> <span class="n">bz2</span><span class="p">.</span><span class="nf">decompress</span><span class="p">(</span><span class="n">pw</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s1">'bzip2'</span>
 <span class="n">un</span> <span class="o">=</span> <span class="s2">"同上，需要用双引号括起来"</span>
 <span class="n">pw</span> <span class="o">=</span> <span class="s2">"同上，需要用双引号括起来"</span>
@@ -320,16 +326,16 @@ copy from the source page
 
 <p>提示：源代码给的 first 每两个数字一组，是一个点的位置，从第一个点开始画，一直画到最后一个点，seoncd 也是这样。原图上的点是要告诉你，连好后看点线的外观。这是一头牛。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageDraw</span>
-<span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="n">new</span><span class="p">(</span><span class="s">"RGB"</span><span class="p">,(</span><span class="mi">640</span><span class="p">,</span><span class="mi">480</span><span class="p">),</span> <span class="s">'white'</span><span class="p">)</span>
-<span class="n">draw</span> <span class="o">=</span> <span class="n">ImageDraw</span><span class="p">.</span><span class="n">Draw</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
-<span class="n">draw</span><span class="p">.</span><span class="n">polygon</span><span class="p">(</span><span class="n">first_list</span><span class="p">,</span> <span class="s">'black'</span><span class="p">)</span>
-<span class="n">draw</span><span class="p">.</span><span class="n">polygon</span><span class="p">(</span><span class="n">second_list</span><span class="p">,</span> <span class="s">'grey'</span><span class="p">)</span>
-<span class="n">img</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">from</span> <span class="n">PIL</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageDraw</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="sh">"</span><span class="s">RGB</span><span class="sh">"</span><span class="p">,(</span><span class="mi">640</span><span class="p">,</span><span class="mi">480</span><span class="p">),</span> <span class="sh">'</span><span class="s">white</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">draw</span> <span class="o">=</span> <span class="n">ImageDraw</span><span class="p">.</span><span class="nc">Draw</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">draw</span><span class="p">.</span><span class="nf">polygon</span><span class="p">(</span><span class="n">first_list</span><span class="p">,</span> <span class="sh">'</span><span class="s">black</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">draw</span><span class="p">.</span><span class="nf">polygon</span><span class="p">(</span><span class="n">second_list</span><span class="p">,</span> <span class="sh">'</span><span class="s">grey</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">img</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"RMagick"</span>
 <span class="n">img</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span> <span class="s1">'good.jpg'</span>
 <span class="n">gc</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">Draw</span><span class="p">.</span><span class="nf">new</span>
@@ -347,15 +353,15 @@ copy from the source page
 
 <p>这是一个 <a href="http://en.wikipedia.org/wiki/Look-and-say_sequence">look and say sequence</a>，它是一个比较特殊的序列。后者是前者读出的结果，比如：前一个数是 11，则后一个数就是 21，表示 2 个 1；再后一个数就是 1 个 2，1 个1，即 1211。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">findall</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">from</span> <span class="n">re</span> <span class="kn">import</span> <span class="n">findall</span>
 <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="k">return</span> <span class="s">"1"</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">''</span><span class="p">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="p">[</span><span class="s">"%d%s"</span><span class="o">%</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s">'(\d)(\1*)'</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))])</span>
-<span class="k">print</span> <span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
+    <span class="k">return</span> <span class="sh">"</span><span class="s">1</span><span class="sh">"</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="sh">''</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span>
+        <span class="p">[</span><span class="sh">"</span><span class="s">%d%s</span><span class="sh">"</span><span class="o">%</span><span class="p">(</span><span class="nf">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="nf">findall</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">(\d)(\1*)</span><span class="sh">'</span><span class="p">,</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))])</span>
+<span class="k">print</span> <span class="nf">len</span><span class="p">(</span><span class="nf">f</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="k">def</span> <span class="nf">f</span> <span class="n">n</span>
   <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">?</span> <span class="s2">"1"</span><span class="p">:</span>
     <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="nf">scan</span><span class="p">(</span><span class="sr">/(\d)(\1*)/</span><span class="p">).</span><span class="nf">collect</span><span class="p">{</span><span class="o">|</span><span class="n">i</span><span class="o">|</span> <span class="s2">"</span><span class="si">#{</span><span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="nf">size</span><span class="o">+</span><span class="mi">1</span><span class="si">}#{</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">}.</span><span class="nf">join</span>
@@ -371,22 +377,22 @@ copy from the source page
 
 <p>提示：用下一行的黑色像素覆盖上一行的非黑色像素。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="s">"cave.jpg"</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="kn">from</span> <span class="n">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sh">"</span><span class="s">cave.jpg</span><span class="sh">"</span><span class="p">)</span>
 <span class="n">c</span><span class="p">,</span><span class="n">r</span> <span class="o">=</span> <span class="n">img</span><span class="p">.</span><span class="n">size</span>
-<span class="n">pix</span> <span class="o">=</span> <span class="n">img</span><span class="p">.</span><span class="n">load</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">r</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+<span class="n">pix</span> <span class="o">=</span> <span class="n">img</span><span class="p">.</span><span class="nf">load</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">r</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+        <span class="nf">if </span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="n">j</span><span class="p">)</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
             <span class="n">pix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">pix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-<span class="n">img</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+<span class="n">img</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 <span class="c1"># 注意也可以用 img.getpixel 和 img.putpixel 来操作像素。
 </span></code></pre></div></div>
 
-<p>或者直接<code class="language-plaintext highlighter-rouge">Image.open('cave.jpg').resize((320, 240)).show()</code>这样也可以。本来原理就是把黑色的像素块拼起来。你也可以在 PS 里选择以邻近的方法将图像大小重新设置为 320*240。</p>
+<p>或者直接<span class="codespan">Image.open('cave.jpg').resize((320, 240)).show()</span>这样也可以。本来原理就是把黑色的像素块拼起来。你也可以在 PS 里选择以邻近的方法将图像大小重新设置为 320*240。</p>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="nb">require</span> <span class="s2">"RMagick"</span>
 <span class="n">img</span> <span class="o">=</span> <span class="no">Magick</span><span class="o">::</span><span class="no">ImageList</span><span class="p">.</span><span class="nf">new</span> <span class="s1">'cave.jpg'</span>
 <span class="n">r</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">img</span><span class="p">.</span><span class="nf">rows</span><span class="p">,</span> <span class="n">img</span><span class="p">.</span><span class="nf">columns</span>
@@ -403,19 +409,19 @@ copy from the source page
 
 <h3 id="第-12-题">第 12 题</h3>
 
-<p>这一题真难……首先仔细观察源码（源码才几行有什么好观察的！），注意到图片的名字叫 evil1.jpg，诶～title 告诉我们要 dealing evil，那么就先看看 evil2.jpg 是什么。有惊喜吧！它告诉我们不是 jpg，是 gfx。先不管，继续 dealing evil，换 evil3.jpg，没啦！不管，还是继续，evil4.jpg：一张坏掉的图？用文本编辑器打开它，<code class="language-plaintext highlighter-rouge">bert is evil, go back!</code></p>
+<p>这一题真难……首先仔细观察源码（源码才几行有什么好观察的！），注意到图片的名字叫 evil1.jpg，诶～title 告诉我们要 dealing evil，那么就先看看 evil2.jpg 是什么。有惊喜吧！它告诉我们不是 jpg，是 gfx。先不管，继续 dealing evil，换 evil3.jpg，没啦！不管，还是继续，evil4.jpg：一张坏掉的图？用文本编辑器打开它，<span class="codespan">bert is evil, go back!</span></p>
 
 <p>好吧，先记住 bert，url 改成 bert.html 会有一张图，不过看起来没什么用，还是回到 evil2 吧！把 jpg 改成 gfx，好，得到一个文件。剩下的所有工作都是在这个文件里进行。仔细观察这个文件的头部，会发现它很奇怪。有点熟悉，但是又不是那么熟悉。 <del>好吧我是看了别人的提示才知道的。</del> 原来这个文件中，隐藏着若干个图片！每隔 5 个字符看，很容易的就能找到 GIF 和 PNG。还等什么，马上写代码把他们分开吧！</p>
 
-<p>提示，用可以查看二进制文件的编辑器查看这个 .gfx 文件。在 vim 里是输入<code class="language-plaintext highlighter-rouge">:%!xxd</code>即可。</p>
+<p>提示，用可以查看二进制文件的编辑器查看这个 .gfx 文件。在 vim 里是输入<span class="codespan">:%!xxd</span>即可。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
-</span><span class="n">raw</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">'evil2.gfx'</span><span class="p">,</span><span class="s">'rb'</span><span class="p">).</span><span class="n">read</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-    <span class="nb">open</span><span class="p">(</span><span class="s">'out%d'</span><span class="o">%</span><span class="n">i</span><span class="p">,</span> <span class="s">'wb'</span><span class="p">).</span><span class="n">write</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">i</span><span class="p">::</span><span class="mi">5</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># python
+</span><span class="n">raw</span> <span class="o">=</span> <span class="nf">open</span><span class="p">(</span><span class="sh">'</span><span class="s">evil2.gfx</span><span class="sh">'</span><span class="p">,</span><span class="sh">'</span><span class="s">rb</span><span class="sh">'</span><span class="p">).</span><span class="nf">read</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="nf">open</span><span class="p">(</span><span class="sh">'</span><span class="s">out%d</span><span class="sh">'</span><span class="o">%</span><span class="n">i</span><span class="p">,</span> <span class="sh">'</span><span class="s">wb</span><span class="sh">'</span><span class="p">).</span><span class="nf">write</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">i</span><span class="p">::</span><span class="mi">5</span><span class="p">])</span>
 </code></pre></div></div>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ruby</span>
 <span class="c1"># 一定要注意，读写文件要强调是二进制</span>
 <span class="n">evil</span> <span class="o">=</span>  <span class="no">File</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">"evil2.gfx"</span><span class="p">,</span> <span class="s1">'rb'</span><span class="p">).</span><span class="nf">read</span>
 <span class="n">outputs</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="o">..</span><span class="mi">4</span><span class="p">).</span><span class="nf">map</span> <span class="p">{</span> <span class="o">|</span><span class="n">i</span><span class="o">|</span> <span class="no">File</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">"out</span><span class="si">#{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="p">}</span>

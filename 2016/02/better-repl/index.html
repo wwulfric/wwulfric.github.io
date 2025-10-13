@@ -15,7 +15,6 @@
 
   <title>更好的 repl</title>
   <meta name="description" content="在习惯使用动态语言之后，很是热衷于在 repl 下做各种尝试验证一些简单的想法。多数动态语言都内置提供了 repl，比如 python 的python，ruby 的irb，php 的php -a，nodejs 的node，甚至 haskell 这样的静态语言也有 repl: ghci。 只是这些自带的 repl 都比较简单，所以会有一些替代工具，提供更好的体验：语法高亮，即时输出，简单的代码补全和提示。
-
 ">
   <meta name="keywords" content="repl,python,ruby,php,nodejs,jupyter,rlwrap">
   <link rel="canonical" href="https://wulfric.me/2016/02/better-repl/">
@@ -68,15 +67,15 @@
 
 
   <article class="post-content">
-    <p>在习惯使用动态语言之后，很是热衷于在 repl 下做各种尝试验证一些简单的想法。多数动态语言都内置提供了 repl，比如 python 的<code class="language-plaintext highlighter-rouge">python</code>，ruby 的<code class="language-plaintext highlighter-rouge">irb</code>，php 的<code class="language-plaintext highlighter-rouge">php -a</code>，nodejs 的<code class="language-plaintext highlighter-rouge">node</code>，甚至 haskell 这样的静态语言也有 repl: <code class="language-plaintext highlighter-rouge">ghci</code>。 只是这些自带的 repl 都比较简单，所以会有一些替代工具，提供<strong>更好</strong>的体验：语法高亮，即时输出，简单的代码补全和提示。</p>
+    <p>在习惯使用动态语言之后，很是热衷于在 repl 下做各种尝试验证一些简单的想法。多数动态语言都内置提供了 repl，比如 python 的<span class="codespan">python</span>，ruby 的<span class="codespan">irb</span>，php 的<span class="codespan">php -a</span>，nodejs 的<span class="codespan">node</span>，甚至 haskell 这样的静态语言也有 repl: <span class="codespan">ghci</span>。 只是这些自带的 repl 都比较简单，所以会有一些替代工具，提供<strong>更好</strong>的体验：语法高亮，即时输出，简单的代码补全和提示。</p>
 
 <h3 id="php">php</h3>
 
-<p>php 默认的是<code class="language-plaintext highlighter-rouge">php -a</code>，功能很差，要输出内容还必须 echo。<code class="language-plaintext highlighter-rouge">boris</code>是更好的替代，不需输入 echo 直接输出，也有基本的语法高亮（只对输出有高亮，输入没有）。boris 没有代码补全。</p>
+<p>php 默认的是<span class="codespan">php -a</span>，功能很差，要输出内容还必须 echo。<span class="codespan">boris</span>是更好的替代，不需输入 echo 直接输出，也有基本的语法高亮（只对输出有高亮，输入没有）。boris 没有代码补全。</p>
 
-<p>MAC 自带的 php 缺乏一些必要的组件，使得 boris 无法使用，建议使用 brew 下的 php: <code class="language-plaintext highlighter-rouge">brew install php</code>。</p>
+<p>MAC 自带的 php 缺乏一些必要的组件，使得 boris 无法使用，建议使用 brew 下的 php: <span class="codespan">brew install php</span>。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">boris</span><span class="o">&gt;</span> <span class="kd">class</span> <span class="nc">A</span> <span class="p">{</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="n">boris</span><span class="o">&gt;</span> <span class="kd">class</span> <span class="nc">A</span> <span class="p">{</span>
 <span class="p">[</span><span class="mi">1</span><span class="p">]</span>     <span class="o">*&gt;</span> <span class="k">function</span> <span class="n">t</span><span class="p">(){</span>
 <span class="p">[</span><span class="mi">1</span><span class="p">]</span>     <span class="o">*&gt;</span> <span class="k">return</span> <span class="s2">"test"</span><span class="p">;</span>
 <span class="p">[</span><span class="mi">1</span><span class="p">]</span>     <span class="o">*&gt;</span> <span class="p">}</span>
@@ -96,13 +95,27 @@
 
 <p>bpython 是一个相当优秀的替代，不仅提供了很好的高亮，也可以 tab 键智能补全和提示。建议当只是想做一些简单的试验的时候，用 bpython 代替 python。</p>
 
-<p><img src="/images/R-bpython.png" alt="bpython" title="bpython.png" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-bpython.png" alt="bpython" title="bpython.png" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>bpython</figcaption>
+        </figure></p>
 
-<p>ipython 的 terminal 看起来似乎没有 bpython 好，不仅没有语法高亮，代码提示也很一般<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">1</a></sup>。但是 ipython 是完全不同的一个工具，详情看<a href="http://ipython.org/">官网</a>，这是一个套件，支持交互式的数据可视化，ipython notebook 是一个强大的 python IDE，功能很类似 matlab（不妨参考之前的<a href="/2015/10/better-config-for-matplotlib/">文章</a>）。毕竟，一个可以招博士后的项目，绝非池中之物<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">2</a></sup>。</p>
+<p>ipython 的 terminal 看起来似乎没有 bpython 好，不仅没有语法高亮，代码提示也很一般<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。但是 ipython 是完全不同的一个工具，详情看<a href="http://ipython.org/">官网</a>，这是一个套件，支持交互式的数据可视化，ipython notebook 是一个强大的 python IDE，功能很类似 matlab（不妨参考之前的<a href="/2015/10/better-config-for-matplotlib/">文章</a>）。毕竟，一个可以招博士后的项目，绝非池中之物<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>。</p>
 
 <p>ipython notebook 基于 <a href="http://jupyter.org/">jupyter</a>，功能丰富。jupyter 目前已支持 bash, haskell, julia, python, r, ruby, scala。<a href="https://try.jupyter.org/">Try</a></p>
 
-<p><img src="/images/R-jupyter.png" alt="jupyter" title="jupyter.png" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-jupyter.png" alt="jupyter" title="jupyter.png" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jupyter</figcaption>
+        </figure></p>
 
 <p>最近的 4.1 <a href="http://blog.jupyter.org/2016/01/08/notebook-4-1-release/">更新</a>中，更是提供了一些现代编辑器如 sublime text 和 atom 的功能，比如 Command palette，以及更强大的查找和替换。详情请查看上面博文。</p>
 
@@ -110,13 +123,20 @@
 
 <p>ruby 自带的 irb 默认功能是挺简单的，但是配置好 irbrc 后，也是可以实现常见的高亮和提示功能的。然而在 ruby 世界用 pry 的更多，pry  默认配置已经足够好，还可以配置 pryrc，完全定制 pry 的样式和功能。pry 提供了一些实用<a href="https://github.com/pry/pry/wiki/Available-plugins">插件</a>，甚至有 <a href="https://github.com/kyrylo/pry-theme">pry-theme</a> 这样的项目。ruby 世界对颜值的追求一向不落人后。</p>
 
-<p><img src="/images/R-pry-rails-console.png" alt="pry-rails-console" title="pry-rails-console.png" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-pry-rails-console.png" alt="pry-rails-console" title="pry-rails-console.png" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>pry-rails-console</figcaption>
+        </figure></p>
 
 <h3 id="nodejs">nodejs</h3>
 
 <p>nodejs 除了自带的 node，也有一些第三方 repl 增强。<a href="http://danielgtaylor.github.io/nesh/">nesh</a> 就是其中很优秀的一个。不得不说，node 世界最近发展迅速，开发者热情高涨，插件、库层出不穷。<a href="https://www.npmjs.com/browse/keyword/nesh">nesh plugins</a></p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm <span class="nb">install</span> <span class="nt">-g</span> nesh
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm <span class="nb">install</span> <span class="nt">-g</span> nesh
 <span class="c"># Run nesh</span>
 nesh
 <span class="c"># Run nesh with CoffeeScript</span>
@@ -127,7 +147,14 @@ nesh <span class="nt">-b</span>
 
 <p><a href="https://github.com/mksenzov/i.js/tree/master">i.js</a> 是一个受 ipython 启发而开发的项目，但不是基于 jupyter。有兴趣的不妨尝试一下。</p>
 
-<p><img src="https://camo.githubusercontent.com/33b129ac20536958f30b7bc2cacd8a3b7dfdb7a8/687474703a2f2f692e696d6775722e636f6d2f706863597838502e706e67" alt="i.js screenshot" title="i.js screenshot" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://camo.githubusercontent.com/33b129ac20536958f30b7bc2cacd8a3b7dfdb7a8/687474703a2f2f692e696d6775722e636f6d2f706863597838502e706e67" alt="i.js screenshot" title="i.js screenshot" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>i.js screenshot</figcaption>
+        </figure></p>
 
 <h3 id="others">others</h3>
 
@@ -135,7 +162,7 @@ nesh <span class="nt">-b</span>
 
 <p><a href="https://github.com/hanslub42/rlwrap">rlwrap</a> 正是解决这一问题的工具。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>0] % sqlite3 production.sqlite3
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>0] % sqlite3 production.sqlite3
 SQLite version 3.8.4.1 2014-03-11 15:27:36
 Enter <span class="s2">".help"</span> <span class="k">for </span>usage hints.
 sqlite&gt; .tables
@@ -144,7 +171,7 @@ albums             images             <span class="nb">users
 sqlite&gt; ^[[A^[[A^[[A^[[A
 </code></pre></div></div>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>1] % rlwrap sqlite3 production.sqlite3
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>1] % rlwrap sqlite3 production.sqlite3
 SQLite version 3.8.4.1 2014-03-11 15:27:36
 Enter <span class="s2">".help"</span> <span class="k">for </span>usage hints.
 sqlite&gt; .tables
@@ -157,10 +184,10 @@ sqlite&gt; .tables
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p>因为 ipython terminal 还不是很好用，因此有了这个项目 <a href="http://bipython.org/">bipython</a>。尽管个人觉得不是很必要😳 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>IPython/Jupyter is hiring postdocs: the project has <a href="http://blog.jupyter.org/2015/11/19/project-jupyter-is-hiring-two-postdoctoral-fellows-uc-berkeley">two postdoctoral positions open at UC Berkeley</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

@@ -15,7 +15,6 @@
 
   <title>服务器和本地的文件同步</title>
   <meta name="description" content="在开发的时候经常会有这样的情形：在本地做 Git 操作和代码编辑工作，然后在远程服务器/虚拟机上做调试，这样可以保持本地环境的整洁。有以下几种待选方案：
-
 ">
   <meta name="keywords" content="samba,远程,remote,server,rsync,ubuntu,centos">
   <link rel="canonical" href="https://wulfric.me/2014/03/sync-in-remote-and-local/">
@@ -80,7 +79,14 @@
 
 <h2 id="samba">Samba</h2>
 
-<p><img src="/images/samba.png" alt="Samba" title="Samba" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/samba.png" alt="Samba" title="Samba" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>Samba</figcaption>
+        </figure></p>
 
 <p>在网速比较好的情况下，samba 是一个比较优秀的解决方案。它将远程的文件夹加载到本地，可以保持本地和远程文件内容的一致性。</p>
 
@@ -88,7 +94,7 @@
 
 <h3 id="安装">安装</h3>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
 <span class="c"># 安装 samba</span>
 <span class="nb">sudo </span>apt-get <span class="nb">install </span>samba
 <span class="c"># yum: sudo yum install samba</span>
@@ -114,7 +120,7 @@
 
 <p>如果服务器是在信任的局域网中，那么可以跳过权限验证，使用简单的guest 来挂载。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir </span>guest_share
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir </span>guest_share
 <span class="nb">ls</span> <span class="nt">-l</span>
 <span class="c"># 通过查看可以知道 guest_share 的权限是 775，guest 没有写权限，这会导致本地只能读而不能写</span>
 <span class="c"># 修改权限</span>
@@ -123,7 +129,7 @@
 
 <p>编辑配置文件。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
 
 <span class="c">#======================= Global Settings ======================</span>
 <span class="o">[</span>global]
@@ -141,7 +147,7 @@
 
 <p>重启。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看配置文件的内容有没有错误，如果有重要的配置丢失，可能是因为缩进不对</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看配置文件的内容有没有错误，如果有重要的配置丢失，可能是因为缩进不对</span>
 <span class="nb">sudo </span>testparm
 <span class="nb">sudo </span>service smb restart
 <span class="nb">sudo </span>service nmb restart
@@ -164,7 +170,7 @@
 
 <p>如果是远程的服务器，安全起见，最好还是能够用帐号和密码登录。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建组</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 创建组</span>
 <span class="nb">sudo </span>groupadd smbgrp
 <span class="c"># 创建用户</span>
 <span class="nb">sudo </span>useradd smbuser
@@ -181,9 +187,9 @@
 <span class="nb">sudo chmod</span> <span class="nt">-R</span> 770 secure_share
 </code></pre></div></div>
 
-<p>编辑配置文件，注意差别，security 从 share 改为 user<sup id="fnref:share_level" role="doc-noteref"><a href="#fn:share_level" class="footnote" rel="footnote">1</a></sup>。</p>
+<p>编辑配置文件，注意差别，security 从 share 改为 user<sup id="fnref:share_level"><a href="#fn:share_level" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/samba/smb.conf</span>
 
 <span class="c">#======================= Global Settings ======================</span>
 <span class="o">[</span>global]
@@ -215,18 +221,25 @@
 
 <p>本地和服务器都需要安装 Rsync。这种工作方式对网络的实时性需求不是很高，而且相对于 sftp，rsync 是增量更新，对带宽的需求更小。</p>
 
-<p><img src="/images/rsync.jpg" alt="rsync" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/rsync.jpg" alt="rsync" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>rsync</figcaption>
+        </figure></p>
 
 <p>一般编辑器都有 rsync 的插件，对于 sublime text 就是 <a href="https://sublime.wbond.net/packages/RSync">RSync</a>。</p>
 
-<p>值得注意的是，MAC 的系统是 Case-insenstive 的，因此使用 git 作版本控制时，重命名操作会出现问题。一个解决方案是，利用 MAC 自带的 Disk Utility 工具，创建一个 Case-senstive 的 new image<sup id="fnref:case_sensitivity" role="doc-noteref"><a href="#fn:case_sensitivity" class="footnote" rel="footnote">2</a></sup>。</p>
+<p>值得注意的是，MAC 的系统是 Case-insenstive 的，因此使用 git 作版本控制时，重命名操作会出现问题。一个解决方案是，利用 MAC 自带的 Disk Utility 工具，创建一个 Case-senstive 的 new image<sup id="fnref:case_sensitivity"><a href="#fn:case_sensitivity" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>。</p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:share_level" role="doc-endnote">
+    <li id="fn:share_level">
       <p>samba 有多种 <a href="https://www.samba.org/samba/docs/man/Samba-HOWTO-Collection/ServerType.html">share level</a> <a href="#fnref:share_level" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:case_sensitivity" role="doc-endnote">
+    <li id="fn:case_sensitivity">
       <p>参见<a href="http://stackoverflow.com/questions/8904327/case-sensitivity-in-git">讨论</a> <a href="#fnref:case_sensitivity" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

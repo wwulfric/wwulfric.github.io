@@ -15,7 +15,6 @@
 
   <title>翻译：统计、机器学习和神经预测方法</title>
   <meta name="description" content="原文地址
-
 ">
   <meta name="keywords" content="stats,ml,neural,forecast,time series">
   <link rel="canonical" href="https://wulfric.me/2025/10/statisticalneuralmethods/">
@@ -123,53 +122,60 @@
 
 <p>该示例使用M5数据集。它由 30,490 个底部时间序列组成。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">pandas</span> <span class="k">as</span> <span class="n">pd</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Load the training target dataset from the provided URL
-</span><span class="n">Y_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s">'https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Load the training target dataset from the provided URL
+</span><span class="n">Y_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_parquet</span><span class="p">(</span><span class="sh">'</span><span class="s">https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet</span><span class="sh">'</span><span class="p">)</span>
 
 <span class="c1"># Rename columns to match the Nixtlaverse's expectations
 # The 'item_id' becomes 'unique_id' representing the unique identifier of the time series
 # The 'timestamp' becomes 'ds' representing the time stamp of the data points
 # The 'demand' becomes 'y' representing the target variable we want to forecast
-</span><span class="n">Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span>
-    <span class="s">'item_id'</span><span class="p">:</span> <span class="s">'unique_id'</span><span class="p">,</span> 
-    <span class="s">'timestamp'</span><span class="p">:</span> <span class="s">'ds'</span><span class="p">,</span> 
-    <span class="s">'demand'</span><span class="p">:</span> <span class="s">'y'</span>
+</span><span class="n">Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="nf">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+    <span class="sh">'</span><span class="s">item_id</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> 
+    <span class="sh">'</span><span class="s">timestamp</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">,</span> 
+    <span class="sh">'</span><span class="s">demand</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">y</span><span class="sh">'</span>
 <span class="p">})</span>
 
 <span class="c1"># Convert the 'ds' column to datetime format to ensure proper handling of date-related operations in subsequent steps
-</span><span class="n">Y_df</span><span class="p">[</span><span class="s">'ds'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">Y_df</span><span class="p">[</span><span class="s">'ds'</span><span class="p">])</span>
+</span><span class="n">Y_df</span><span class="p">[</span><span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">to_datetime</span><span class="p">(</span><span class="n">Y_df</span><span class="p">[</span><span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">])</span>
 </code></pre></div></div>
 
 <p>为简单起见，我们将只保留一个类别</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'unique_id.str.startswith("FOODS_3")'</span><span class="p">).</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">unique_id.str.startswith(</span><span class="sh">"</span><span class="s">FOODS_3</span><span class="sh">"</span><span class="s">)</span><span class="sh">'</span><span class="p">).</span><span class="nf">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-<span class="n">Y_df</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">]</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">].</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="n">Y_df</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">].</span><span class="nf">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 </code></pre></div></div>
 
 <h3 id="基本绘图">基本绘图</h3>
 
 <p>使用 StatsForecast 类的plot方法绘制一些系列。该方法从数据集中打印出8个随机序列，对基本的探索性数据分析很有用。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">statsforecast</span> <span class="kn">import</span> <span class="n">StatsForecast</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">statsforecast</span> <span class="kn">import</span> <span class="n">StatsForecast</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot random series for EDA
-</span><span class="n">StatsForecast</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot random series for EDA
+</span><span class="n">StatsForecast</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot groups of series for EDA
-</span><span class="n">StatsForecast</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="s">"FOODS_3_432_TX_2"</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot groups of series for EDA
+</span><span class="n">StatsForecast</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">FOODS_3_432_TX_2</span><span class="sh">"</span><span class="p">])</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot groups of series for EDA
-</span><span class="n">StatsForecast</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="s">"FOODS_3_432_TX_2"</span><span class="p">],</span> <span class="n">engine</span> <span class="o">=</span><span class="s">'matplotlib'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Feature: plot groups of series for EDA
+</span><span class="n">StatsForecast</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">FOODS_3_432_TX_2</span><span class="sh">"</span><span class="p">],</span> <span class="n">engine</span> <span class="o">=</span><span class="sh">'</span><span class="s">matplotlib</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p><img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-9-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=bfafc0b13bcf8793218f2637b53d2836" alt="" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-9-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=bfafc0b13bcf8793218f2637b53d2836" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
 
 <h2 id="使用统计机器学习和神经方法创建预测">使用统计、机器学习和神经方法创建预测</h2>
 
@@ -187,8 +193,8 @@
 
 <p>StatsForecast 每次接收到要拟合的模型列表。由于我们处理的是每日数据，使用7作为季节性将是有益的。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Import necessary models from the statsforecast library
-</span><span class="kn">from</span> <span class="nn">statsforecast.models</span> <span class="kn">import</span> <span class="p">(</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Import necessary models from the statsforecast library
+</span><span class="kn">from</span> <span class="n">statsforecast.models</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="c1"># SeasonalNaive: A model that uses the previous season's data as the forecast
 </span>    <span class="n">SeasonalNaive</span><span class="p">,</span>
     <span class="c1"># Naive: A simple model that uses the last observed value as the forecast
@@ -215,22 +221,22 @@
   <li>fallback_model ：如果模型失败，将使用该模型。任何设置都传递给构造函数。然后调用其fit方法并传入历史数据框。</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">horizon</span> <span class="o">=</span> <span class="mi">28</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">horizon</span> <span class="o">=</span> <span class="mi">28</span>
 <span class="n">models</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">SeasonalNaive</span><span class="p">(</span><span class="n">season_length</span><span class="o">=</span><span class="mi">7</span><span class="p">),</span>
-    <span class="n">Naive</span><span class="p">(),</span>
-    <span class="n">HistoricAverage</span><span class="p">(),</span>
-    <span class="n">CrostonOptimized</span><span class="p">(),</span>
-    <span class="n">ADIDA</span><span class="p">(),</span>
-    <span class="n">IMAPA</span><span class="p">(),</span>
-    <span class="n">AutoETS</span><span class="p">(</span><span class="n">season_length</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+    <span class="nc">SeasonalNaive</span><span class="p">(</span><span class="n">season_length</span><span class="o">=</span><span class="mi">7</span><span class="p">),</span>
+    <span class="nc">Naive</span><span class="p">(),</span>
+    <span class="nc">HistoricAverage</span><span class="p">(),</span>
+    <span class="nc">CrostonOptimized</span><span class="p">(),</span>
+    <span class="nc">ADIDA</span><span class="p">(),</span>
+    <span class="nc">IMAPA</span><span class="p">(),</span>
+    <span class="nc">AutoETS</span><span class="p">(</span><span class="n">season_length</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
 <span class="p">]</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Instantiate the StatsForecast class
-</span><span class="n">sf</span> <span class="o">=</span> <span class="n">StatsForecast</span><span class="p">(</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Instantiate the StatsForecast class
+</span><span class="n">sf</span> <span class="o">=</span> <span class="nc">StatsForecast</span><span class="p">(</span>
     <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">,</span>  <span class="c1"># A list of models to be used for forecasting
-</span>    <span class="n">freq</span><span class="o">=</span><span class="s">'D'</span><span class="p">,</span>  <span class="c1"># The frequency of the time series data (in this case, 'D' stands for daily frequency)
+</span>    <span class="n">freq</span><span class="o">=</span><span class="sh">'</span><span class="s">D</span><span class="sh">'</span><span class="p">,</span>  <span class="c1"># The frequency of the time series data (in this case, 'D' stands for daily frequency)
 </span>    <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># The number of CPU cores to use for parallel execution (-1 means use all available cores)
 </span><span class="p">)</span>
 </code></pre></div></div>
@@ -245,25 +251,26 @@
 
 <p>这段代码计算运行StatsForecast类的预测函数所需的时间，该函数预测未来的28天（h=28）。级别设置为[90]，表示将计算90%的预测区间。时间以分钟计算，并在最后打印出来。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">time</span> <span class="kn">import</span> <span class="n">time</span>
 
 <span class="c1"># Get the current time before forecasting starts, this will be used to measure the execution time
-</span><span class="n">init</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+</span><span class="n">init</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
 
 <span class="c1"># Call the forecast method of the StatsForecast instance to predict the next 28 days (h=28) 
 # Level is set to [90], which means that it will compute the 90% prediction interval
-</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="n">forecast</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mi">28</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
+</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="nf">forecast</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mi">28</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
 
 <span class="c1"># Get the current time after the forecasting ends
-</span><span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+</span><span class="n">end</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
 
 <span class="c1"># Calculate and print the total time taken for the forecasting in minutes
-</span><span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">'Forecast Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="s">'</span><span class="p">)</span>
+</span><span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">'</span><span class="s">Forecast Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -384,6 +391,7 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <h3 id="mlforecast">MLForecast</h3>
 
@@ -398,25 +406,25 @@
   <li>水平可扩展性：MLForecast能够使用Spark、Dask和Ray等分布式计算框架进行水平扩展。该功能使其能够通过在集群中的多个节点上分布计算来高效处理大规模数据集，非常适用于大规模时间序列预测任务。</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">mlforecast</span> <span class="kn">import</span> <span class="n">MLForecast</span>
-<span class="kn">from</span> <span class="nn">mlforecast.target_transforms</span> <span class="kn">import</span> <span class="n">Differences</span>
-<span class="kn">from</span> <span class="nn">mlforecast.utils</span> <span class="kn">import</span> <span class="n">PredictionIntervals</span>
-<span class="kn">from</span> <span class="nn">window_ops.expanding</span> <span class="kn">import</span> <span class="n">expanding_mean</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">mlforecast</span> <span class="kn">import</span> <span class="n">MLForecast</span>
+<span class="kn">from</span> <span class="n">mlforecast.target_transforms</span> <span class="kn">import</span> <span class="n">Differences</span>
+<span class="kn">from</span> <span class="n">mlforecast.utils</span> <span class="kn">import</span> <span class="n">PredictionIntervals</span>
+<span class="kn">from</span> <span class="n">window_ops.expanding</span> <span class="kn">import</span> <span class="n">expanding_mean</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">!</span><span class="n">pip</span> <span class="n">install</span> <span class="n">lightgbm</span> <span class="n">xgboost</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">!</span><span class="n">pip</span> <span class="n">install</span> <span class="n">lightgbm</span> <span class="n">xgboost</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Import the necessary models from various libraries
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Import the necessary models from various libraries
 </span>
 <span class="c1"># LGBMRegressor: A gradient boosting framework that uses tree-based learning algorithms from the LightGBM library
-</span><span class="kn">from</span> <span class="nn">lightgbm</span> <span class="kn">import</span> <span class="n">LGBMRegressor</span>
+</span><span class="kn">from</span> <span class="n">lightgbm</span> <span class="kn">import</span> <span class="n">LGBMRegressor</span>
 
 <span class="c1"># XGBRegressor: A gradient boosting regressor model from the XGBoost library
-</span><span class="kn">from</span> <span class="nn">xgboost</span> <span class="kn">import</span> <span class="n">XGBRegressor</span>
+</span><span class="kn">from</span> <span class="n">xgboost</span> <span class="kn">import</span> <span class="n">XGBRegressor</span>
 
 <span class="c1"># LinearRegression: A simple linear regression model from the scikit-learn library
-</span><span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LinearRegression</span>
+</span><span class="kn">from</span> <span class="n">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LinearRegression</span>
 </code></pre></div></div>
 
 <p>使用 MLForecast 进行时间序列预测，我们实例化一个新的 MLForecast 对象，并提供各种参数来根据我们的特定需求定制建模过程：</p>
@@ -433,41 +441,42 @@
 
 <p>所有这些设置都传递给 MLForecast 构造函数。一旦使用这些设置初始化 MLForecast 对象，我们调用它的 fit 方法并将历史的 dataframe 作为参数传递。该 fit 方法在提供的历史数据上训练模型，为未来的预测任务做好准备。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Instantiate the MLForecast object
-</span><span class="n">mlf</span> <span class="o">=</span> <span class="n">MLForecast</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">LGBMRegressor</span><span class="p">(),</span> <span class="n">XGBRegressor</span><span class="p">(),</span> <span class="n">LinearRegression</span><span class="p">()],</span>  <span class="c1"># List of models for forecasting: LightGBM, XGBoost and Linear Regression
-</span>    <span class="n">freq</span><span class="o">=</span><span class="s">'D'</span><span class="p">,</span>  <span class="c1"># Frequency of the data - 'D' for daily frequency
-</span>    <span class="n">lags</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>  <span class="c1"># Specific lags to use as regressors: 1 to 6 days
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Instantiate the MLForecast object
+</span><span class="n">mlf</span> <span class="o">=</span> <span class="nc">MLForecast</span><span class="p">(</span>
+    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="nc">LGBMRegressor</span><span class="p">(),</span> <span class="nc">XGBRegressor</span><span class="p">(),</span> <span class="nc">LinearRegression</span><span class="p">()],</span>  <span class="c1"># List of models for forecasting: LightGBM, XGBoost and Linear Regression
+</span>    <span class="n">freq</span><span class="o">=</span><span class="sh">'</span><span class="s">D</span><span class="sh">'</span><span class="p">,</span>  <span class="c1"># Frequency of the data - 'D' for daily frequency
+</span>    <span class="n">lags</span><span class="o">=</span><span class="nf">list</span><span class="p">(</span><span class="nf">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>  <span class="c1"># Specific lags to use as regressors: 1 to 6 days
 </span>    <span class="n">lag_transforms</span> <span class="o">=</span> <span class="p">{</span>
         <span class="mi">1</span><span class="p">:</span>  <span class="p">[</span><span class="n">expanding_mean</span><span class="p">],</span>  <span class="c1"># Apply expanding mean transformation to the lag of 1 day
 </span>    <span class="p">},</span>
-    <span class="n">date_features</span><span class="o">=</span><span class="p">[</span><span class="s">'year'</span><span class="p">,</span> <span class="s">'month'</span><span class="p">,</span> <span class="s">'day'</span><span class="p">,</span> <span class="s">'dayofweek'</span><span class="p">,</span> <span class="s">'quarter'</span><span class="p">,</span> <span class="s">'week'</span><span class="p">],</span>  <span class="c1"># Date features to use as regressors
+    <span class="n">date_features</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">month</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">day</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">dayofweek</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">quarter</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">week</span><span class="sh">'</span><span class="p">],</span>  <span class="c1"># Date features to use as regressors
 </span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>只需调用 fit 模型来训练选择的模型。在这种情况下，我们正在生成符合性预测区间。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Start the timer to calculate the time taken for fitting the models
-</span><span class="n">init</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Start the timer to calculate the time taken for fitting the models
+</span><span class="n">init</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
 
 <span class="c1"># Fit the MLForecast models to the data, with prediction intervals set using a window size of 28 days
-</span><span class="n">mlf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">prediction_intervals</span><span class="o">=</span><span class="n">PredictionIntervals</span><span class="p">(</span><span class="n">window_size</span><span class="o">=</span><span class="mi">28</span><span class="p">))</span>
+</span><span class="n">mlf</span><span class="p">.</span><span class="nf">fit</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">prediction_intervals</span><span class="o">=</span><span class="nc">PredictionIntervals</span><span class="p">(</span><span class="n">window_size</span><span class="o">=</span><span class="mi">28</span><span class="p">))</span>
 
 <span class="c1"># Calculate the end time after fitting the models
-</span><span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+</span><span class="n">end</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
 
 <span class="c1"># Print the time taken to fit the MLForecast models, in minutes
-</span><span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">'MLForecast Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="s">'</span><span class="p">)</span>
+</span><span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">'</span><span class="s">MLForecast Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>之后，只需调用 predict 来生成预测。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_mlf_df</span> <span class="o">=</span> <span class="n">mlf</span><span class="p">.</span><span class="n">predict</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_mlf_df</span> <span class="o">=</span> <span class="n">mlf</span><span class="p">.</span><span class="nf">predict</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_mlf_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_mlf_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -558,6 +567,7 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <h3 id="neuralforecast">NeuralForecast</h3>
 
@@ -573,13 +583,14 @@
 
 <p>可以使用Colab的GPU来训练NeuralForecast。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Read the results from Colab
-</span><span class="n">fcst_nf_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s">'https://m5-benchmarks.s3.amazonaws.com/data/forecast-nf.parquet'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Read the results from Colab
+</span><span class="n">fcst_nf_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_parquet</span><span class="p">(</span><span class="sh">'</span><span class="s">https://m5-benchmarks.s3.amazonaws.com/data/forecast-nf.parquet</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_nf_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_nf_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -652,26 +663,27 @@
     </tr>
   </tbody>
 </table>
+</div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Merge the forecasts from StatsForecast and NeuralForecast
-</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="n">merge</span><span class="p">(</span><span class="n">fcst_nf_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Merge the forecasts from StatsForecast and NeuralForecast
+</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="nf">merge</span><span class="p">(</span><span class="n">fcst_nf_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="sh">'</span><span class="s">left</span><span class="sh">'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">])</span>
 
 <span class="c1"># Merge the forecasts from MLForecast into the combined forecast dataframe
-</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="n">merge</span><span class="p">(</span><span class="n">fcst_mlf_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">])</span>
+</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="nf">merge</span><span class="p">(</span><span class="n">fcst_mlf_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="sh">'</span><span class="s">left</span><span class="sh">'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">])</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fcst_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
 <h3 id="预测图的绘制">预测图的绘制</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>使用plot函数来探索模型和ID。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> 
-        <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="s">'CrostonOptimized'</span><span class="p">,</span> <span class="s">'AutoNHITS'</span><span class="p">,</span> <span class="s">'SeasonalNaive'</span><span class="p">,</span> <span class="s">'LGBMRegressor'</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> 
+        <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">CrostonOptimized</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">AutoNHITS</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">SeasonalNaive</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">LGBMRegressor</span><span class="sh">'</span><span class="p">])</span>
 </code></pre></div></div>
 
 <h2 id="验证模型的性能">验证模型的性能</h2>
@@ -691,10 +703,10 @@
 
 <p>这些参数允许我们控制交叉验证过程的范围和粒度。通过调整这些设置，我们可以在计算成本和交叉验证的彻底性之间取得平衡。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">init</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-<span class="n">cv_df</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="n">cross_validation</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> <span class="n">n_windows</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step_size</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
-<span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-<span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">'CV Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="s">'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">init</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
+<span class="n">cv_df</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="nf">cross_validation</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> <span class="n">n_windows</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step_size</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">])</span>
+<span class="n">end</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">'</span><span class="s">CV Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>crossvalidation_df 对象是一个包含以下列的新 data frame：</p>
@@ -707,9 +719,10 @@
   <li>model：具有模型名称和拟合值的列。</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -842,6 +855,7 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <h3 id="mlforecast-1">MLForecast</h3>
 <p>MLForecast 类中的 cross_validation 方法接受以下参数。</p>
@@ -854,16 +868,16 @@
   <li>prediction_intervals：用于计算一致性区间的类。</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">init</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-<span class="n">cv_mlf_df</span> <span class="o">=</span> <span class="n">mlf</span><span class="p">.</span><span class="n">cross_validation</span><span class="p">(</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">init</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
+<span class="n">cv_mlf_df</span> <span class="o">=</span> <span class="n">mlf</span><span class="p">.</span><span class="nf">cross_validation</span><span class="p">(</span>
     <span class="n">data</span><span class="o">=</span><span class="n">Y_df</span><span class="p">,</span> 
     <span class="n">window_size</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> 
     <span class="n">n_windows</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> 
     <span class="n">step_size</span><span class="o">=</span><span class="n">horizon</span><span class="p">,</span> 
     <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">90</span><span class="p">],</span>
 <span class="p">)</span>
-<span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-<span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">'CV Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="s">'</span><span class="p">)</span>
+<span class="n">end</span> <span class="o">=</span> <span class="nf">time</span><span class="p">()</span>
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">'</span><span class="s">CV Minutes: </span><span class="si">{</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">init</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="si">}</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>crossvalidation_df 对象是一个包含以下列的新 data frame：</p>
@@ -876,9 +890,10 @@
   <li>model：具有模型名称和拟合值的列。</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_mlf_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_mlf_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -945,16 +960,18 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <h3 id="neuralforecast-1">NeuralForecast</h3>
 <p>使用Colab的GPU来训练NeuralForecast。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_nf_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s">'https://m5-benchmarks.s3.amazonaws.com/data/cross-validation-nf.parquet'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_nf_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_parquet</span><span class="p">(</span><span class="sh">'</span><span class="s">https://m5-benchmarks.s3.amazonaws.com/data/cross-validation-nf.parquet</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_nf_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_nf_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -1039,98 +1056,100 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <h3 id="合并交叉验证预测">合并交叉验证预测</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">merge</span><span class="p">(</span><span class="n">cv_nf_df</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'y'</span><span class="p">]),</span> <span class="n">how</span><span class="o">=</span><span class="s">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">])</span>
-<span class="n">cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">merge</span><span class="p">(</span><span class="n">cv_mlf_df</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'y'</span><span class="p">]),</span> <span class="n">how</span><span class="o">=</span><span class="s">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">])</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="nf">merge</span><span class="p">(</span><span class="n">cv_nf_df</span><span class="p">.</span><span class="nf">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">]),</span> <span class="n">how</span><span class="o">=</span><span class="sh">'</span><span class="s">left</span><span class="sh">'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">])</span>
+<span class="n">cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="nf">merge</span><span class="p">(</span><span class="n">cv_mlf_df</span><span class="p">.</span><span class="nf">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">]),</span> <span class="n">how</span><span class="o">=</span><span class="sh">'</span><span class="s">left</span><span class="sh">'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">])</span>
 </code></pre></div></div>
 
 <h3 id="交叉验证绘图">交叉验证绘图</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cutoffs</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="s">'cutoff'</span><span class="p">].</span><span class="n">unique</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cutoffs</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">].</span><span class="nf">unique</span><span class="p">()</span>
 </code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">cutoff</span> <span class="ow">in</span> <span class="n">cutoffs</span><span class="p">:</span>
-    <span class="n">img</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">cutoff</span> <span class="ow">in</span> <span class="n">cutoffs</span><span class="p">:</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span>
         <span class="n">Y_df</span><span class="p">,</span> 
-        <span class="n">cv_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'cutoff == @cutoff'</span><span class="p">).</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'y'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">]),</span> 
+        <span class="n">cv_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">cutoff == @cutoff</span><span class="sh">'</span><span class="p">).</span><span class="nf">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">]),</span> 
         <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span> 
-        <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="s">'FOODS_3_001_CA_1'</span><span class="p">],</span>
+        <span class="n">unique_ids</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">FOODS_3_001_CA_1</span><span class="sh">'</span><span class="p">],</span>
     <span class="p">)</span>
-    <span class="n">img</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">img</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
 <h3 id="汇总需求">汇总需求</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">agg_cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span><span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">'hi|lo'</span><span class="p">)].</span><span class="n">groupby</span><span class="p">([</span><span class="s">'ds'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">]).</span><span class="nb">sum</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">).</span><span class="n">reset_index</span><span class="p">()</span>
-<span class="n">agg_cv_df</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'agg_demand'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">agg_cv_df</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span><span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="nf">contains</span><span class="p">(</span><span class="sh">'</span><span class="s">hi|lo</span><span class="sh">'</span><span class="p">)].</span><span class="nf">groupby</span><span class="p">([</span><span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">]).</span><span class="nf">sum</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">).</span><span class="nf">reset_index</span><span class="p">()</span>
+<span class="n">agg_cv_df</span><span class="p">.</span><span class="nf">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">agg_demand</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">agg_Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'ds'</span><span class="p">]).</span><span class="nb">sum</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">).</span><span class="n">reset_index</span><span class="p">()</span>
-<span class="n">agg_Y_df</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'agg_demand'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">agg_Y_df</span> <span class="o">=</span> <span class="n">Y_df</span><span class="p">.</span><span class="nf">groupby</span><span class="p">([</span><span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">]).</span><span class="nf">sum</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">).</span><span class="nf">reset_index</span><span class="p">()</span>
+<span class="n">agg_Y_df</span><span class="p">.</span><span class="nf">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">agg_demand</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">cutoff</span> <span class="ow">in</span> <span class="n">cutoffs</span><span class="p">:</span>
-    <span class="n">img</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">cutoff</span> <span class="ow">in</span> <span class="n">cutoffs</span><span class="p">:</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span>
         <span class="n">agg_Y_df</span><span class="p">,</span> 
-        <span class="n">agg_cv_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'cutoff == @cutoff'</span><span class="p">).</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'y'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">]),</span>
+        <span class="n">agg_cv_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">cutoff == @cutoff</span><span class="sh">'</span><span class="p">).</span><span class="nf">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">]),</span>
         <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">img</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">img</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
 <h2 id="按序列和交叉验证窗口进行评估">按序列和交叉验证窗口进行评估</h2>
 
 <p>在本节中，我们将评估每个模型在每个时间序列和每个交叉验证窗口中的性能。由于有许多组合，我们将使用 dask 来并行评估。并行化将使用 fugue 完成。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
 
-<span class="kn">from</span> <span class="nn">distributed</span> <span class="kn">import</span> <span class="n">Client</span>
-<span class="kn">from</span> <span class="nn">fugue</span> <span class="kn">import</span> <span class="n">transform</span>
-<span class="kn">from</span> <span class="nn">fugue_dask</span> <span class="kn">import</span> <span class="n">DaskExecutionEngine</span>
-<span class="kn">from</span> <span class="nn">datasetsforecast.losses</span> <span class="kn">import</span> <span class="n">mse</span><span class="p">,</span> <span class="n">mae</span><span class="p">,</span> <span class="n">smape</span>
+<span class="kn">from</span> <span class="n">distributed</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="n">fugue</span> <span class="kn">import</span> <span class="n">transform</span>
+<span class="kn">from</span> <span class="n">fugue_dask</span> <span class="kn">import</span> <span class="n">DaskExecutionEngine</span>
+<span class="kn">from</span> <span class="n">datasetsforecast.losses</span> <span class="kn">import</span> <span class="n">mse</span><span class="p">,</span> <span class="n">mae</span><span class="p">,</span> <span class="n">smape</span>
 </code></pre></div></div>
 
 <p>evaluate 函数接收一个时间序列和一个窗口的唯一组合，并计算 df 中每个模型的不同 metrics 。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">metrics</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">metrics</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">:</span>
     <span class="n">eval_</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">models</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">'unique_id|y|ds|cutoff|lo|hi'</span><span class="p">)].</span><span class="n">columns</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="nf">contains</span><span class="p">(</span><span class="sh">'</span><span class="s">unique_id|y|ds|cutoff|lo|hi</span><span class="sh">'</span><span class="p">)].</span><span class="n">columns</span>
     <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span><span class="p">:</span>
         <span class="n">eval_</span><span class="p">[</span><span class="n">model</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
-            <span class="n">eval_</span><span class="p">[</span><span class="n">model</span><span class="p">][</span><span class="n">metric</span><span class="p">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">metric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">'y'</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">model</span><span class="p">])</span>
-    <span class="n">eval_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">eval_</span><span class="p">).</span><span class="n">rename_axis</span><span class="p">(</span><span class="s">'metric'</span><span class="p">).</span><span class="n">reset_index</span><span class="p">()</span>
-    <span class="n">eval_df</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s">'cutoff'</span><span class="p">].</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="n">eval_df</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">'unique_id'</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">].</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">eval_</span><span class="p">[</span><span class="n">model</span><span class="p">][</span><span class="n">metric</span><span class="p">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="nf">metric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">model</span><span class="p">])</span>
+    <span class="n">eval_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nc">DataFrame</span><span class="p">(</span><span class="n">eval_</span><span class="p">).</span><span class="nf">rename_axis</span><span class="p">(</span><span class="sh">'</span><span class="s">metric</span><span class="sh">'</span><span class="p">).</span><span class="nf">reset_index</span><span class="p">()</span>
+    <span class="n">eval_df</span><span class="p">.</span><span class="nf">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">].</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">eval_df</span><span class="p">.</span><span class="nf">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">].</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">eval_df</span>
 </code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">str_models</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">'unique_id|y|ds|cutoff|lo|hi'</span><span class="p">)].</span><span class="n">columns</span>
-<span class="n">str_models</span> <span class="o">=</span> <span class="s">','</span><span class="p">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s">"</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s">:float"</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">str_models</span><span class="p">])</span>
-<span class="n">cv_df</span><span class="p">[</span><span class="s">'cutoff'</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="s">'cutoff'</span><span class="p">].</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-<span class="n">cv_df</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">].</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">str_models</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="nf">contains</span><span class="p">(</span><span class="sh">'</span><span class="s">unique_id|y|ds|cutoff|lo|hi</span><span class="sh">'</span><span class="p">)].</span><span class="n">columns</span>
+<span class="n">str_models</span> <span class="o">=</span> <span class="sh">'</span><span class="s">,</span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">([</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s">:float</span><span class="sh">"</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">str_models</span><span class="p">])</span>
+<span class="n">cv_df</span><span class="p">[</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">].</span><span class="nf">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="n">cv_df</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_df</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">].</span><span class="nf">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 </code></pre></div></div>
 <p>让我们创建一个 dask 客户端。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span> <span class="c1"># without this, dask is not in distributed mode
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">client</span> <span class="o">=</span> <span class="nc">Client</span><span class="p">()</span> <span class="c1"># without this, dask is not in distributed mode
 # fugue.dask.dataframe.default.partitions determines the default partitions for a new DaskDataFrame
-</span><span class="n">engine</span> <span class="o">=</span> <span class="n">DaskExecutionEngine</span><span class="p">({</span><span class="s">"fugue.dask.dataframe.default.partitions"</span><span class="p">:</span> <span class="mi">96</span><span class="p">})</span>
+</span><span class="n">engine</span> <span class="o">=</span> <span class="nc">DaskExecutionEngine</span><span class="p">({</span><span class="sh">"</span><span class="s">fugue.dask.dataframe.default.partitions</span><span class="sh">"</span><span class="p">:</span> <span class="mi">96</span><span class="p">})</span>
 </code></pre></div></div>
 
 <p>transform 函数接受 evaluate 函数，并将其应用于每个时间序列（ unique_id ）和交叉验证窗口（ cutoff ）的组合，使用之前我们创建的 dask 客户端。</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span>
-    <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">'lo|hi'</span><span class="p">)],</span> 
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df</span> <span class="o">=</span> <span class="nf">transform</span><span class="p">(</span>
+    <span class="n">cv_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">cv_df</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nb">str</span><span class="p">.</span><span class="nf">contains</span><span class="p">(</span><span class="sh">'</span><span class="s">lo|hi</span><span class="sh">'</span><span class="p">)],</span> 
     <span class="n">evaluate</span><span class="p">,</span> 
-    <span class="n">engine</span><span class="o">=</span><span class="s">"dask"</span><span class="p">,</span>
-    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s">'metrics'</span><span class="p">:</span> <span class="p">[</span><span class="n">mse</span><span class="p">,</span> <span class="n">mae</span><span class="p">,</span> <span class="n">smape</span><span class="p">]},</span> 
-    <span class="n">schema</span><span class="o">=</span><span class="sa">f</span><span class="s">"unique_id:str,cutoff:str,metric:str, </span><span class="si">{</span><span class="n">str_models</span><span class="si">}</span><span class="s">"</span><span class="p">,</span> 
+    <span class="n">engine</span><span class="o">=</span><span class="sh">"</span><span class="s">dask</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="sh">'</span><span class="s">metrics</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="n">mse</span><span class="p">,</span> <span class="n">mae</span><span class="p">,</span> <span class="n">smape</span><span class="p">]},</span> 
+    <span class="n">schema</span><span class="o">=</span><span class="sa">f</span><span class="sh">"</span><span class="s">unique_id:str,cutoff:str,metric:str, </span><span class="si">{</span><span class="n">str_models</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span> 
     <span class="n">as_local</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-    <span class="n">partition</span><span class="o">=</span><span class="p">{</span><span class="s">'by'</span><span class="p">:</span> <span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">]}</span>
+    <span class="n">partition</span><span class="o">=</span><span class="p">{</span><span class="sh">'</span><span class="s">by</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">]}</span>
 <span class="p">)</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df</span><span class="p">.</span><span class="n">head</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df</span><span class="p">.</span><span class="nf">head</span><span class="p">()</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -1245,11 +1264,13 @@
     </tr>
   </tbody>
 </table>
+</div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Calculate the mean metric for each cross validation window
-</span><span class="n">evaluation_df</span><span class="p">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'cutoff'</span><span class="p">,</span> <span class="s">'metric'</span><span class="p">]).</span><span class="n">mean</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Calculate the mean metric for each cross validation window
+</span><span class="n">evaluation_df</span><span class="p">.</span><span class="nf">groupby</span><span class="p">([</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">metric</span><span class="sh">'</span><span class="p">]).</span><span class="nf">mean</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </code></pre></div></div>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -1432,9 +1453,11 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <p>前面试验的结果。</p>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -1465,26 +1488,34 @@
     </tr>
   </tbody>
 </table>
+</div>
 
 <p>Top 3 模型：DeepAR，AutoNHITS，AutoETS。</p>
 
 <h3 id="误差分布">误差分布</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">!</span><span class="n">pip</span> <span class="n">install</span> <span class="n">seaborn</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">!</span><span class="n">pip</span> <span class="n">install</span> <span class="n">seaborn</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="n">seaborn</span> <span class="k">as</span> <span class="n">sns</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df_melted</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">melt</span><span class="p">(</span><span class="n">evaluation_df</span><span class="p">,</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'cutoff'</span><span class="p">,</span> <span class="s">'metric'</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="s">'model'</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s">'error'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">evaluation_df_melted</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">melt</span><span class="p">(</span><span class="n">evaluation_df</span><span class="p">,</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">metric</span><span class="sh">'</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="sh">'</span><span class="s">model</span><span class="sh">'</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="sh">'</span><span class="s">error</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
 <h3 id="smape">SMAPE</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sns</span><span class="p">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">evaluation_df_melted</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'metric=="smape"'</span><span class="p">),</span> <span class="n">x</span><span class="o">=</span><span class="s">'error'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s">'model'</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sns</span><span class="p">.</span><span class="nf">violinplot</span><span class="p">(</span><span class="n">evaluation_df_melted</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">metric==</span><span class="sh">"</span><span class="s">smape</span><span class="sh">"'</span><span class="p">),</span> <span class="n">x</span><span class="o">=</span><span class="sh">'</span><span class="s">error</span><span class="sh">'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="sh">'</span><span class="s">model</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
-<p><img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-50-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=37053c3b98734facadf33ee50719b136" alt="" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-50-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=37053c3b98734facadf33ee50719b136" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
 
 <h2 id="为时序组合选择模型">为时序组合选择模型</h2>
 
@@ -1497,53 +1528,67 @@
   <li>或者MinMax（选择是集成）</li>
 </ul>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Choose the best model for each time series, metric, and cross validation window
-</span><span class="n">evaluation_df</span><span class="p">[</span><span class="s">'best_model'</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="n">idxmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Choose the best model for each time series, metric, and cross validation window
+</span><span class="n">evaluation_df</span><span class="p">[</span><span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="nf">idxmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="c1"># count how many times a model wins per metric and cross validation window
-</span><span class="n">count_best_model</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="n">groupby</span><span class="p">([</span><span class="s">'cutoff'</span><span class="p">,</span> <span class="s">'metric'</span><span class="p">,</span> <span class="s">'best_model'</span><span class="p">]).</span><span class="n">size</span><span class="p">().</span><span class="n">rename</span><span class="p">(</span><span class="s">'n'</span><span class="p">).</span><span class="n">to_frame</span><span class="p">().</span><span class="n">reset_index</span><span class="p">()</span>
+</span><span class="n">count_best_model</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="nf">groupby</span><span class="p">([</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">metric</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">]).</span><span class="nf">size</span><span class="p">().</span><span class="nf">rename</span><span class="p">(</span><span class="sh">'</span><span class="s">n</span><span class="sh">'</span><span class="p">).</span><span class="nf">to_frame</span><span class="p">().</span><span class="nf">reset_index</span><span class="p">()</span>
 <span class="c1"># plot results
-</span><span class="n">sns</span><span class="p">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">count_best_model</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s">'n'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s">'best_model'</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s">'metric'</span><span class="p">)</span>
+</span><span class="n">sns</span><span class="p">.</span><span class="nf">barplot</span><span class="p">(</span><span class="n">count_best_model</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="sh">'</span><span class="s">n</span><span class="sh">'</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="sh">'</span><span class="s">metric</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p><img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-51-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=57d9e7ffec4a52bd9d7ccb1c5aaee945" alt="" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-51-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=57d9e7ffec4a52bd9d7ccb1c5aaee945" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
 
-<h3 id="多元一体一个包容性的预测饼图">多元一体<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>：一个包容性的预测饼图</h3>
+<h3 id="多元一体一个包容性的预测饼图">多元一体<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>：一个包容性的预测饼图</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># For the mse, calculate how many times a model wins
-</span><span class="n">eval_series_df</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'metric == "mse"'</span><span class="p">).</span><span class="n">groupby</span><span class="p">([</span><span class="s">'unique_id'</span><span class="p">]).</span><span class="n">mean</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="n">eval_series_df</span><span class="p">[</span><span class="s">'best_model'</span><span class="p">]</span> <span class="o">=</span> <span class="n">eval_series_df</span><span class="p">.</span><span class="n">idxmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">counts_series</span> <span class="o">=</span> <span class="n">eval_series_df</span><span class="p">.</span><span class="n">value_counts</span><span class="p">(</span><span class="s">'best_model'</span><span class="p">)</span>
-<span class="n">plt</span><span class="p">.</span><span class="n">pie</span><span class="p">(</span><span class="n">counts_series</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">counts_series</span><span class="p">.</span><span class="n">index</span><span class="p">,</span> <span class="n">autopct</span><span class="o">=</span><span class="s">'%.0f%%'</span><span class="p">)</span>
-<span class="n">plt</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># For the mse, calculate how many times a model wins
+</span><span class="n">eval_series_df</span> <span class="o">=</span> <span class="n">evaluation_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">metric == </span><span class="sh">"</span><span class="s">mse</span><span class="sh">"'</span><span class="p">).</span><span class="nf">groupby</span><span class="p">([</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">]).</span><span class="nf">mean</span><span class="p">(</span><span class="n">numeric_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">eval_series_df</span><span class="p">[</span><span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">eval_series_df</span><span class="p">.</span><span class="nf">idxmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">counts_series</span> <span class="o">=</span> <span class="n">eval_series_df</span><span class="p">.</span><span class="nf">value_counts</span><span class="p">(</span><span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">plt</span><span class="p">.</span><span class="nf">pie</span><span class="p">(</span><span class="n">counts_series</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">counts_series</span><span class="p">.</span><span class="n">index</span><span class="p">,</span> <span class="n">autopct</span><span class="o">=</span><span class="sh">'</span><span class="s">%.0f%%</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">plt</span><span class="p">.</span><span class="nf">show</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p><img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-52-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=cfa767203e822628915690b8e1d6eb06" alt="" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://mintcdn.com/nixtla/Oro4FJl3t6oNJW6V/statsforecast/docs/tutorials/StatisticalNeuralMethods_files/figure-markdown_strict/cell-52-output-1.png?fit=max&amp;auto=format&amp;n=Oro4FJl3t6oNJW6V&amp;q=85&amp;s=cfa767203e822628915690b8e1d6eb06" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">cv_df</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'cutoff'</span><span class="p">,</span> <span class="s">'y'</span><span class="p">]),</span> 
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">cv_df</span><span class="p">.</span><span class="nf">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">cutoff</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">y</span><span class="sh">'</span><span class="p">]),</span> 
         <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">6</span><span class="p">,</span> 
-        <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="s">'AutoNHITS'</span><span class="p">],</span>
-        <span class="n">unique_ids</span><span class="o">=</span><span class="n">eval_series_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'best_model == "AutoNHITS"'</span><span class="p">).</span><span class="n">index</span><span class="p">[:</span><span class="mi">8</span><span class="p">])</span>
+        <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">AutoNHITS</span><span class="sh">'</span><span class="p">],</span>
+        <span class="n">unique_ids</span><span class="o">=</span><span class="n">eval_series_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">best_model == </span><span class="sh">"</span><span class="s">AutoNHITS</span><span class="sh">"'</span><span class="p">).</span><span class="n">index</span><span class="p">[:</span><span class="mi">8</span><span class="p">])</span>
 </code></pre></div></div>
 
 <h3 id="为不同时序分组选择不同的预测方法">为不同时序分组选择不同的预测方法</h3>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Merge the best model per time series dataframe
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Merge the best model per time series dataframe
 # and filter the forecasts based on that dataframe
 # for each time series
-</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">melt</span><span class="p">(</span><span class="n">fcst_df</span><span class="p">.</span><span class="n">set_index</span><span class="p">(</span><span class="s">'unique_id'</span><span class="p">),</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s">'ds'</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="s">'model'</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s">'forecast'</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">eval_series_df</span><span class="p">[[</span><span class="s">'best_model'</span><span class="p">]])</span>
-<span class="n">fcst_df</span><span class="p">[[</span><span class="s">'model'</span><span class="p">,</span> <span class="s">'pred-interval'</span><span class="p">]]</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">[</span><span class="s">'model'</span><span class="p">].</span><span class="nb">str</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">'-'</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="s">'model == best_model'</span><span class="p">)</span>
-<span class="n">fcst_df</span><span class="p">[</span><span class="s">'name'</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s">'forecast-</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s">'</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">'forecast'</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fcst_df</span><span class="p">[</span><span class="s">'pred-interval'</span><span class="p">]]</span>
-<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">pivot_table</span><span class="p">(</span><span class="n">fcst_df</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s">'unique_id'</span><span class="p">,</span> <span class="s">'ds'</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="s">'forecast'</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s">'name'</span><span class="p">]).</span><span class="n">droplevel</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">).</span><span class="n">reset_index</span><span class="p">()</span>
+</span><span class="n">fcst_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">melt</span><span class="p">(</span><span class="n">fcst_df</span><span class="p">.</span><span class="nf">set_index</span><span class="p">(</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">),</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="sh">'</span><span class="s">model</span><span class="sh">'</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="sh">'</span><span class="s">forecast</span><span class="sh">'</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">eval_series_df</span><span class="p">[[</span><span class="sh">'</span><span class="s">best_model</span><span class="sh">'</span><span class="p">]])</span>
+<span class="n">fcst_df</span><span class="p">[[</span><span class="sh">'</span><span class="s">model</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">pred-interval</span><span class="sh">'</span><span class="p">]]</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">[</span><span class="sh">'</span><span class="s">model</span><span class="sh">'</span><span class="p">].</span><span class="nb">str</span><span class="p">.</span><span class="nf">split</span><span class="p">(</span><span class="sh">'</span><span class="s">-</span><span class="sh">'</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">fcst_df</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">model == best_model</span><span class="sh">'</span><span class="p">)</span>
+<span class="n">fcst_df</span><span class="p">[</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="sh">'</span><span class="s">forecast-</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="sh">'</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="sh">'</span><span class="s">forecast</span><span class="sh">'</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fcst_df</span><span class="p">[</span><span class="sh">'</span><span class="s">pred-interval</span><span class="sh">'</span><span class="p">]]</span>
+<span class="n">fcst_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">pivot_table</span><span class="p">(</span><span class="n">fcst_df</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">unique_id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ds</span><span class="sh">'</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">forecast</span><span class="sh">'</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">]).</span><span class="nf">droplevel</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">).</span><span class="nf">reset_index</span><span class="p">()</span>
 </code></pre></div></div>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sf</span><span class="p">.</span><span class="nf">plot</span><span class="p">(</span><span class="n">Y_df</span><span class="p">,</span> <span class="n">fcst_df</span><span class="p">,</span> <span class="n">max_insample_length</span><span class="o">=</span><span class="mi">28</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
 </code></pre></div></div>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>"Et pluribus unum" 是拉丁语，意思是"合众为一"或"多中之一"。这句话是美国的传统格言，出现在美国国徽上，也曾经是美国的非正式国家座右铭（直到1956年被"In God We Trust"取代）。它表达的理念是：许多不同的州或人民团结成为一个统一的国家。 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

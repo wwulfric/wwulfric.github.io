@@ -15,7 +15,6 @@
 
   <title>个人电子书自动发送到 kindle</title>
   <meta name="description" content="kindle 有个send to kindle服务，可以把个人文档发送到 kindle 的服务器上。kindle 的内容包括：电子书（从亚马逊购入的书）、个人文档（个人电子书，通过send to kindle服务得到）、字典(在任何终端和 APP 里下载的字典)。
-
 ">
   <meta name="keywords" content="ifttt,kindle,dropbox,gmail,Klip.me">
   <link rel="canonical" href="https://wulfric.me/2015/06/send-to-kindle/">
@@ -68,29 +67,64 @@
 
 
   <article class="post-content">
-    <p>kindle 有个<code class="language-plaintext highlighter-rouge">send to kindle</code>服务，可以把个人文档发送到 kindle 的服务器上。kindle 的内容包括：电子书（从亚马逊购入的书）、个人文档（个人电子书，通过<code class="language-plaintext highlighter-rouge">send to kindle</code>服务得到）、字典(在任何终端和 APP 里下载的字典)。</p>
+    <p>kindle 有个<span class="codespan">send to kindle</span>服务，可以把个人文档发送到 kindle 的服务器上。kindle 的内容包括：电子书（从亚马逊购入的书）、个人文档（个人电子书，通过<span class="codespan">send to kindle</span>服务得到）、字典(在任何终端和 APP 里下载的字典)。</p>
 
-<p><img src="/images/R-my_content.png" alt="我的内容" title="我的内容" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-my_content.png" alt="我的内容" title="我的内容" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>我的内容</figcaption>
+        </figure></p>
 
-<p>但亚马逊中国的<code class="language-plaintext highlighter-rouge">send to kindle</code>服务一直无法正常使用，我们只好另辟蹊径了 -_-! 参看<a href="http://www.zhihu.com/question/21174855">知乎讨论</a>。</p>
+<p>但亚马逊中国的<span class="codespan">send to kindle</span>服务一直无法正常使用，我们只好另辟蹊径了 -_-! 参看<a href="http://www.zhihu.com/question/21174855">知乎讨论</a>。</p>
 
-<p>一种方法是，通过 chrome 插件<code class="language-plaintext highlighter-rouge">Klip.me</code>，另一种是手动给亚马逊 kindle 的对应邮箱发送文件。其原理都是，从 A 邮箱（用户个人邮箱，安全起见，需要在亚马逊官网填写注册这个邮箱，否则无法发送成功）往 B 邮箱（kindle 绑定邮箱，每个 kindle 设备和 kindle APP 都对应一个邮箱）发送个人文档，该个人文档就会被发送到 B 邮箱对应的 kindle 设备或 APP。举例来说，<code class="language-plaintext highlighter-rouge">Klip.me</code>的原理就是，通过<code class="language-plaintext highlighter-rouge">kindle@klip.me</code>A 邮箱发送文档到<code class="language-plaintext highlighter-rouge">%s_%d@kindle.cn</code>B 邮箱。</p>
+<p>一种方法是，通过 chrome 插件<span class="codespan">Klip.me</span>，另一种是手动给亚马逊 kindle 的对应邮箱发送文件。其原理都是，从 A 邮箱（用户个人邮箱，安全起见，需要在亚马逊官网填写注册这个邮箱，否则无法发送成功）往 B 邮箱（kindle 绑定邮箱，每个 kindle 设备和 kindle APP 都对应一个邮箱）发送个人文档，该个人文档就会被发送到 B 邮箱对应的 kindle 设备或 APP。举例来说，<span class="codespan">Klip.me</span>的原理就是，通过<span class="codespan">kindle@klip.me</span>A 邮箱发送文档到<span class="codespan">%s_%d@kindle.cn</span>B 邮箱。</p>
 
-<p><img src="/images/R-content_settings.png" alt="设备绑定邮箱" title="设备绑定邮箱" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-content_settings.png" alt="设备绑定邮箱" title="设备绑定邮箱" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>设备绑定邮箱</figcaption>
+        </figure></p>
 
-<p><img src="/images/R-auth_email.png" alt="个人认证邮箱" title="个人认证邮箱" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-auth_email.png" alt="个人认证邮箱" title="个人认证邮箱" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>个人认证邮箱</figcaption>
+        </figure></p>
 
-<p>我们还可以利用<code class="language-plaintext highlighter-rouge">ifttt</code>将这一过程自动化。 登录<code class="language-plaintext highlighter-rouge">ifttt</code>，激活<code class="language-plaintext highlighter-rouge">dropbox</code>和<code class="language-plaintext highlighter-rouge">gmail</code>，给<code class="language-plaintext highlighter-rouge">dropbox</code>设置 trigger。当<code class="language-plaintext highlighter-rouge">dropbox</code>的某个文件夹有文件添加时，触发<code class="language-plaintext highlighter-rouge">ifttt</code>。</p>
+<p>我们还可以利用<span class="codespan">ifttt</span>将这一过程自动化。 登录<span class="codespan">ifttt</span>，激活<span class="codespan">dropbox</span>和<span class="codespan">gmail</span>，给<span class="codespan">dropbox</span>设置 trigger。当<span class="codespan">dropbox</span>的某个文件夹有文件添加时，触发<span class="codespan">ifttt</span>。</p>
 
-<p><img src="/images/R-ifttt_dropbox_gmail_triger.png" alt="ifttt-trigger" title="ifttt trigger" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-ifttt_dropbox_gmail_triger.png" alt="ifttt-trigger" title="ifttt trigger" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ifttt-trigger</figcaption>
+        </figure></p>
 
-<p><code class="language-plaintext highlighter-rouge">ifttt</code> 触发后，执行<code class="language-plaintext highlighter-rouge">gmail</code>的 action，将该文件通过<code class="language-plaintext highlighter-rouge">gmail</code>邮箱发送到 kindle 邮箱。</p>
+<p><span class="codespan">ifttt</span> 触发后，执行<span class="codespan">gmail</span>的 action，将该文件通过<span class="codespan">gmail</span>邮箱发送到 kindle 邮箱。</p>
 
-<p><img src="/images/R-ifttt_dropbox_gmail_action.png" alt="ifttt-action" title="ifttt action" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-ifttt_dropbox_gmail_action.png" alt="ifttt-action" title="ifttt action" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ifttt-action</figcaption>
+        </figure></p>
 
 <p>稍等片刻，该文档就会发送到 kindle 邮箱对应的设备上了。</p>
 
-<p>注意：<code class="language-plaintext highlighter-rouge">ifttt</code>需要较高的权限，请自己判断是否愿意把<code class="language-plaintext highlighter-rouge">dropbox</code>和<code class="language-plaintext highlighter-rouge">gmail</code>的权限交给<code class="language-plaintext highlighter-rouge">ifttt</code>。<code class="language-plaintext highlighter-rouge">dropbox</code>似乎会经常回收权限，如果发送失败，请查看是否需要重新激活。至于<code class="language-plaintext highlighter-rouge">gmail</code>，可以注册一个全新的帐号，仅作发送文档之用。</p>
+<p>注意：<span class="codespan">ifttt</span>需要较高的权限，请自己判断是否愿意把<span class="codespan">dropbox</span>和<span class="codespan">gmail</span>的权限交给<span class="codespan">ifttt</span>。<span class="codespan">dropbox</span>似乎会经常回收权限，如果发送失败，请查看是否需要重新激活。至于<span class="codespan">gmail</span>，可以注册一个全新的帐号，仅作发送文档之用。</p>
 
   </article>
 

@@ -15,7 +15,6 @@
 
   <title>Transformer 论文翻译：Attention is All you Need</title>
   <meta name="description" content="注意力就是一切。
-
 ">
   <meta name="keywords" content="ai,chatgpt">
   <link rel="canonical" href="https://wulfric.me/2023/04/Transformer-ch/">
@@ -115,7 +114,14 @@
 
 <p>大多数竞争性神经序列转换模型都具有编码器-解码器结构[5, 2, 35]。其中，编码器将符号表示的输入序列(x1,…,xn)映射到一系列连续表示z = (z1,…,zn)。给定z，解码器随后生成一个符号输出序列(y1, …, ym)，每次生成一个元素。在每个步骤中，该模型是自回归的[10]，在生成下一个符号时消耗先前生成的符号作为额外的输入。</p>
 
-<p><img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>图1：Transformer 模型架构</figcaption>
+        </figure></p>
 
 <p>Transformer遵循这种总体架构，使用堆叠的自注意力和点式全连接层分别作为编码器和解码器，分别显示在图1的左半部分和右半部分。</p>
 
@@ -129,7 +135,14 @@
 
 <p>注意力函数可以描述为将一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。输出是值的加权和，其中分配给每个值的权重是由查询与相应键的兼容性函数计算的。</p>
 
-<p><img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。</figcaption>
+        </figure></p>
 
 <h4 id="321-缩放点积注意力">3.2.1 缩放点积注意力</h4>
 
@@ -141,7 +154,7 @@
 
 <p>两种最常用的注意力函数是加性注意力[2]和点积（乘法）注意力。点积注意力与我们的算法相同，除了缩放因子 $frac{1}{d_k}$。加性注意力使用具有单个隐藏层的前馈网络计算兼容性函数。虽然两者在理论复杂度上相似，但在实践中，点积注意力速度更快，空间效率更高，因为它可以使用高度优化的矩阵乘法代码实现。</p>
 
-<p>虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4" role="doc-noteref"><a href="#fn:4" class="footnote" rel="footnote">1</a></sup>。为了抵消这种效应，我们通过 $frac{1}{d_k}$ 对点积进行缩放。</p>
+<p>虽然在$d_k$的值较小的情况下，这两种机制的表现相似，但对于较大的$d_k$值，加性注意力优于没有缩放的点积注意力[3]。我们怀疑对于较大的$d_k$值，点积变得很大，将softmax函数推入具有极小梯度的区域<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。为了抵消这种效应，我们通过 $frac{1}{d_k}$ 对点积进行缩放。</p>
 
 <h4 id="322-多头注意力">3.2.2 多头注意力</h4>
 
@@ -170,7 +183,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)\]
 
 <h3 id="33-位置编码前馈网络">3.3 位置编码前馈网络</h3>
 
-<p>除了注意力子层外，我们的编码器和解码器中的每个层都包含一个全连接的前馈神经网络<sup id="fnref:PFFN" role="doc-noteref"><a href="#fn:PFFN" class="footnote" rel="footnote">2</a></sup>，它是独立地应用于每个位置并且相同地处理。该前馈神经网络由两个线性变换层组成，中间使用ReLU激活函数。</p>
+<p>除了注意力子层外，我们的编码器和解码器中的每个层都包含一个全连接的前馈神经网络<sup id="fnref:PFFN"><a href="#fn:PFFN" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>，它是独立地应用于每个位置并且相同地处理。该前馈神经网络由两个线性变换层组成，中间使用ReLU激活函数。</p>
 
 \[FFN(x)=max(0,xW_1+b_1)W_2+b_2\]
 
@@ -184,7 +197,14 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)\]
 
 <p>由于我们的模型不包含循环和卷积，为了使模型能够利用序列的顺序，我们必须注入有关序列中标记的相对或绝对位置的一些信息。为此，在编码器和解码器堆栈底部的输入嵌入中添加“位置编码”。位置编码与嵌入具有相同的维度dmodel，因此可以将它们相加。有许多位置编码的选择，可以是可学习的或固定的[9]。</p>
 
-<p><img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。</figcaption>
+        </figure></p>
 
 <p>我们的工作中使用了不同频率的 sin 和 cos 函数：</p>
 
@@ -221,10 +241,10 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:4" role="doc-endnote">
+    <li id="fn:4">
       <p>为了说明为什么点积变得很大，假设q和k的分量是具有均值0和方差1的独立随机变量。那么它们的点积，$q·k = \sum_{i=1}^{d_k} q_ik_i$ 的均值为0，方差为dk。 <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:PFFN" role="doc-endnote">
+    <li id="fn:PFFN">
       <p>（位置编码前馈网络）是Transformer模型中的一种组件，用于在每个注意力子层之间增加一个前馈神经网络层，从而提高模型性能。该网络层是在每个位置上独立地应用的，因此称为“位置编码”。它由两个全连接层组成，每个层之间使用ReLU激活函数。在每个位置上，该网络将输入向量映射到具有相同维度的中间向量，再通过第二个全连接层将中间向量映射回原始维度的输出向量。通过使用位置编码前馈网络，Transformer模型能够更好地处理不同位置之间的依赖关系，从而提高了其在序列到序列任务中的性能。 <a href="#fnref:PFFN" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

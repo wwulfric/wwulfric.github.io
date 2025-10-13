@@ -15,7 +15,6 @@
 
   <title>对敏捷开发实践的思考</title>
   <meta name="description" content="背景
-
 ">
   <meta name="keywords" content="agile,敏捷">
   <link rel="canonical" href="https://wulfric.me/2018/12/agile-practice/">
@@ -84,7 +83,14 @@
 
 <p><a href="https://www.wikiwand.com/en/Waterfall_model">瀑布式开发</a>是一种传统的计算机软件开发方法。它强调开发进度像瀑布一样，沿着固定的状态流动。即严格按照预先计划的需求分析、设计、编码、集成、测试、维护的步骤顺序进行。</p>
 
-<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Waterfall_model.svg/800px-Waterfall_model.svg.png?1546152701225" alt="瀑布式开发--来自维基百科" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Waterfall_model.svg/800px-Waterfall_model.svg.png?1546152701225" alt="瀑布式开发--来自维基百科" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>瀑布式开发--来自维基百科</figcaption>
+        </figure></p>
 
 <h3 id="迭代式开发">迭代式开发</h3>
 
@@ -92,21 +98,35 @@
 
 <p>在迭代式开发方法中，整个开发工作被组织为一系列的短小的、固定长度（如3周）的小项目，被称为一系列的迭代。每一次迭代都包括了需求分析、设计、实现与测试。采用这种方法，开发工作可以在需求被完整地确定之前启动，并在一次迭代中完成系统的一部分功能或业务逻辑的开发工作。再通过客户的反馈来细化需求，并开始新一轮的迭代。</p>
 
-<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Iterative_development_model.svg/640px-Iterative_development_model.svg.png?1546154989142" alt="迭代式开发--来自维基百科" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Iterative_development_model.svg/640px-Iterative_development_model.svg.png?1546154989142" alt="迭代式开发--来自维基百科" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>迭代式开发--来自维基百科</figcaption>
+        </figure></p>
 
 <h3 id="螺旋式开发">螺旋式开发</h3>
 
 <p><a href="https://www.wikiwand.com/en/Spiral_model">螺旋模型</a>是一种演化软件开发过程模型，它兼顾了快速原型的迭代的特征以及瀑布模型的系统化与严格监控。螺旋模型最大的特点在于引入了其他模型不具备的风险分析，使软件在无法排除重大风险时有机会停止，以减小损失。同时，在每个迭代阶段构建原型是螺旋模型用以减小风险的途径。螺旋模型更适合大型的昂贵的系统级的软件应用。</p>
 
-<p>可以看出，螺旋式开发强调风险评估，同样也是一种迭代，只不过是螺旋式的迭代<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。</p>
+<p>可以看出，螺旋式开发强调风险评估，同样也是一种迭代，只不过是螺旋式的迭代<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
-<p><img src="https://cdn-images-1.medium.com/max/1600/0*xUPmGSQEX-40Z7Ag.png" alt="螺旋式开发" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://cdn-images-1.medium.com/max/1600/0*xUPmGSQEX-40Z7Ag.png" alt="螺旋式开发" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>螺旋式开发</figcaption>
+        </figure></p>
 
 <h3 id="敏捷开发">敏捷开发</h3>
 
 <p><a href="https://www.wikiwand.com/en/Agile_software_development">敏捷软件开发</a>（英语：Agile software development），又称敏捷开发，是一种从1990年代开始逐渐引起广泛关注的一些新型软件开发方法，是一种应对快速变化的需求的一种软件开发能力。它们的具体名称、理念、过程、术语都不尽相同，相对于“非敏捷”，更强调程序员团队与业务专家之间的紧密协作、面对面的沟通（认为比书面的文档更有效）、频繁交付新的软件版本、紧凑而自我组织型的团队、能够很好地适应需求变化的代码编写和团队组织方法，也更注重软件开发过程中人的作用。</p>
 
-<p>敏捷开发最着重强调的是价值观而不是具体的形式或流程，这是它和其他开发模式很不一样的地方。也因为这样，在具体的敏捷开发的实践中，瀑布、迭代、螺旋等开发方式都可能会用到，而差别主要在于：敏捷开发往往有更小的迭代规模<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>；敏捷开发不应过度设计未知的需求<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">3</a></sup>。</p>
+<p>敏捷开发最着重强调的是价值观而不是具体的形式或流程，这是它和其他开发模式很不一样的地方。也因为这样，在具体的敏捷开发的实践中，瀑布、迭代、螺旋等开发方式都可能会用到，而差别主要在于：敏捷开发往往有更小的迭代规模<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>；敏捷开发不应过度设计未知的需求<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>。</p>
 
 <p>从上面的介绍我们可以看出来，其实实际的大多数开发方式都是混搭的。很多公司或团队会声称使用敏捷开发，实际使用中很有可能会退化到其他基本开发方式。这些都是正常的，合适的才是最好的。如果一个好的开发模型实施起来很有难度，要么该模型不适合当前场景，要么使用方法不恰当。这方面后面也会提到。</p>
 
@@ -144,7 +164,14 @@
 
 <p>增长战略的工作内容有：重新梳理用户需求，整理出用户故事地图，并建立用户画像，分清客户的行业背景，使用习惯、痛点等的差异。使用敏捷开发，全面优化产品的每个阶段（导流，留存，沉淀等等）。</p>
 
-<p><img src="/images/R-aarrr-model.png" alt="AARRR 模型" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-aarrr-model.png" alt="AARRR 模型" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>AARRR 模型</figcaption>
+        </figure></p>
 
 <p>如上图所示，产品团队针对 AARRR 模型开了 5 个小组，分别研究：</p>
 
@@ -162,20 +189,20 @@
 
 <p>服务化拆分最重要的当然就是梳理领域模型，划分限界上下文。但在我们规划中给这部分留的时间太少了。在梳理领域模型的时候，我们要求整理该领域所有的对外提供的业务员接口和内部调用关系，这都需要对业务熟悉的老员工来整理，因此往往是 Blocked 的，而即使是老员工，也几乎没有对该领域所有业务内容都熟悉的，因此这部分工作是延期的；整理抽取出限界上下文之后，需要评估有多少重写的工作量，比如参数校验、权限校验、BO、DO、DTO 等都有可能，但这部分有些轻视，低估了工作量，最终也导致了延期。</p>
 
-<p>但接口梳理工作做得好的直接好处就是：敏捷迭代的拆分变得极为简单。我们以对外提供服务的接口为粒度分配敏捷开发迭代任务，在业务梳理清楚，基础模块重写工作做完之后，每个接口从请求一直到数据库的工作量的评估就非常容易，而且每个接口背后的工作量都不大。按照我们的应用的规模和实际的经验，每 2 周能重构 15 个左右的接口。在早期磨合<sup id="fnref:4" role="doc-noteref"><a href="#fn:4" class="footnote" rel="footnote">4</a></sup>完成之后几乎不会因为自身原因延期。同时，我们对每个接口都设置了路由切换，每次迭代的任何接口都可以随时回滚，大大降低了上线风险。</p>
+<p>但接口梳理工作做得好的直接好处就是：敏捷迭代的拆分变得极为简单。我们以对外提供服务的接口为粒度分配敏捷开发迭代任务，在业务梳理清楚，基础模块重写工作做完之后，每个接口从请求一直到数据库的工作量的评估就非常容易，而且每个接口背后的工作量都不大。按照我们的应用的规模和实际的经验，每 2 周能重构 15 个左右的接口。在早期磨合<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>完成之后几乎不会因为自身原因延期。同时，我们对每个接口都设置了路由切换，每次迭代的任何接口都可以随时回滚，大大降低了上线风险。</p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>https://medium.com/existek/sdlc-models-explained-agile-waterfall-v-shaped-iterative-spiral-e3f012f390c5 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p>https://stackoverflow.com/questions/11842318/difference-between-agile-and-iterative-and-incremental-development <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:3" role="doc-endnote">
+    <li id="fn:3">
       <p>https://stackoverflow.com/questions/253789/agile-vs-spiral-model-for-sdlc <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:4" role="doc-endnote">
+    <li id="fn:4">
       <p>为了保障敏捷开发的快速迭代得以实现，我们补上了之前比较欠缺的服务监控、数据库 sql 监控；代码健康分检查（用 sonarqube 检查测试覆盖率，code smell 和 bug 数）；单元测试和服务压测。这部分在早期磨合的时候会造成一定程度的延期。 <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

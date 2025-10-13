@@ -15,7 +15,6 @@
 
   <title>Vim、Emacs 和 IDE</title>
   <meta name="description" content="这篇文章想要介绍一下 vim 和 emacs 两个编辑器。包括怎样组装插件打造成近似 IDE 的功能，使用场合，优点和缺点等。本文并不致力于手把手教你将 vim/emacs 打造成 IDE，也不会详细的介绍某些具体的功能和插件。
-
 ">
   <meta name="keywords" content="vim,emacs,ide,spf13,kvim,fisa,prelude,purcell,spacemacs">
   <link rel="canonical" href="https://wulfric.me/2016/05/editor-vim-emacs/">
@@ -70,13 +69,27 @@
   <article class="post-content">
     <p>这篇文章想要介绍一下 vim 和 emacs 两个编辑器。包括怎样组装插件打造成近似 IDE 的功能，使用场合，优点和缺点等。本文并不致力于手把手教你将 vim/emacs 打造成 IDE，也不会详细的介绍某些具体的功能和插件。</p>
 
-<p><img src="/images/vim-and-emacs.png" alt="vim and emacs" title="vim and emacs" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/vim-and-emacs.png" alt="vim and emacs" title="vim and emacs" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>vim and emacs</figcaption>
+        </figure></p>
 
 <h2 id="vim-和-emacs-的优缺点">vim 和 emacs 的优缺点</h2>
 
 <p>vim 和 emacs 分别被称为「 编辑器之神」与「 神之编辑器」，自有其独到之处。但是陡峭的学习曲线却吓跑了好多潜在用户。那么我们是否还有必要学习这两个编辑器呢？</p>
 
-<p><img src="/images/editor-learning-curve.jpg" alt="editor-learning-curve" title="编辑器学习曲线" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/editor-learning-curve.jpg" alt="editor-learning-curve" title="编辑器学习曲线" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>editor-learning-curve</figcaption>
+        </figure></p>
 
 <h3 id="快捷键的无差别延续">快捷键的无差别延续</h3>
 
@@ -96,8 +109,9 @@
 
 <p>无论是日常感知还是做一些简单的<a href="http://www.google.com/trends/explore#q=Emacs%2C%20Vim&amp;cmpt=q&amp;tz=">调查</a>，大概都能得出 vim 用户多于 emacs 用户的结论。而且，对大部分 Linux 发行版来说，vim 都是内置的，emacs 则不是。也就是说，某种程度上，vim 比 emacs 更容易被接受。</p>
 
-<p>vim 的基础快捷键非常简洁，比如移动的<code class="language-plaintext highlighter-rouge">hjklweb</code>，删除的<code class="language-plaintext highlighter-rouge">dx</code>，复制粘贴相关的<code class="language-plaintext highlighter-rouge">yp</code>，配合 vim 独有的 text object 属性（i 表示 in，a 表示 around），可以组合出非常强大的快捷操作。比如：</p>
+<p>vim 的基础快捷键非常简洁，比如移动的<span class="codespan">hjklweb</span>，删除的<span class="codespan">dx</span>，复制粘贴相关的<span class="codespan">yp</span>，配合 vim 独有的 text object 属性（i 表示 in，a 表示 around），可以组合出非常强大的快捷操作。比如：</p>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -140,10 +154,11 @@
     </tr>
   </tbody>
 </table>
+</div>
 
-<p>大家在做<code class="language-plaintext highlighter-rouge">git rebase</code> 的时候经常遇到下面这种情况吧，在 vim 下，把第二到第十行的 pick 改成 squash 就非常简单：<code class="language-plaintext highlighter-rouge">:2,10s/pick/squash</code>。</p>
+<p>大家在做<span class="codespan">git rebase</span> 的时候经常遇到下面这种情况吧，在 vim 下，把第二到第十行的 pick 改成 squash 就非常简单：<span class="codespan">:2,10s/pick/squash</span>。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pick 4aad920 f
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pick 4aad920 f
 pick 322877a f
 pick 34dacff f
 pick f1c9311 f
@@ -159,11 +174,25 @@ pick 5c3747b f
 
 <p>除此之外，vim 的矩形编辑也非常犀利。比如上面的示例，也可以在矩形编辑下，选中第二到第十行的 pick，删除，然后 I 插入 squash，继而退出 insert mode 即可。</p>
 
-<p><img src="/images/emacs-bad-shortcut.png" alt="看到这样的快捷键，我的内心是拒绝的" title="看到这样的快捷键，我的内心是拒绝的" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/emacs-bad-shortcut.png" alt="看到这样的快捷键，我的内心是拒绝的" title="看到这样的快捷键，我的内心是拒绝的" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>看到这样的快捷键，我的内心是拒绝的</figcaption>
+        </figure></p>
 
-<p>而 emacs 没有输入上的 mode 差别，所以需要依赖复杂的快捷键来实现强大的编辑功能，正如上图所示。emacs 插件想象力更加丰富，有「伪装成编辑器的操作系统」之称。插件的 major mode 和 minor mode 的设计很出彩，对一个文件，只有一个 major mode，但是可以有多个 minor mode，这样一个文件一个主插件，多个附加插件，可以实现很多有趣的效果。在 vim 中，是通过<code class="language-plaintext highlighter-rouge">set filetype=python</code>或者在<code class="language-plaintext highlighter-rouge">filetype.vim</code>文件中自定义来决定 vim 使用哪种语法渲染，其他比如自动补全这样的插件通过判断<code class="language-plaintext highlighter-rouge">filetype</code>来实现相关功能，并没有 mode 一说，针对同一种文件类型的插件可以非常分散。而在 emacs 中，如果我们选中<code class="language-plaintext highlighter-rouge">pythonA-mode</code>作为<code class="language-plaintext highlighter-rouge">.py</code>文件的 major mode，那么<code class="language-plaintext highlighter-rouge">pythonB-mode</code>就不会起作用，除非它是 minor mode。这有利于大而优秀的特定 major mode 脱颖而出，同时使用多个 minor mode 提供通用编辑功能<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。</p>
+<p>而 emacs 没有输入上的 mode 差别，所以需要依赖复杂的快捷键来实现强大的编辑功能，正如上图所示。emacs 插件想象力更加丰富，有「伪装成编辑器的操作系统」之称。插件的 major mode 和 minor mode 的设计很出彩，对一个文件，只有一个 major mode，但是可以有多个 minor mode，这样一个文件一个主插件，多个附加插件，可以实现很多有趣的效果。在 vim 中，是通过<span class="codespan">set filetype=python</span>或者在<span class="codespan">filetype.vim</span>文件中自定义来决定 vim 使用哪种语法渲染，其他比如自动补全这样的插件通过判断<span class="codespan">filetype</span>来实现相关功能，并没有 mode 一说，针对同一种文件类型的插件可以非常分散。而在 emacs 中，如果我们选中<span class="codespan">pythonA-mode</span>作为<span class="codespan">.py</span>文件的 major mode，那么<span class="codespan">pythonB-mode</span>就不会起作用，除非它是 minor mode。这有利于大而优秀的特定 major mode 脱颖而出，同时使用多个 minor mode 提供通用编辑功能<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
-<p><img src="/images/emacs-major-mode.png" alt="emacs major mode" title="emacs major mode" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/emacs-major-mode.png" alt="emacs major mode" title="emacs major mode" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>emacs major mode</figcaption>
+        </figure></p>
 
 <h2 id="打造-ide-的尝试">打造 IDE 的尝试</h2>
 
@@ -177,11 +206,18 @@ pick 5c3747b f
 
 <h3 id="快速定位">快速定位</h3>
 
-<p>得益于 sublime text 的 go to anywhere 思想，ctrlp 几乎成为了现代编辑器的标配功能。所谓 go to anywhere，就是通过一个快捷键（一般是 ctrl+p）能够通过模糊查找快速到达项目中的任意文件、类、方法。毫无疑问，在编辑器中，这个功能 sublime 做的最好。在 sublime 中，ctrlp 会弹出一个输入框，直接输入，会查找文件，先输入<code class="language-plaintext highlighter-rouge">@</code>，则会查找方法，先输入<code class="language-plaintext highlighter-rouge">:</code>，则会跳到这一行。而且还支持组合查找。</p>
+<p>得益于 sublime text 的 go to anywhere 思想，ctrlp 几乎成为了现代编辑器的标配功能。所谓 go to anywhere，就是通过一个快捷键（一般是 ctrl+p）能够通过模糊查找快速到达项目中的任意文件、类、方法。毫无疑问，在编辑器中，这个功能 sublime 做的最好。在 sublime 中，ctrlp 会弹出一个输入框，直接输入，会查找文件，先输入<span class="codespan">@</span>，则会查找方法，先输入<span class="codespan">:</span>，则会跳到这一行。而且还支持组合查找。</p>
 
-<p><img src="/images/sublime-text-ctrlp.png" alt="sublime-text-ctrlp" title="sublime-text-ctrlp" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/sublime-text-ctrlp.png" alt="sublime-text-ctrlp" title="sublime-text-ctrlp" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>sublime-text-ctrlp</figcaption>
+        </figure></p>
 
-<p>其实 JetBrains 系 IDE 的 go to anywhere 功能更加强大，可以同时搜索文件、类、方法、IDE 动作。代价就是性能太差—每次<code class="language-plaintext highlighter-rouge">⇧⇧</code>都会卡顿，所以只好使用<code class="language-plaintext highlighter-rouge">⌘+O</code>查找文件，查找到文件之后再查找方法，或跳转到具体行。这意味着，在这一方面，更强大的 IDE，反而比编辑器更不方便。这倒不是因为它是 IDE，而是软件设计的一个问题—哪些功能应该合在一起，哪些功能应该分开。</p>
+<p>其实 JetBrains 系 IDE 的 go to anywhere 功能更加强大，可以同时搜索文件、类、方法、IDE 动作。代价就是性能太差—每次<span class="codespan">⇧⇧</span>都会卡顿，所以只好使用<span class="codespan">⌘+O</span>查找文件，查找到文件之后再查找方法，或跳转到具体行。这意味着，在这一方面，更强大的 IDE，反而比编辑器更不方便。这倒不是因为它是 IDE，而是软件设计的一个问题—哪些功能应该合在一起，哪些功能应该分开。</p>
 
 <p>vim 下的 go to anywhere 插件名字就叫 <a href="http://ctrlpvim.github.io/ctrlp.vim/">ctrlp</a>，仅仅实现了查找文件功能，需要通过<a href="https://github.com/ctrlpvim/ctrlp.vim/tree/extensions">插件</a>来扩展功能，比如查找 vim 命令的 <a href="https://github.com/tacahiroy/ctrlp-funky">ctrlp-funky</a>。而且，不知是不是技术限制，其搜索精确度还是无法和 sublime 相比。不仅如此，搜索速度也不够好，需要借助插件 <a href="https://github.com/FelikZ/ctrlp-py-matcher">ctrlp-py-matcher</a> 。这一切搭配好之后，ctrlp 还是可以用得很好的。（PS：<a href="https://github.com/vim-ctrlspace/vim-ctrlspace">vim-ctrlspace</a> 提供了一种新型的文件编辑管理方式，使用 go 写了模糊查询，并没有使用过，感兴趣的可以尝试下）</p>
 
@@ -193,12 +229,20 @@ pick 5c3747b f
 
 <p>自动补全和跳转，这两个功能就是 IDE 的强项了。IDE 解析语法树，可以实现相当精准的补全和跳转，而编辑器基于字符串匹配，效果就要大打折扣了。当然了，我说的是静态语言🙄。对于动态语言，即使是 IDE，也总有力所不及的地方， 而编辑器开一个语言解释器进程实时解析也能实现不错的效果。二者的差别没那么明显。对于静态语言，编辑器竟也有和 IDE 相抗的野心：<a href="http://eclim.org/">eclim</a>，也就是 eclipse+vim（当然也有 emacs 插件），在后台开一个 eclipse 进程，然后在 vim 中利用 eclipse 来做补全和跳转……</p>
 
-<p><img src="/images/woxuanzesiwang.jpeg" alt="说得好，我选择死亡" title="说得好，我选择死亡" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/woxuanzesiwang.jpeg" alt="说得好，我选择死亡" title="说得好，我选择死亡" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>说得好，我选择死亡</figcaption>
+        </figure></p>
 
 <p>众生皆苦，何必苦上加苦？</p>
 
 <h3 id="其他">其他</h3>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -230,10 +274,11 @@ pick 5c3747b f
     </tr>
   </tbody>
 </table>
+</div>
 
 <p>然而比起这些来，我更喜欢的是针对编辑的一些插件，比如 <a href="https://github.com/tpope/vim-surround">vim-surround</a>，能够快速的将字符串的包裹修改或者删除。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"Hello world!"</span>  
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"Hello world!"</span>  
 <span class="c"># cs"'</span>
 <span class="s1">'Hello world!'</span>
 <span class="c"># cs'&lt;q&gt;</span>
@@ -260,7 +305,7 @@ Hello world!
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>vim 社区出了个 <a href="https://github.com/junegunn/vim-plug#on-demand-loading-of-plugins">vim-plug</a> 插件管理工具，这个工具可以按需加载插件，起到和 Emacs 下 major mode 相近的功能。 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

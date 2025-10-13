@@ -15,7 +15,6 @@
 
   <title>一些命令行效率工具</title>
   <meta name="description" content="Zsh
-
 ">
   <meta name="keywords" content="zsh,oh-my-zsh,autojump,proxychains,ag,htop,ccat">
   <link rel="canonical" href="https://wulfric.me/2015/08/zsh/">
@@ -74,23 +73,37 @@
 
 <p>Mac 自带 zsh，不过我们当然要用最新版啦，其他发行版请参照各自的软件安装方法。安装完毕后，重新打开 iTerm2。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>brew <span class="nb">install </span>zsh
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>brew <span class="nb">install </span>zsh
 chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="sb">`</span>
 </code></pre></div></div>
 
 <h3 id="补全">补全</h3>
 
-<p>zsh 的命令补全功能非常强大，可以补齐路径，补齐命令，补齐参数等。（请问你记住 tar 的所有参数了吗😃，只要 <code class="language-plaintext highlighter-rouge">tar -</code>加 tab 键，再也不用 <a href="https://zh.wikipedia.org/zh/RTFM">rtfm</a> 了😂）</p>
+<p>zsh 的命令补全功能非常强大，可以补齐路径，补齐命令，补齐参数等。（请问你记住 tar 的所有参数了吗😃，只要 <span class="codespan">tar -</span>加 tab 键，再也不用 <a href="https://zh.wikipedia.org/zh/RTFM">rtfm</a> 了😂）</p>
 
-<p><img src="/images/R-zsh-autocomplete.png" alt="zsh auto complete" title="zsh auto complete" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-zsh-autocomplete.png" alt="zsh auto complete" title="zsh auto complete" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>zsh auto complete</figcaption>
+        </figure></p>
 
 <p>按下 tab 键显示出所有待选项后，再按一次 tab 键，即进入选择模式，进入选择模式后，按 tab 切向下一个选项，按 shift+tab 键切向上一个选项，ctrl+f/b/n/p 可以向前后左右切换。</p>
 
-<p><img src="/images/R-zsh-tab-tab.png" alt="zsh tab 切换" title="zsh tab 切换" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-zsh-tab-tab.png" alt="zsh tab 切换" title="zsh tab 切换" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>zsh tab 切换</figcaption>
+        </figure></p>
 
-<p>以前杀进程是<code class="language-plaintext highlighter-rouge">ps aux | grep xxx</code>查进程的 PID，然后<code class="language-plaintext highlighter-rouge">kill PID</code>。有了 zsh，直接<code class="language-plaintext highlighter-rouge">kill xxx</code>然后按下 tab 键即可～</p>
+<p>以前杀进程是<span class="codespan">ps aux | grep xxx</span>查进程的 PID，然后<span class="codespan">kill PID</span>。有了 zsh，直接<span class="codespan">kill xxx</span>然后按下 tab 键即可～</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">kill </span>emacs
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">kill </span>emacs
 <span class="c"># 按下 tab，变成：</span>
 <span class="nb">kill </span>59683
 </code></pre></div></div>
@@ -99,7 +112,7 @@ chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="s
 
 <p>zsh 不仅支持普通 alias，还支持针对文件类型的 alias。我配置的文件类型 alias 如下：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">gz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">gz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
 <span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">tgz</span><span class="o">=</span><span class="s1">'tar -xzvf'</span>
 <span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">zip</span><span class="o">=</span><span class="s1">'unzip'</span>
 <span class="nb">alias</span> <span class="nt">-s</span> <span class="nv">bz2</span><span class="o">=</span><span class="s1">'tar -xjvf'</span>
@@ -110,15 +123,15 @@ chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="s
 <span class="nb">alias </span><span class="nv">gcid</span><span class="o">=</span><span class="s2">"git log | head -1 | awk '{print substr(</span><span class="se">\$</span><span class="s2">2,1,7)}' | pbcopy"</span>
 </code></pre></div></div>
 
-<p>配置完毕之后，在 zsh 下直接输入<code class="language-plaintext highlighter-rouge">xxx.rb</code>，将自动用 vi 打开，直接输入<code class="language-plaintext highlighter-rouge">xxx.tgz</code>，将直接按照<code class="language-plaintext highlighter-rouge">tar -xzvf</code>解压。最后一个<code class="language-plaintext highlighter-rouge">gcid</code>将当前 git 项目的第一个 commit 的 id 复制到系统剪切板（<code class="language-plaintext highlighter-rouge">pbcopy</code>是 Mac 下的复制到系统剪切板命令，linux 请参考相应的发行版更改），在执行 rebase 的时候特别方便。</p>
+<p>配置完毕之后，在 zsh 下直接输入<span class="codespan">xxx.rb</span>，将自动用 vi 打开，直接输入<span class="codespan">xxx.tgz</span>，将直接按照<span class="codespan">tar -xzvf</span>解压。最后一个<span class="codespan">gcid</span>将当前 git 项目的第一个 commit 的 id 复制到系统剪切板（<span class="codespan">pbcopy</span>是 Mac 下的复制到系统剪切板命令，linux 请参考相应的发行版更改），在执行 rebase 的时候特别方便。</p>
 
 <h3 id="跳转">跳转</h3>
 
-<p>zsh 的目录跳转更为智能，你无需输入<code class="language-plaintext highlighter-rouge">cd</code>，直接输入路径即可。<code class="language-plaintext highlighter-rouge">..</code>表示后退一级目录，<code class="language-plaintext highlighter-rouge">../../</code>表示后退两级，依次类推。（<code class="language-plaintext highlighter-rouge">...</code>的作用和<code class="language-plaintext highlighter-rouge">../../</code>相同）</p>
+<p>zsh 的目录跳转更为智能，你无需输入<span class="codespan">cd</span>，直接输入路径即可。<span class="codespan">..</span>表示后退一级目录，<span class="codespan">../../</span>表示后退两级，依次类推。（<span class="codespan">...</span>的作用和<span class="codespan">../../</span>相同）</p>
 
-<p>输入<code class="language-plaintext highlighter-rouge">d</code>，将列出当前 session 访问过的所有目录，再按提示的数字即可进入相应目录。</p>
+<p>输入<span class="codespan">d</span>，将列出当前 session 访问过的所有目录，再按提示的数字即可进入相应目录。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~
 <span class="o">&gt;</span> d
 0	~
 1	~/Applications
@@ -132,58 +145,58 @@ chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="s
 
 <h3 id="历史记录">历史记录</h3>
 
-<p>zsh 的历史记录跨 session，可以共享。历史记录支持受限查找。比如，输入<code class="language-plaintext highlighter-rouge">git</code>，再按向上箭头，会搜索用过的所有 git 命令。</p>
+<p>zsh 的历史记录跨 session，可以共享。历史记录支持受限查找。比如，输入<span class="codespan">git</span>，再按向上箭头，会搜索用过的所有 git 命令。</p>
 
 <h3 id="通配符搜索">通配符搜索</h3>
 
-<p><code class="language-plaintext highlighter-rouge">ls *.png</code>查找当前目录下所有 png 文件，<code class="language-plaintext highlighter-rouge">ls **/*.png</code>递归查找。</p>
+<p><span class="codespan">ls *.png</span>查找当前目录下所有 png 文件，<span class="codespan">ls **/*.png</span>递归查找。</p>
 
 <h2 id="oh-my-zsh">oh-my-zsh</h2>
 
 <p><a href="https://github.com/robbyrussell/oh-my-zsh">oh-my-zsh</a> 是最为流行的 zsh 配置文件，提供了大量的主题和插件，极大的拓展了 zsh 的功能，推动了 zsh 的流行，有点类似于 rails 之于 ruby。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install</span>
 <span class="c"># via curl</span>
 sh <span class="nt">-c</span> <span class="s2">"</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh<span class="si">)</span><span class="s2">"</span>
 <span class="c"># via wget </span>
 sh <span class="nt">-c</span> <span class="s2">"</span><span class="si">$(</span>wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh <span class="nt">-O</span> -<span class="si">)</span><span class="s2">"</span>
 </code></pre></div></div>
 
-<p>安装过后，<code class="language-plaintext highlighter-rouge">source ~/.zshrc</code>使之生效。</p>
+<p>安装过后，<span class="codespan">source ~/.zshrc</span>使之生效。</p>
 
 <h3 id="主题">主题</h3>
 
-<p>oh-my-zsh 内置了大量主题，可在<code class="language-plaintext highlighter-rouge">~/.oh-my-zsh/themes</code>中查看具体的配置。官网提供了一些主题的<a href="https://github.com/robbyrussell/oh-my-zsh/wiki/themes">截图</a>。也可参见我的<a href="http://www.zhihu.com/question/33277508/answer/58979821">知乎回答</a>。</p>
+<p>oh-my-zsh 内置了大量主题，可在<span class="codespan">~/.oh-my-zsh/themes</span>中查看具体的配置。官网提供了一些主题的<a href="https://github.com/robbyrussell/oh-my-zsh/wiki/themes">截图</a>。也可参见我的<a href="http://www.zhihu.com/question/33277508/answer/58979821">知乎回答</a>。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 我用的主题是 avit，可以很好的显示 git 信息</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 我用的主题是 avit，可以很好的显示 git 信息</span>
 /Volumes/Disk Image/cloudoffice  master ✔                                     37m
 <span class="o">&gt;</span> 鼠标在新一行
 </code></pre></div></div>
 
 <h3 id="插件">插件</h3>
 
-<p>oh-my-zsh 提供极为丰富的插件，在<code class="language-plaintext highlighter-rouge">~/.oh-my-zsh/plugins</code>目录下查看具体的配置。在<code class="language-plaintext highlighter-rouge">.zshrc</code>中写入<code class="language-plaintext highlighter-rouge">plugin(git autojump osx)</code>即可使用插件，下面介绍几个特别优秀的插件。</p>
+<p>oh-my-zsh 提供极为丰富的插件，在<span class="codespan">~/.oh-my-zsh/plugins</span>目录下查看具体的配置。在<span class="codespan">.zshrc</span>中写入<span class="codespan">plugin(git autojump osx)</span>即可使用插件，下面介绍几个特别优秀的插件。</p>
 
 <h4 id="git">git</h4>
 
-<p>精简 git 命令，减少输入字符数。参见 <a href="https://github.com/robbyrussell/oh-my-zsh/wiki/Plugin:git">Plugin:git</a>。该插件提供的快捷命令比较多，挑几个常用和好记的记忆即可，不必全记。我常用的有<code class="language-plaintext highlighter-rouge">gst</code>, <code class="language-plaintext highlighter-rouge">ggp</code>, <code class="language-plaintext highlighter-rouge">gco</code>, <code class="language-plaintext highlighter-rouge">gcm</code>, <code class="language-plaintext highlighter-rouge">gcp</code> 等。</p>
+<p>精简 git 命令，减少输入字符数。参见 <a href="https://github.com/robbyrussell/oh-my-zsh/wiki/Plugin:git">Plugin:git</a>。该插件提供的快捷命令比较多，挑几个常用和好记的记忆即可，不必全记。我常用的有<span class="codespan">gst</span>, <span class="codespan">ggp</span>, <span class="codespan">gco</span>, <span class="codespan">gcm</span>, <span class="codespan">gcp</span> 等。</p>
 
 <h4 id="autojump">autojump</h4>
 
-<p><a href="https://github.com/wting/autojump">autojump</a> 按照你的使用频率记录路径，使得目录的跳转更为方便。安装<code class="language-plaintext highlighter-rouge">brew install autojump</code>。如需跳转到包含 'foo' 的目录，执行<code class="language-plaintext highlighter-rouge">j foo</code>，这是最基础，也是最常用的命令。除此之外，还有<code class="language-plaintext highlighter-rouge">jc</code>, <code class="language-plaintext highlighter-rouge">jo</code>, <code class="language-plaintext highlighter-rouge">jco</code>命令，查看官网文档获取更多的使用方法。</p>
+<p><a href="https://github.com/wting/autojump">autojump</a> 按照你的使用频率记录路径，使得目录的跳转更为方便。安装<span class="codespan">brew install autojump</span>。如需跳转到包含 'foo' 的目录，执行<span class="codespan">j foo</span>，这是最基础，也是最常用的命令。除此之外，还有<span class="codespan">jc</span>, <span class="codespan">jo</span>, <span class="codespan">jco</span>命令，查看官网文档获取更多的使用方法。</p>
 
 <h4 id="osx">osx</h4>
 
 <p>该插件增强 Mac 下的使用体验，提供了如下命令：</p>
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">cdf</code>: 在 Finder 中打开要 cd 的目录；</li>
-  <li><code class="language-plaintext highlighter-rouge">quick-look</code>: 快速预览该文件，类似于在 Finder 中按下空格键；</li>
-  <li><code class="language-plaintext highlighter-rouge">man preview</code>: 在 preview 中打开 man page；</li>
-  <li><code class="language-plaintext highlighter-rouge">itunes</code>: 命令行操作 iTunes。</li>
+  <li><span class="codespan">cdf</span>: 在 Finder 中打开要 cd 的目录；</li>
+  <li><span class="codespan">quick-look</span>: 快速预览该文件，类似于在 Finder 中按下空格键；</li>
+  <li><span class="codespan">man preview</span>: 在 preview 中打开 man page；</li>
+  <li><span class="codespan">itunes</span>: 命令行操作 iTunes。</li>
 </ul>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> itunes
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> itunes
 itunes:shift:2: <span class="nb">shift </span>count must be &lt;<span class="o">=</span> <span class="nv">$#</span>
 Usage: itunes &lt;option&gt;
 option:
@@ -199,19 +212,26 @@ option:
 
 <h2 id="proxychains">proxychains</h2>
 
-<p>proxychains 是命令行的科学上网工具。安装<code class="language-plaintext highlighter-rouge">brew install proxychains-ng</code>。如图所示，亚马逊 S3 存储服务和 github 并不稳定，有时候需要科学上网才能访问。</p>
+<p>proxychains 是命令行的科学上网工具。安装<span class="codespan">brew install proxychains-ng</span>。如图所示，亚马逊 S3 存储服务和 github 并不稳定，有时候需要科学上网才能访问。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 原命令</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 原命令</span>
 brew cask <span class="nb">install </span>xxx
 <span class="c"># 使用 proxychains</span>
 proxychains4 brew cask <span class="nb">install </span>xxx
 </code></pre></div></div>
 
-<p><img src="/images/proxychain.png" alt="proxychains" title="proxychains" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/proxychain.png" alt="proxychains" title="proxychains" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>proxychains</figcaption>
+        </figure></p>
 
 <p>使用 proxychains 需要本地先开启科学上网的工具，比如 VPN/shadowsocks，然后在配置文件中添加相应的配置，其配置方法和 chrome 下的科学上网插件很相似，可以参考相关文档。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 在文件 ~/.proxychains/proxychains.conf 的末尾 ProxyList 部分，参照 ProxyList format Examples 添加，比如我用的是 shadowsocks，则配置是：</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 在文件 ~/.proxychains/proxychains.conf 的末尾 ProxyList 部分，参照 ProxyList format Examples 添加，比如我用的是 shadowsocks，则配置是：</span>
 socks5 	127.0.0.1 1080
 </code></pre></div></div>
 
@@ -222,21 +242,28 @@ socks5 	127.0.0.1 1080
 <p><a href="https://github.com/ggreer/the_silver_searcher">ag</a> 是一个新的搜索工具：</p>
 
 <ul>
-  <li>与<code class="language-plaintext highlighter-rouge">ack</code>相比，速度有了巨大的提升，这里有一个<a href="http://dongweiming.github.io/blog/archives/ack/">对比</a>；</li>
-  <li>搜索会忽略<code class="language-plaintext highlighter-rouge">.gitignore</code>和<code class="language-plaintext highlighter-rouge">.hgignore</code>中的 pattern；</li>
-  <li>不想搜索的文件可以把对应的 pattern 写到<code class="language-plaintext highlighter-rouge">.agignore</code>中；</li>
-  <li>命令比<code class="language-plaintext highlighter-rouge">ack</code>短 33%，且一只手可以按全。</li>
+  <li>与<span class="codespan">ack</span>相比，速度有了巨大的提升，这里有一个<a href="http://dongweiming.github.io/blog/archives/ack/">对比</a>；</li>
+  <li>搜索会忽略<span class="codespan">.gitignore</span>和<span class="codespan">.hgignore</span>中的 pattern；</li>
+  <li>不想搜索的文件可以把对应的 pattern 写到<span class="codespan">.agignore</span>中；</li>
+  <li>命令比<span class="codespan">ack</span>短 33%，且一只手可以按全。</li>
 </ul>
 
 <p>最后一条虽然看似戏谑，却道出了工具的本质：哪怕是能减少输入一个字符，也是必要的进步。</p>
 
 <h3 id="htop">htop</h3>
 
-<p><a href="http://hisham.hm/htop/">htop</a> 是一款运行于 Linux 系统监控与进程管理软件，用于取代 Unix 下传统的 top。与 top 只提供最消耗资源的进程列表不同，htop 提供所有进程的列表，并且使用彩色标识出处理器、swap 和内存状态。<sup id="fnref:htop-wiki" role="doc-noteref"><a href="#fn:htop-wiki" class="footnote" rel="footnote">1</a></sup></p>
+<p><a href="http://hisham.hm/htop/">htop</a> 是一款运行于 Linux 系统监控与进程管理软件，用于取代 Unix 下传统的 top。与 top 只提供最消耗资源的进程列表不同，htop 提供所有进程的列表，并且使用彩色标识出处理器、swap 和内存状态。<sup id="fnref:htop-wiki"><a href="#fn:htop-wiki" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></p>
 
-<p><img src="/images/htop.png" alt="htop" title="htop" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/htop.png" alt="htop" title="htop" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>htop</figcaption>
+        </figure></p>
 
-<p>htop 命令优点<sup id="fnref:htop-lizhenghn" role="doc-noteref"><a href="#fn:htop-lizhenghn" class="footnote" rel="footnote">2</a></sup>:</p>
+<p>htop 命令优点<sup id="fnref:htop-lizhenghn"><a href="#fn:htop-lizhenghn" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>:</p>
 
 <ul>
   <li>快速查看关键性能统计数据，如 CPU（多核布局）、内存/交换使用；</li>
@@ -248,16 +275,23 @@ socks5 	127.0.0.1 1080
 
 <h3 id="ccat">ccat</h3>
 
-<p><a href="https://github.com/jingweno/ccat">ccat</a> 是上色的<code class="language-plaintext highlighter-rouge">cat</code>，在 cat 的基础上提供了语法高亮。可通过<code class="language-plaintext highlighter-rouge">brew install ccat</code>安装。目前已支持<code class="language-plaintext highlighter-rouge">ruby</code>, <code class="language-plaintext highlighter-rouge">python</code>, <code class="language-plaintext highlighter-rouge">javascript</code>, <code class="language-plaintext highlighter-rouge">java</code>, <code class="language-plaintext highlighter-rouge">c</code>, <code class="language-plaintext highlighter-rouge">go</code>。</p>
+<p><a href="https://github.com/jingweno/ccat">ccat</a> 是上色的<span class="codespan">cat</span>，在 cat 的基础上提供了语法高亮。可通过<span class="codespan">brew install ccat</span>安装。目前已支持<span class="codespan">ruby</span>, <span class="codespan">python</span>, <span class="codespan">javascript</span>, <span class="codespan">java</span>, <span class="codespan">c</span>, <span class="codespan">go</span>。</p>
 
-<p><img src="/images/R-ccat.png" alt="ccat" title="ccat" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-ccat.png" alt="ccat" title="ccat" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>ccat</figcaption>
+        </figure></p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:htop-wiki" role="doc-endnote">
+    <li id="fn:htop-wiki">
       <p><a href="https://zh.wikipedia.org/wiki/Htop">Htop - 维基百科，自由的百科全书</a> <a href="#fnref:htop-wiki" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:htop-lizhenghn" role="doc-endnote">
+    <li id="fn:htop-lizhenghn">
       <p><a href="http://www.cnblogs.com/lizhenghn/p/3728610.html">Linux下超级命令htop的学习使用 - lizhenghn - 博客园</a> <a href="#fnref:htop-lizhenghn" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

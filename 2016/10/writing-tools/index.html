@@ -15,7 +15,6 @@
 
   <title>我的写作工具</title>
   <meta name="description" content="从开博客以来渐渐写了不少文字，此文用以记录这一过程中积累的一些写作工具。
-
 ">
   <meta name="keywords" content="scrivener,workflowy,notes,typora,qiniu,alfred,jekyll">
   <link rel="canonical" href="https://wulfric.me/2016/10/writing-tools/">
@@ -91,7 +90,14 @@
 
 <p>当素材积累完成时，便可以打开 <a href="https://www.typora.io/">typora</a> 开始写了。</p>
 
-<p><img src="/images/editor/typora.png" alt="typora" title="typora" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/editor/typora.png" alt="typora" title="typora" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>typora</figcaption>
+        </figure></p>
 
 <h2 id="图片同步">图片同步</h2>
 
@@ -101,7 +107,7 @@
 
 <p>在 shell 下执行同步的输出如下：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2016/09/23 00:13:05.006800 INFO qrsync.go:49: Syncing /Users/username/images <span class="o">=&gt;</span> your_bucket_name
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2016/09/23 00:13:05.006800 INFO qrsync.go:49: Syncing /Users/username/images <span class="o">=&gt;</span> your_bucket_name
 
 2016/09/23 00:13:05.011035 INFO qrsync.go:83: Processing file: /Users/username/.qrsync/xxx.log
 
@@ -112,7 +118,7 @@
 
 <p>图片上传完毕后，我们还需要插入地址，我写了一个 alfred 的 snippet 来获取 url。在 alfred 的 Features 标签页中，选择 Clipboard，添加如下的 snippet：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">![{</span>clipboard<span class="o">}](</span>http://your_qiniu_bucket.qiniudn.com/<span class="o">{</span>clipboard<span class="o">}</span> <span class="s2">"{clipboard}"</span><span class="o">)</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">![{</span>clipboard<span class="o">}](</span>http://your_qiniu_bucket.qiniudn.com/<span class="o">{</span>clipboard<span class="o">}</span> <span class="s2">"{clipboard}"</span><span class="o">)</span>
 </code></pre></div></div>
 <p>我只需要复制alfred/jekyll-title.png，然后选择该 snippet，即可得到需要的 markdown 地址格式。</p>
 
@@ -122,11 +128,18 @@
 
 <p>我用的是 Jekyll 博客程序，要求每篇文章都要有头信息，包括 title, date, categories, tags 等。每次都写会很麻烦，便在如下位置添加了一个 snippet：</p>
 
-<p><img src="/images/alfred/jekyll-title.png" alt="jekyll title" title="jekyll title" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/alfred/jekyll-title.png" alt="jekyll title" title="jekyll title" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jekyll title</figcaption>
+        </figure></p>
 
 <p>其内容如下：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">---</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">---</span>
 title: <span class="o">{</span>clipboard<span class="o">}</span>
 <span class="nb">date</span>: <span class="o">{</span><span class="nb">date</span>:medium<span class="o">}</span> <span class="o">{</span><span class="nb">time</span><span class="o">}</span>
 categories: <span class="o">[</span>技术]
@@ -137,13 +150,20 @@ tags: <span class="o">[]</span>
 
 <p>PS：这里的 date 和 time 是操作系统所支持的，可以在系统设置-&gt;时间和日期设置-&gt;语言和时区-&gt;高级设置中查看。其中 {date:xxx} 后面的内容和 dates 中的一一对应。</p>
 
-<p><img src="/images/macos/macos-date-time.png" alt="macos date and time" title="macos date and time" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/macos/macos-date-time.png" alt="macos date and time" title="macos date and time" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>macos date and time</figcaption>
+        </figure></p>
 
 <h3 id="jekyll-部署">Jekyll 部署</h3>
 
-<p><a href="/2014/09/jekyll-plugs/">旧文</a>中曾提及，我使用 Jekyll 的方式和 octopress 很像，都是一个分支保存 source，一个分支用来部署。为了简化这一过程，我写了一个 script 脚本，<code class="language-plaintext highlighter-rouge">_deploy.sh</code>（下划线开头的文件不会被转换到 site 中去）。</p>
+<p><a href="/2014/09/jekyll-plugs/">旧文</a>中曾提及，我使用 Jekyll 的方式和 octopress 很像，都是一个分支保存 source，一个分支用来部署。为了简化这一过程，我写了一个 script 脚本，<span class="codespan">_deploy.sh</span>（下划线开头的文件不会被转换到 site 中去）。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
 git submodule foreach git pull <span class="c"># 我把文章 source 抽成一个 repo 了</span>
 jekyll b <span class="c"># jekyll build</span>
 <span class="nb">cd </span>_site <span class="c"># site 中是部署的代码，分支是 master；外层分支是 source</span>
@@ -153,7 +173,7 @@ git commit <span class="nt">-m</span> <span class="s2">"</span><span class="k">$
 git push origin master
 </code></pre></div></div>
 
-<p>这样每次写好文章之后，执行<code class="language-plaintext highlighter-rouge">sh _deploy.sh</code>即可。</p>
+<p>这样每次写好文章之后，执行<span class="codespan">sh _deploy.sh</span>即可。</p>
 
   </article>
 

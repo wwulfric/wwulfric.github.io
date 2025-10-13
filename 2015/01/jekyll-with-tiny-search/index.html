@@ -15,7 +15,6 @@
 
   <title>为 Jekyll 博客添加微搜索</title>
   <meta name="description" content="作为静态博客，搜索是个不太好做的功能。一般的处理方式是，在 Jekyll build 的时候，把页面信息写入一个文件中，然后在搜索的时候用 js 作匹配。客户端的浏览器会较为吃力。微搜索 是一个提供静态搜索的服务，功能强大，可定制性强，还可支持拼音搜索，非常适于作为博客这样开放，静态的内容的搜索引擎。
-
 ">
   <meta name="keywords" content="jekyll,tinysou,search">
   <link rel="canonical" href="https://wulfric.me/2015/01/jekyll-with-tiny-search/">
@@ -78,9 +77,9 @@
   <li>获取 engine key，并安装到页面中</li>
 </ol>
 
-<p>我在 Jekyll 博客的根目录下新建了一个<code class="language-plaintext highlighter-rouge">search.html</code>，其内容如下：</p>
+<p>我在 Jekyll 博客的根目录下新建了一个<span class="codespan">search.html</span>，其内容如下：</p>
 
-<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>layout: page
+<div  class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>layout: page
 
 title: Search
 
@@ -104,7 +103,7 @@ title: Search
 
 <span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="nx">d</span><span class="p">,</span><span class="nx">t</span><span class="p">,</span><span class="nx">u</span><span class="p">,</span><span class="nx">n</span><span class="p">,</span><span class="nx">s</span><span class="p">,</span><span class="nx">e</span><span class="p">){</span>
 
-<span class="nx">s</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="nx">t</span><span class="p">);</span>
+<span class="nx">s</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">createElement</span><span class="p">(</span><span class="nx">t</span><span class="p">);</span>
 
 <span class="nx">s</span><span class="p">.</span><span class="nx">src</span> <span class="o">=</span> <span class="nx">u</span><span class="p">;</span>
 
@@ -116,13 +115,13 @@ title: Search
 
 <span class="p">};</span>
 
-<span class="nx">e</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">getElementsByTagName</span><span class="p">(</span><span class="nx">t</span><span class="p">)[</span><span class="mi">0</span><span class="p">];</span>
+<span class="nx">e</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">getElementsByTagName</span><span class="p">(</span><span class="nx">t</span><span class="p">)[</span><span class="mi">0</span><span class="p">];</span>
 
-<span class="nx">e</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">insertBefore</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">e</span><span class="p">);</span>
+<span class="nx">e</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nf">insertBefore</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">e</span><span class="p">);</span>
 
 <span class="p">})(</span><span class="nb">window</span><span class="p">,</span><span class="nb">document</span><span class="p">,</span><span class="dl">'</span><span class="s1">script</span><span class="dl">'</span><span class="p">,</span><span class="dl">'</span><span class="s1">//tinysou-cdn.b0.upaiyun.com/ts.js</span><span class="dl">'</span><span class="p">,</span><span class="dl">'</span><span class="s1">_ts</span><span class="dl">'</span><span class="p">);</span>
 
-<span class="nx">_ts</span><span class="p">(</span><span class="nx">option</span><span class="p">);</span>
+<span class="nf">_ts</span><span class="p">(</span><span class="nx">option</span><span class="p">);</span>
 
 <span class="nt">&lt;/script&gt;</span>
 

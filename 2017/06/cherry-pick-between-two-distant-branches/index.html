@@ -15,7 +15,6 @@
 
   <title>遥远分支的手动 cherry-pick 方法</title>
   <meta name="description" content="在刚开始使用 git 作为代码托管工具的时候，我还是一名学生，自己的项目也没啥冲突好解决的，那个时候的 git 感觉就是一个用起来还算方便的轻量级代码同步工具。之所以说它轻量，是因为彼时所需要的所有命令只有 4 个：
-
 ">
   <meta name="keywords" content="git,cherry-pick,diff">
   <link rel="canonical" href="https://wulfric.me/2017/06/cherry-pick-between-two-distant-branches/">
@@ -70,7 +69,7 @@
   <article class="post-content">
     <p>在刚开始使用 git 作为代码托管工具的时候，我还是一名学生，自己的项目也没啥冲突好解决的，那个时候的 git 感觉就是一个用起来还算方便的轻量级代码同步工具。之所以说它轻量，是因为彼时所需要的所有命令只有 4 个：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git pull <span class="c"># 换电脑的时候同步代码</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git pull <span class="c"># 换电脑的时候同步代码</span>
 
 git add
 git commit
@@ -83,7 +82,14 @@ git push <span class="c"># 推送代码</span>
 
 <p>这次遇到的就是一个较为棘手的合并问题。如下图所示，当开发一个feature 分支的时候，突然有需求要将该 feature 分支的 B commit 放到 master 分支上。而此时，由于疏忽，feature 分支已经远远落后于 master 分支了，且该分支也提交了大量的 commit，可想而知合并将产生大量的冲突。（当然，feature 分支应该尽量频繁的 rebase master）</p>
 
-<p><img src="/images/git/R-far-away-branch.png" alt="两个分道扬镳的分支之间的 cherry pick 手动 git 修复" title="两个分道扬镳的分支之间的 cherry pick 手动 git 修复" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/git/R-far-away-branch.png" alt="两个分道扬镳的分支之间的 cherry pick 手动 git 修复" title="两个分道扬镳的分支之间的 cherry pick 手动 git 修复" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>两个分道扬镳的分支之间的 cherry pick 手动 git 修复</figcaption>
+        </figure></p>
 
 <p>面对这种冲突一点办法都没有，如果直接 cherry pick，大量的难以理解的冲突将令人无所是从，解决这些冲突也会消耗大量的精力，即使有些文件的冲突你很明白并不需要，只是两个 commit git diff 的结果而已。我们可以通过一些原始的手段手动减少一些冲突和打一部分补丁，以下是常用的方法：</p>
 
@@ -97,7 +103,7 @@ git push <span class="c"># 推送代码</span>
 
 <p>下面的命令清单记录了解决冲突要用到的 git 命令。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看两个 commit 之间哪些文件有变动</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看两个 commit 之间哪些文件有变动</span>
 git diff <span class="nt">--name-only</span> SHA1 SHA2
 <span class="c"># http://stackoverflow.com/questions/1552340/how-to-list-the-file-names-only-that-changed-between-two-commits</span>
 

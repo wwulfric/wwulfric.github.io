@@ -15,7 +15,6 @@
 
   <title>PHP 的错误和异常处理机制</title>
   <meta name="description" content="原先的 PHP 只有错误没有异常。看一些老的文档你能看到不少错误输出是直接 echo html 标签的。而现代一点的框架早已经包裹好了一切，直接抛出异常就可以有比较漂亮的错误显示页面，比如 rails 的 better errors。当然，PHP 的现代框架也已经做的不错了，比如 laravel。然而我司目前还是用 codeigniter 2，它的错误和异常处理还比较简陋。借着升级到 PHP7 的契机梳理了一下 PHP 的错误和异常处理的机制。
-
 ">
   <meta name="keywords" content="php,error,exception,throwable">
   <link rel="canonical" href="https://wulfric.me/2017/08/php-error-exception/">
@@ -76,7 +75,7 @@
 
 <h3 id="php-的错误">PHP 的错误</h3>
 
-<p>除了异常 PHP5 常见的就是抛出错误。你可以在官方<a href="http://php.net/manual/zh/errorfunc.constants.php">文档</a>找到所有的错误的定义，这些错误可以大致分为 WARNING, ERROR(fatal error), NOTICE 等<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。<a href="http://www.cnblogs.com/yjf512/p/5314345.html">PHP的错误机制总结</a>一文中给出了每种错误出现的场景。</p>
+<p>除了异常 PHP5 常见的就是抛出错误。你可以在官方<a href="http://php.net/manual/zh/errorfunc.constants.php">文档</a>找到所有的错误的定义，这些错误可以大致分为 WARNING, ERROR(fatal error), NOTICE 等<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。<a href="http://www.cnblogs.com/yjf512/p/5314345.html">PHP的错误机制总结</a>一文中给出了每种错误出现的场景。</p>
 
 <blockquote>
   <p>E_DEPRECATED(8192)  运行时通知,启用后将会对在未来版本中可能无法正常工作的代码给出警告。</p>
@@ -128,7 +127,7 @@
 
 <p>常见的有：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="c1">// E_ERROR</span>
 <span class="nf">nonexist</span><span class="p">();</span> <span class="c1">// PHP Fatal error:  Call to undefined function nonexist()</span>
 <span class="k">throw</span> <span class="k">new</span> <span class="nc">Exception</span><span class="p">(</span><span class="s1">''</span><span class="p">);</span> <span class="c1">// 未捕获异常也是 fatal error</span>
@@ -143,7 +142,7 @@
 
 <p>由于历史原因，这个老旧的 ci2 框架有不少不合理的地方，比如会读取不存在的 log 文件；我们对 PHP 也有一些不规范的使用，比如：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$req</span> <span class="o">=</span> <span class="p">[];</span>
 <span class="nv">$user_id</span> <span class="o">=</span> <span class="nv">$req</span><span class="p">[</span><span class="s1">'user_id'</span><span class="p">];</span> <span class="c1">// PHP error:  Undefined offset</span>
 <span class="k">if</span> <span class="p">(</span><span class="kc">null</span> <span class="o">===</span> <span class="nv">$user_id</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* do something */</span><span class="p">}</span>
@@ -153,7 +152,7 @@
 
 <h3 id="php-对错误的处理">PHP 对错误的处理</h3>
 
-<p>如果没有做任何配置，PHP 的错误是会直接打印出来的。古老的 PHP 应用也确实有这么做的。但现代应用显然不能这样，现代应用的错误应该遵循一下规则<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>：</p>
+<p>如果没有做任何配置，PHP 的错误是会直接打印出来的。古老的 PHP 应用也确实有这么做的。但现代应用显然不能这样，现代应用的错误应该遵循一下规则<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>：</p>
 
 <blockquote>
   <p>一定要让 PHP 报告错误；</p>
@@ -169,13 +168,13 @@
 
 <p>本来这个函数是搭配 <a href="http://php.net/manual/zh/function.trigger-error.php">trigger_error 函数</a>使用的。用户通过 trigger_error 产生 error，然后用 error_handler 来处理错误。只是在这种场景下往往「异常」更好用，所以这么用的并不多。</p>
 
-<p>在前述的系统自带的 16 种错误中，有一部分相当重要的错误并不能被 error_handler 捕获<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">3</a></sup>：</p>
+<p>在前述的系统自带的 16 种错误中，有一部分相当重要的错误并不能被 error_handler 捕获<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>：</p>
 
 <blockquote>
   <p>以下级别的错误不能由用户定义的函数来处理： E_ERROR、 E_PARSE、 E_CORE_ERROR、 E_CORE_WARNING、 E_COMPILE_ERROR、E_COMPILE_WARNING，和在调用 set_error_handler() 函数所在文件中产生的大多数 E_STRICT。</p>
 </blockquote>
 
-<p>这些错误将无法记录下来，同时也不方便统一处理<sup id="fnref:4" role="doc-noteref"><a href="#fn:4" class="footnote" rel="footnote">4</a></sup>。在 PHP7 之前的 PHP 版本一个很大的痛点就是：发生了 E_ERROR 错误，无法捕获，导致数据库的事务无法回滚造成数据不一致<sup id="fnref:5" role="doc-noteref"><a href="#fn:5" class="footnote" rel="footnote">5</a></sup>。</p>
+<p>这些错误将无法记录下来，同时也不方便统一处理<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>。在 PHP7 之前的 PHP 版本一个很大的痛点就是：发生了 E_ERROR 错误，无法捕获，导致数据库的事务无法回滚造成数据不一致<sup id="fnref:5"><a href="#fn:5" class="footnote" rel="footnote" role="doc-noteref">5</a></sup>。</p>
 
 <p>另外一个需要注意的是， error_handler 处理完毕，脚本将会继续执行发生错误的后一行。在某些情况下，你可能希望遇到某些错误可以中断脚本的执行。在<a href="http://php.net/manual/zh/function.set-error-handler.php">官方文档</a>中已说明，</p>
 
@@ -189,11 +188,11 @@
 
 <p><a href="https://www.wikiwand.com/zh-hans/%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86">异常</a>是对程序错误的一种优秀的处理方式，较于错误，异常的优点是默认打印调用栈，便于调试，可控等，可以参考一下鸟哥的文章<a href="http://www.laruence.com/2012/02/02/2515.html">我们什么时候应该使用异常</a>，清晰的点明了错误码和异常的优缺点。</p>
 
-<p>对异常的处理也要遵循前述的错误处理规则<sup id="fnref:2:1" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>。在我们的日常开发中，不可能保证可以 catch 所有的异常，而未被 catch 的异常将以 fatal error 的形式中断脚本的执行并输出错误信息。所以要借助 <a href="http://php.net/manual/zh/function.set-exception-handler.php">set_exception_handler</a>，统一处理所有未被 catch 的异常。我们可以像 error_handler 那样，在 exception_handler 中处理 log，将数据库的事务回滚。</p>
+<p>对异常的处理也要遵循前述的错误处理规则<sup id="fnref:2:1"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>。在我们的日常开发中，不可能保证可以 catch 所有的异常，而未被 catch 的异常将以 fatal error 的形式中断脚本的执行并输出错误信息。所以要借助 <a href="http://php.net/manual/zh/function.set-exception-handler.php">set_exception_handler</a>，统一处理所有未被 catch 的异常。我们可以像 error_handler 那样，在 exception_handler 中处理 log，将数据库的事务回滚。</p>
 
 <p>前面提到，error_handler 需要在必要的时候手动中断脚本， PHP 文档中给出的一种实践是，在 error_handler 中 throw <a href="http://php.net/manual/en/class.errorexception.php">ErrorException</a>，代码示例如下：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">function</span> <span class="n">exception_error_handler</span><span class="p">(</span><span class="nv">$severity</span><span class="p">,</span> <span class="nv">$message</span><span class="p">,</span> <span class="nv">$file</span><span class="p">,</span> <span class="nv">$line</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="nb">error_reporting</span><span class="p">()</span> <span class="o">&amp;</span> <span class="nv">$severity</span><span class="p">))</span> <span class="p">{</span>
         <span class="c1">// This error code is not included in error_reporting</span>
@@ -213,7 +212,7 @@
 
 <p>鸟哥通过一个<a href="http://www.laruence.com/2010/08/03/1697.html">例子</a>讲解了 PHP 的异常的处理机制，在这里转述一下。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">function</span> <span class="n">onError</span><span class="p">(</span><span class="nv">$errCode</span><span class="p">,</span> <span class="nv">$errMesg</span><span class="p">,</span> <span class="nv">$errFile</span><span class="p">,</span> <span class="nv">$errLine</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">echo</span> <span class="s2">"Error Occurred</span><span class="se">\n</span><span class="s2">"</span><span class="p">;</span>
     <span class="k">throw</span> <span class="k">new</span> <span class="nc">Exception</span><span class="p">(</span><span class="nv">$errMesg</span><span class="p">);</span>
@@ -248,7 +247,14 @@
 
 <p>PHP 中的异常处理机制如下：</p>
 
-<p><img src="http://laruence-wordpress.stor.sinaapp.com/uploads/PHP-exception-cycle.png" alt="" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="http://laruence-wordpress.stor.sinaapp.com/uploads/PHP-exception-cycle.png" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
 
 <p>PHP在遇到 Fatal Error 的时候，会直接 zend_bailout，而 zend_bailout 会导致程序流程直接跳过上面代码段，也可以理解为直接 exit 了(longjmp)，这就导致了 user_exception_handler 没有机会发生作用。</p>
 
@@ -258,9 +264,9 @@
 
 <h2 id="php7-的错误和异常">PHP7 的错误和异常</h2>
 
-<p>PHP 7 改变了大多数错误的报告方式。不同于传统（PHP 5）的错误报告机制，现在大多数错误被作为 <strong>Error</strong> 异常抛出（在 PHP7 中，只有 fatal error 和 recoverable error 抛出异常，其他 error 比如 warning 和 notice 的表现不变<sup id="fnref:7" role="doc-noteref"><a href="#fn:7" class="footnote" rel="footnote">6</a></sup>）。PHP7 中的 Error 和 Exception 的关系如图<sup id="fnref:7:1" role="doc-noteref"><a href="#fn:7" class="footnote" rel="footnote">6</a></sup>：</p>
+<p>PHP 7 改变了大多数错误的报告方式。不同于传统（PHP 5）的错误报告机制，现在大多数错误被作为 <strong>Error</strong> 异常抛出（在 PHP7 中，只有 fatal error 和 recoverable error 抛出异常，其他 error 比如 warning 和 notice 的表现不变<sup id="fnref:7"><a href="#fn:7" class="footnote" rel="footnote" role="doc-noteref">6</a></sup>）。PHP7 中的 Error 和 Exception 的关系如图<sup id="fnref:7:1"><a href="#fn:7" class="footnote" rel="footnote" role="doc-noteref">6</a></sup>：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>interface Throwable
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>interface Throwable
     |- Exception implements Throwable
         |- ...
     |- Error implements Throwable
@@ -271,7 +277,7 @@
         |- AssertionError extends Error
 </code></pre></div></div>
 
-<p>值得注意的是，Error 类表现上和 Exception 基本一致，可以像 <a href="http://php.net/manual/zh/class.exception.php">Exception</a> 异常一样被第一个匹配的 try / catch 块所捕获，如果没有匹配的 <a href="http://php.net/manual/zh/language.exceptions.php#language.exceptions.catch">catch</a> 块，则调用异常处理函数（事先通过 set_exception_handler() 注册<sup id="fnref:6" role="doc-noteref"><a href="#fn:6" class="footnote" rel="footnote">7</a></sup>）进行处理。 如果尚未注册异常处理函数，则按照传统方式处理，被报告为一个致命错误（Fatal Error）。但并非继承自 <a href="http://php.net/manual/zh/class.exception.php">Exception</a> 类（要考虑到和 PHP5 的兼容性），所以不能用 <code class="language-plaintext highlighter-rouge">catch (Exception $e) { ... }</code> 来捕获，而需要使用 <code class="language-plaintext highlighter-rouge">catch (Error $e) { ... }</code>，当然，也可以使用 set_exception_handler 来捕获。</p>
+<p>值得注意的是，Error 类表现上和 Exception 基本一致，可以像 <a href="http://php.net/manual/zh/class.exception.php">Exception</a> 异常一样被第一个匹配的 try / catch 块所捕获，如果没有匹配的 <a href="http://php.net/manual/zh/language.exceptions.php#language.exceptions.catch">catch</a> 块，则调用异常处理函数（事先通过 set_exception_handler() 注册<sup id="fnref:6"><a href="#fn:6" class="footnote" rel="footnote" role="doc-noteref">7</a></sup>）进行处理。 如果尚未注册异常处理函数，则按照传统方式处理，被报告为一个致命错误（Fatal Error）。但并非继承自 <a href="http://php.net/manual/zh/class.exception.php">Exception</a> 类（要考虑到和 PHP5 的兼容性），所以不能用 <span class="codespan">catch (Exception $e) { ... }</span> 来捕获，而需要使用 <span class="codespan">catch (Error $e) { ... }</span>，当然，也可以使用 set_exception_handler 来捕获。</p>
 
 <p>但是，用户不能自己定义类实现 Throwable，这是为了保证只有 Exception 和 Error 才可以抛出。</p>
 
@@ -279,7 +285,7 @@
 
 <p>PHP7 中的 fatal error 会抛出 Error，且可以被正常 catch 到：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nv">$a</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
 <span class="k">try</span> <span class="p">{</span>
   <span class="nv">$a</span><span class="o">-&gt;</span><span class="nf">nonexist</span><span class="p">();</span>
@@ -290,7 +296,7 @@
 
 <p>也有些错误场景下会抛出更加详细的错误，比如：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="c1">// TypeError</span>
 <span class="k">function</span> <span class="n">test</span><span class="p">(</span><span class="kt">int</span> <span class="nv">$i</span><span class="p">)</span> <span class="p">{</span>
   <span class="k">echo</span> <span class="nv">$i</span><span class="p">;</span>
@@ -337,7 +343,7 @@
 
 <p>对于业务中不应该出现错误的地方，抛出 InternalException，而不是 Error。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="kd">class</span> <span class="nc">InternalException</span> <span class="kd">extends</span> <span class="nc">Exception</span> <span class="p">{</span> <span class="cm">/*...*/</span> <span class="p">}</span>
 
 <span class="k">function</span> <span class="n">find</span><span class="p">(</span><span class="kt">Array</span> <span class="nv">$ids</span><span class="p">)</span> <span class="p">{</span>
@@ -350,7 +356,7 @@
 
 <p>只在需要清理现场的时候 catch Error。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">try</span> <span class="p">{</span> <span class="cm">/*...*/</span> <span class="p">}</span>
 <span class="k">catch</span> <span class="p">(</span><span class="nc">Throwable</span> <span class="nv">$t</span><span class="p">)</span> <span class="p">{</span>
   <span class="c1">// log, transaction rollback, cleanup...</span>
@@ -363,7 +369,7 @@
 
 <p>FriendlyErrorType：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">function</span> <span class="n">FriendlyErrorType</span><span class="p">(</span><span class="nv">$type</span><span class="p">)</span> 
 <span class="p">{</span> 
     <span class="k">switch</span><span class="p">(</span><span class="nv">$type</span><span class="p">)</span> 
@@ -405,7 +411,7 @@
 
 <p>error_handler:</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">function</span> <span class="n">exception_error_handler</span><span class="p">(</span><span class="nv">$severity</span><span class="p">,</span> <span class="nv">$message</span><span class="p">,</span> <span class="nv">$file</span><span class="p">,</span> <span class="nv">$line</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="nb">error_reporting</span><span class="p">()</span> <span class="o">&amp;</span> <span class="nv">$severity</span><span class="p">))</span> <span class="p">{</span>
         <span class="c1">// This error code is not included in error_reporting</span>
@@ -417,32 +423,32 @@
 <span class="nb">set_error_handler</span><span class="p">(</span><span class="s2">"exception_error_handler"</span><span class="p">);</span>
 </code></pre></div></div>
 
-<p>PHP 会把所有的错误都交给错误处理程序，甚至包括错误报告设置中排除的错误。因此，我们要检查每个错误代码<code class="language-plaintext highlighter-rouge">$severity</code>，然后做适当的处理<sup id="fnref:8" role="doc-noteref"><a href="#fn:8" class="footnote" rel="footnote">8</a></sup>。</p>
+<p>PHP 会把所有的错误都交给错误处理程序，甚至包括错误报告设置中排除的错误。因此，我们要检查每个错误代码<span class="codespan">$severity</span>，然后做适当的处理<sup id="fnref:8"><a href="#fn:8" class="footnote" rel="footnote" role="doc-noteref">8</a></sup>。</p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p><a href="http://www.jianshu.com/p/1b6004a94eb8">PHP中的错误级别与具体报错信息分类</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p><a href="https://book.douban.com/subject/26635862/">modern php</a> 第五章，P115 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:2:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
     </li>
-    <li id="fn:3" role="doc-endnote">
+    <li id="fn:3">
       <p>E_ERROR 无法捕获，E_RECOVERABLE_ERROR 可以，后者默认输出 Catachable fatal error <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:4" role="doc-endnote">
+    <li id="fn:4">
       <p>fatal error 会记录到 web 服务器的 error.log，这一点需要注意，因为这个 log 的位置往往不是 PHP 应用定义的，而是 web 服务器定义的。 <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:5" role="doc-endnote">
+    <li id="fn:5">
       <p>PHP 中还有一个 <a href="http://php.net/manual/zh/function.register-shutdown-function.php">register_shutdown_function</a> 函数，它允许注册一个会在 PHP 中止时执行的函数，这个函数可以捕获 fatal error，毕竟是只要是脚本中断就可以捕获的。ci2 并没有使用这个方法，所以相关问题一直没有得到很好的解决，当时也没有意识到这个函数的存在，升级 PHP7 之后可以通过 catch Error 来解决，便不再需要这样处理了。 <a href="#fnref:5" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:7" role="doc-endnote">
+    <li id="fn:7">
       <p><a href="https://trowski.com/2015/06/24/throwable-exceptions-and-errors-in-php7/">Throwable Exceptions and Errors in PHP 7</a> <a href="#fnref:7" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:7:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
     </li>
-    <li id="fn:6" role="doc-endnote">
+    <li id="fn:6">
       <p>在 PHP7 中，传入 exception_handler 的参数从 <a href="http://php.net/manual/zh/class.exception.php">Exception</a> 改为 Throwable，这意味着 exception_handler 可以截获 Error。 <a href="#fnref:6" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:8" role="doc-endnote">
+    <li id="fn:8">
       <p>modern php 第五章，P116 <a href="#fnref:8" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

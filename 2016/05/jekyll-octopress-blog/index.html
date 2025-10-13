@@ -15,7 +15,6 @@
 
   <title>jekyll 和 octopress 博客程序的选择</title>
   <meta name="description" content="首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 自动 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。
-
 ">
   <meta name="keywords" content="jekyll,octopress,hexo">
   <link rel="canonical" href="https://wulfric.me/2016/05/jekyll-octopress-blog/">
@@ -70,7 +69,7 @@
   <article class="post-content">
     <p>首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 <strong>自动</strong> 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+----+
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+----+
      |
      +-+article1.md
      |
@@ -84,9 +83,9 @@
      +-+article4.md
 </code></pre></div></div>
 
-<p>上图是 jekyll 的 master 分支的结构（隐去了其他必要的文件，只留下 md），github 服务器上运行的 <code class="language-plaintext highlighter-rouge">jekyll server</code> 命令会监控这里的变化，并自动把 md 文件转成 html host 出去。</p>
+<p>上图是 jekyll 的 master 分支的结构（隐去了其他必要的文件，只留下 md），github 服务器上运行的 <span class="codespan">jekyll server</span> 命令会监控这里的变化，并自动把 md 文件转成 html host 出去。</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-----+                 +----+
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-----+                 +----+
       |                      |
       +-+source folder       +-+index.html
       |                      |
@@ -116,9 +115,9 @@
 
 <p>还记得之前所说的，jekyll 的目录中同样有类似 octopress 的 source folder 和 public folder 吗（<a href="https://jekyllrb.com/docs/structure/">jekyll 目录结构</a>）？jekyll 和 octopress 一样，都有一个 build 命令，可以将 source 中的 md 文件转成 html 放到 public 文件夹下，只要把 public 文件夹的内容设为 master 分支，就可以将 jekyll 变成 octopress 了。（两种工作方式截然不同，所以文件夹目录结构和分支也有很大的变化，我当时改动的时候也很痛苦）</p>
 
-<p>现在我在 source 分支下建立了一个 <code class="language-plaintext highlighter-rouge">_deploy.sh</code> 文件（ <code class="language-plaintext highlighter-rouge">_</code> 开头的文件不会被自动放到 public 下），这个命令其实就等于把 jekyll 变成 octopress 了。这种情况下，jekyll 不再 host md 文件，而和 octopress 一样 host html 文件了。当然这种情况下，你可以使用任何插件了，我就用到了 jekyll-assets, jekyll-sitemap 等插件，还自己修改了 kramdown 的 convert 函数。</p>
+<p>现在我在 source 分支下建立了一个 <span class="codespan">_deploy.sh</span> 文件（ <span class="codespan">_</span> 开头的文件不会被自动放到 public 下），这个命令其实就等于把 jekyll 变成 octopress 了。这种情况下，jekyll 不再 host md 文件，而和 octopress 一样 host html 文件了。当然这种情况下，你可以使用任何插件了，我就用到了 jekyll-assets, jekyll-sitemap 等插件，还自己修改了 kramdown 的 convert 函数。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
 <span class="c"># 编辑 md 文件</span>
 git submodule foreach git pull <span class="c"># 你可以忽略这里，我把 md 文件放在另一个 repo 中了</span>
 jekyll b

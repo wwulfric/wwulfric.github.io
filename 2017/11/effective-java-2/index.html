@@ -15,7 +15,6 @@
 
   <title>Effective-Java-创建和销毁对象</title>
   <meta name="description" content="Effective Java[EJ] 的第二章讲的是创建和销毁对象：在什么情况下需要创建对象，怎样创建；在什么情况下需要避免创建对象，怎样避免；如何按照既定顺序销毁对象，如何在销毁对象前正确清理现场。
-
 ">
   <meta name="keywords" content="java,effective java">
   <link rel="canonical" href="https://wulfric.me/2017/11/effective-java-2/">
@@ -76,7 +75,7 @@
 
 <p>你可以考虑为你的类提供一个静态工厂方法。静态工厂方法是一个返回类的示例的静态方法，如：</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="nc">Boolean</span> <span class="nf">valueOf</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="nc">Boolean</span> <span class="nf">valueOf</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
     <span class="k">return</span> <span class="n">b</span> <span class="o">?</span> <span class="nc">Boolean</span><span class="o">.</span><span class="na">TRUE</span> <span class="o">:</span> <span class="nc">Boolean</span><span class="o">.</span><span class="na">FALSE</span><span class="o">;</span>
 <span class="o">}</span>
 </code></pre></div></div>
@@ -89,7 +88,7 @@
   <li>构造器会返回一个确定的类型（当前类），而静态工厂方法可以返回 subtype（子类，接口类），这在 java.util.Collections 中用的非常多；</li>
 </ul>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="nc">Map</span> <span class="nf">getInstance</span><span class="o">();</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="nc">Map</span> <span class="nf">getInstance</span><span class="o">();</span>
 <span class="c1">// 这个接口可以返回所有实现了 Map 的接口的类的实例</span>
 
 <span class="kd">public</span> <span class="kd">static</span> <span class="nc">AbstractMap</span> <span class="nf">getInstance</span><span class="o">();</span>
@@ -118,7 +117,7 @@
 
 <p>静态工厂方法和构造器有一个共同的局限：不能很好的扩展到大量的可选参数。书中给出了这样一个例子：</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Telescoping constructor pattern - does not scale well!</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Telescoping constructor pattern - does not scale well!</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NutritionFacts</span> <span class="o">{</span>
   <span class="c1">// ... field 定义</span>
   <span class="kd">public</span> <span class="nf">NutritionFacts</span><span class="o">(</span><span class="kt">int</span> <span class="n">servingSize</span><span class="o">,</span> <span class="kt">int</span> <span class="n">servings</span><span class="o">);</span>
@@ -140,7 +139,7 @@
 
 <p>Builder 模式可以很好的兼顾安全和代码可读性。Builder 是目标类的静态成员类，在 Builder 类中处理实际参数的设置。客户端通过 Builder 类设置参数，然后由无参的 build 方法获取所需的不可变对象。</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Builder 模式</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Builder 模式</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NutritionFacts</span> <span class="o">{</span>
     <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">servingSize</span><span class="o">;</span>
     <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">servings</span><span class="o">;</span>
@@ -192,15 +191,15 @@
 
 <p>可见，NutritionFacts 是不可变的；Builder 的 setter 方法返回 this，这样可以链式调用 setter，如下所示：</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">NutritionFacts</span> <span class="n">cocaCola</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">NutritionFacts</span><span class="o">.</span><span class="na">Builder</span><span class="o">(</span><span class="mi">240</span><span class="o">,</span> <span class="mi">8</span><span class="o">).</span><span class="na">calories</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="na">sodium</span><span class="o">(</span><span class="mi">35</span><span class="o">).</span><span class="na">carbohydrate</span><span class="o">(</span><span class="mi">27</span><span class="o">).</span><span class="na">build</span><span class="o">()</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">NutritionFacts</span> <span class="n">cocaCola</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">NutritionFacts</span><span class="o">.</span><span class="na">Builder</span><span class="o">(</span><span class="mi">240</span><span class="o">,</span> <span class="mi">8</span><span class="o">).</span><span class="na">calories</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="na">sodium</span><span class="o">(</span><span class="mi">35</span><span class="o">).</span><span class="na">carbohydrate</span><span class="o">(</span><span class="mi">27</span><span class="o">).</span><span class="na">build</span><span class="o">()</span>
 </code></pre></div></div>
 
 <p>动态语言如 Python 可以通过参数默认值实现类似效果，比如：</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
-  <span class="k">print</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+  <span class="nf">print</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">)</span>
 
-<span class="n">f</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">a</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="nf">f</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">a</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>Builder 模式代码易编写，易阅读，同时可以实现不可变对象，因此是线程安全的。除此之外：</p>
@@ -231,7 +230,7 @@
   <li>实例成员是一个 final 的变量</li>
 </ul>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Singleton with public final field</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Singleton with public final field</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Elvis</span> <span class="o">{</span>
     <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">Elvis</span> <span class="no">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Elvis</span><span class="o">();</span>
     <span class="kd">private</span> <span class="nf">Elvis</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
@@ -243,7 +242,7 @@
   <li>通过一个静态工厂方法返回</li>
 </ul>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Singleton with static factory</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Singleton with static factory</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Elvis</span> <span class="o">{</span>
     <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">Elvis</span> <span class="no">INSTANCE</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Elvis</span><span class="o">();</span>
     <span class="kd">private</span> <span class="nf">Elvis</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
@@ -258,7 +257,7 @@
 
 <p>前两种实现有这么一个问题：容易在序列化的时候踩坑。因为每次反序列化都会创建一个新的对象，所以需要添加一个 readResolve 方法：</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// readResolve method to preserve sigleton property</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// readResolve method to preserve sigleton property</span>
 <span class="kd">private</span> <span class="nc">Object</span> <span class="nf">readResolve</span><span class="o">()</span> <span class="o">{</span>
     <span class="c1">// Return the one true Elvis and let the garbage collector</span>
     <span class="c1">// take care of the Elvis impersonator.</span>
@@ -268,7 +267,7 @@
 
 <p>现在更推荐使用枚举来实现单例，它和 public field 方法是一样的，但是自带序列化支持，可以防范复杂的序列化和反射攻击。单元素的枚举类型已经成为实现 Singleton 的最佳方法。</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Enum singleton - the prefered approach</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Enum singleton - the prefered approach</span>
 <span class="kd">public</span> <span class="kd">enum</span> <span class="nc">Elvis</span> <span class="o">{</span>
     <span class="no">INSTANCE</span><span class="o">;</span>
 
@@ -280,7 +279,7 @@
 
 <p>有些类就是需要设计成不能实例化的，比如 util 工具类，Math 类，实现同一接口的对象的工厂方法等等。对于这些类，可以提供一个私有的构造器，这样就不能实例化了。</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Noninstantiable utility class</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Noninstantiable utility class</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">UtilityClass</span> <span class="o">{</span>
     <span class="c1">// Suppress default constructor for noninstantiability</span>
     <span class="kd">private</span> <span class="nf">UtilityClass</span><span class="o">()</span> <span class="o">{</span>
@@ -302,7 +301,7 @@
 
 <p>有一种容易忽略的不必要创建对象的场合：基本类型的自动装箱。如下所示：</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Hideously slow program! Can you spot the object creation?</span>
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Hideously slow program! Can you spot the object creation?</span>
 <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
     <span class="nc">Long</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
     <span class="k">for</span> <span class="o">(</span><span class="kt">long</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nc">Integer</span><span class="o">.</span><span class="na">MAX_VALUE</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
@@ -312,9 +311,9 @@
 <span class="o">}</span>
 </code></pre></div></div>
 
-<p>上面这段代码可以正常运行，但是很慢，因为 sum 是 Long 类型，而 i 是 long 类型，执行<code class="language-plaintext highlighter-rouge">sum += i</code>的时候会自动给 i 装箱 Long，然后执行计算。可想而知自动装箱执行了 Integer.MAX_VALUE 次，也创建了 Integer.MAX_VALUE 这么多中间对象。</p>
+<p>上面这段代码可以正常运行，但是很慢，因为 sum 是 Long 类型，而 i 是 long 类型，执行<span class="codespan">sum += i</span>的时候会自动给 i 装箱 Long，然后执行计算。可想而知自动装箱执行了 Integer.MAX_VALUE 次，也创建了 Integer.MAX_VALUE 这么多中间对象。</p>
 
-<p>解决方法：将<code class="language-plaintext highlighter-rouge">Long sum = 0L</code>改成<code class="language-plaintext highlighter-rouge">long sum = 0</code>即可，这样就不存在自动装箱了。但不能将<code class="language-plaintext highlighter-rouge">long i = 0</code>改成<code class="language-plaintext highlighter-rouge">Long i = 0L</code>，因为 Long 是不可变对象，所以在进行加法的时候，事实上是每次都要创建 Long 对象，速度依然会很慢，但 long 没有对象创建，只是基本类型，速度会好很多。</p>
+<p>解决方法：将<span class="codespan">Long sum = 0L</span>改成<span class="codespan">long sum = 0</span>即可，这样就不存在自动装箱了。但不能将<span class="codespan">long i = 0</span>改成<span class="codespan">Long i = 0L</span>，因为 Long 是不可变对象，所以在进行加法的时候，事实上是每次都要创建 Long 对象，速度依然会很慢，但 long 没有对象创建，只是基本类型，速度会好很多。</p>
 
 <p>这个例子表明，要优先使用基本类型而不是装箱基本类型，要当心无意识的自动装箱。</p>
 

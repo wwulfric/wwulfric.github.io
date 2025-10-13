@@ -15,7 +15,6 @@
 
   <title>Jekyll 博客的一些优化插件与配置</title>
   <meta name="description" content="在停用了一段时间后，最终还是回归博客写作了。之前使用的是 Octopress，现在换成更简单的 Jekyll。本文记录了搭建 Jekyll 博客的一些优化细节和搜集到的一些有趣的插件。
-
 ">
   <meta name="keywords" content="jekyll,compress,highlight,fontawesome,colorscheme,font">
   <link rel="canonical" href="https://wulfric.me/2014/09/jekyll-plugs/">
@@ -72,15 +71,15 @@
 
 <h2 id="工作方式">工作方式</h2>
 
-<p><a href="http://jekyllrb.com/">Jekyll</a> 的工作方式是，服务器端（对于 github pages，就是 github 的服务器）将特定文件夹下（根目录，<code class="language-plaintext highlighter-rouge">_posts</code>）的文件编译成静态文件，我们只需要在该文件夹下写 md 文件就好了，无需生成 html。</p>
+<p><a href="http://jekyllrb.com/">Jekyll</a> 的工作方式是，服务器端（对于 github pages，就是 github 的服务器）将特定文件夹下（根目录，<span class="codespan">_posts</span>）的文件编译成静态文件，我们只需要在该文件夹下写 md 文件就好了，无需生成 html。</p>
 
-<p>另一种工作方式则是，我们创建一个新的分支（比如 source）来存放 Jekyll 代码，生成的静态站点（在<code class="language-plaintext highlighter-rouge">_site</code>下）作为 master 主分支，这样每次生成静态站点，然后部署到 github。</p>
+<p>另一种工作方式则是，我们创建一个新的分支（比如 source）来存放 Jekyll 代码，生成的静态站点（在<span class="codespan">_site</span>下）作为 master 主分支，这样每次生成静态站点，然后部署到 github。</p>
 
 <p>显然，前者更加方便，但基于安全考虑，github 不支持过于自由的操作，故大量自定义的插件无法在 github pages 使用。所以只好分成两个分支，master 分支是生成站点，source 是 Jekyll 主代码。这也就是 <a href="http://octopress.org/">Octopress</a> 的工作方式了。相比于 Jekyll 的简陋，Octopress 提供了更丰富的功能，比如分类、标签、更强大的代码高亮等。与 Octopress 类似的还有基于 nodejs 的 <a href="http://hexo.io/">Hexo</a>，同样是先编译后部署，因此可以提供更强大的功能。</p>
 
 <h2 id="代码分离">代码分离</h2>
 
-<p>使用 <a href="http://git-scm.com/book/zh/Git-%E5%B7%A5%E5%85%B7-%E5%AD%90%E6%A8%A1%E5%9D%97">Git submodule</a> 分离博客的重要部分。我把文章专门放到一个 repo 里，然后通过 git submodule 的方式引入到<code class="language-plaintext highlighter-rouge">_posts</code>文件夹下。一些插件也可以以这种方式引入到<code class="language-plaintext highlighter-rouge">_plugins</code>里。</p>
+<p>使用 <a href="http://git-scm.com/book/zh/Git-%E5%B7%A5%E5%85%B7-%E5%AD%90%E6%A8%A1%E5%9D%97">Git submodule</a> 分离博客的重要部分。我把文章专门放到一个 repo 里，然后通过 git submodule 的方式引入到<span class="codespan">_posts</span>文件夹下。一些插件也可以以这种方式引入到<span class="codespan">_plugins</span>里。</p>
 
 <h2 id="静态文件优化">静态文件优化</h2>
 
@@ -94,15 +93,15 @@
 
 <p>还有一个插件 <a href="https://github.com/GSI/jekyll_image_encode">jekyll_image_encode</a>，可以将图片转成 base64。其实本质上和把图片下载到本地一样，只是更加自动化。base64 转化后的 img 标签是这样的：</p>
 
-<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"data:image;base64, iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c
+<div  class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"data:image;base64, iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c
 6QAAAAxJREFUCNdj+P//PwAF/gL+3MxZ5wAAAABJRU5ErkJggg== "</span> <span class="nt">/&gt;</span>
 </code></pre></div></div>
 
 <p>可见，src 处已经没有 url 了，而只是图片的 base64 格式源码。当你想隐藏你的图床时，比如，七牛云可以加水印，但是如果知道 url 的话，很容易就可以去掉水印，转成 base64 可以防止这种情况。</p>
 
-<p>除此之外，我还利用 minimagick 库自动给图片加了宽度和高度属性<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。即读在线文件，获取尺寸，加到 img 里。对于 R-图片（我给在 rMBP 上制作的图片都加了 R- 前缀），即 retina 图片，width 设为1/2。另外还同时给 img 加上了 figure  wrapper 和 figcaption。代码如下，打开类<code class="language-plaintext highlighter-rouge">Kramdown::Converter::Html</code>并重写<code class="language-plaintext highlighter-rouge">convert_img</code>方法。</p>
+<p>除此之外，我还利用 minimagick 库自动给图片加了宽度和高度属性<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。即读在线文件，获取尺寸，加到 img 里。对于 R-图片（我给在 rMBP 上制作的图片都加了 R- 前缀），即 retina 图片，width 设为1/2。另外还同时给 img 加上了 figure  wrapper 和 figcaption。代码如下，打开类<span class="codespan">Kramdown::Converter::Html</span>并重写<span class="codespan">convert_img</span>方法。</p>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">convert_img</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">convert_img</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span>
   <span class="n">image</span> <span class="o">=</span> <span class="no">MiniMagick</span><span class="o">::</span><span class="no">Image</span><span class="p">.</span><span class="nf">open</span> <span class="n">el</span><span class="p">.</span><span class="nf">attr</span><span class="p">[</span><span class="s1">'src'</span><span class="p">]</span>
   <span class="n">width</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:width</span><span class="p">]</span>
   <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="ss">:height</span><span class="p">]</span>
@@ -128,7 +127,7 @@
 
 <h2 id="样式">样式</h2>
 
-<p>使用 markdown 写博客，我比较坚持的一点就是，写出的 markdown 文件尽最大可能保持自文档特性，即语法简洁容易理解，尽量不包含 github  不支持显示的语法。换句话说，就是尽量以 <a href="https://help.github.com/articles/github-flavored-markdown">GFM–GitHub Flavored Markdown</a> 为标准。所以我避免使用一切 Jekyll tag，除了数学公式（github 现在还不支持常见的以<code class="language-plaintext highlighter-rouge">$</code>符识别 tex 的特性，但数学公式实在不可避免）。</p>
+<p>使用 markdown 写博客，我比较坚持的一点就是，写出的 markdown 文件尽最大可能保持自文档特性，即语法简洁容易理解，尽量不包含 github  不支持显示的语法。换句话说，就是尽量以 <a href="https://help.github.com/articles/github-flavored-markdown">GFM–GitHub Flavored Markdown</a> 为标准。所以我避免使用一切 Jekyll tag，除了数学公式（github 现在还不支持常见的以<span class="codespan">$</span>符识别 tex 的特性，但数学公式实在不可避免）。</p>
 
 <p>Jekyll 的代码高亮默认是使用 highlight tag。我则只使用 <a href="https://help.github.com/articles/github-flavored-markdown#fenced-code-blocks">fanced codes block</a> 来标识代码，而 kramdown 不支持 pygments。为代码高亮带来不少麻烦。可以使用<a href="https://github.com/mvdbos/kramdown-with-pygments">该插件</a>来 hack kramdown 使之支持 pygments。配合 github 风格的代码高亮 <a href="https://github.com/mojombo/tpw/blob/master/css/syntax.css">syntax</a>，神清气爽。当然，kramdown 自带 coderay 也可以完成代码高亮，两种方法任选一即可。需要注意的是，基于安全原因，大量自定义的插件无法在 github pages 使用，请注意你的 Jekyll 的工作方式。</p>
 
@@ -136,7 +135,14 @@
 
 <p>对于网页的配色（color scheme），我在<a href="https://kuler.adobe.com/main-cxcedar-color-theme-4237607/">这个方案</a>的基础上做了些修改，得到了<a href="https://kuler.adobe.com/Copy-of-the-main-cxcedar-color-theme-4361434/">我的 color scheme</a>。这五种颜色分别用作链接色、重要标题背景色、mark 背景色、强调色和主文字颜色。</p>
 
-<p><img src="/images/R-colorscheme.png" alt="color scheme" title="color scheme" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-colorscheme.png" alt="color scheme" title="color scheme" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>color scheme</figcaption>
+        </figure></p>
 
 <p>对于字体的选择，我使用的是和 <a href="https://github.com/tommy351/Octopress-Theme-Slash/">slash 主题</a>相同的 font-family，尚未对 Windows 字体做兼容性处理。关于字体的选择，可参考<a href="https://ruby-china.org/topics/14005">这篇文章</a>。</p>
 
@@ -144,7 +150,14 @@
 
 <p>最终的样式如图所示：</p>
 
-<p><img src="/images/R-preview.png" alt="Preview" title="Preview" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/R-preview.png" alt="Preview" title="Preview" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>Preview</figcaption>
+        </figure></p>
 
 <p>如果对不同平台下的样式有疑问，欢迎通过评论告诉我~</p>
 
@@ -152,7 +165,7 @@
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>http://stackoverflow.com/questions/1247685/should-i-specify-height-and-width-attributes-for-my-imgs-in-html <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

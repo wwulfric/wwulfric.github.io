@@ -15,7 +15,6 @@
 
   <title>Homebrew--MAC下包管理工具和软件安装工具</title>
   <meta name="description" content="Homebrew
-
 ">
   <meta name="keywords" content="homebrew,brew,brew cask,mac">
   <link rel="canonical" href="https://wulfric.me/2015/08/homebrew/">
@@ -70,16 +69,16 @@
   <article class="post-content">
     <h2 id="homebrew">Homebrew</h2>
 
-<p><a href="http://brew.sh/">Homebrew</a> 是MAC下的包管理工具，可以当做<code class="language-plaintext highlighter-rouge">debian</code>下的<code class="language-plaintext highlighter-rouge">apt-get</code>，但要强大得多。它尽可能的利用系统自带库，大大缩短编译时间；冗余库极少，软件包的管理清晰灵活；安装脚本完全用<code class="language-plaintext highlighter-rouge">ruby</code>编写，极易自由定制<sup id="fnref:linfan" role="doc-noteref"><a href="#fn:linfan" class="footnote" rel="footnote">1</a></sup>。</p>
+<p><a href="http://brew.sh/">Homebrew</a> 是MAC下的包管理工具，可以当做<span class="codespan">debian</span>下的<span class="codespan">apt-get</span>，但要强大得多。它尽可能的利用系统自带库，大大缩短编译时间；冗余库极少，软件包的管理清晰灵活；安装脚本完全用<span class="codespan">ruby</span>编写，极易自由定制<sup id="fnref:linfan"><a href="#fn:linfan" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
 <p>一键安装（一键脚本请参照官网，可能略有不同）：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ruby <span class="nt">-e</span> <span class="s2">"</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> https://raw.githubusercontent.com/Homebrew/install/master/install<span class="si">)</span><span class="s2">"</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ruby <span class="nt">-e</span> <span class="s2">"</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> https://raw.githubusercontent.com/Homebrew/install/master/install<span class="si">)</span><span class="s2">"</span>
 </code></pre></div></div>
 
-<p>安装完毕后执行<code class="language-plaintext highlighter-rouge">brew</code>，输出如下，列出了 brew 的一些用法。</p>
+<p>安装完毕后执行<span class="codespan">brew</span>，输出如下，列出了 brew 的一些用法。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew
 Example usage:
   brew <span class="o">[</span>info | home | options <span class="o">]</span> <span class="o">[</span>FORMULA...]
   brew <span class="nb">install </span>FORMULA...
@@ -107,19 +106,26 @@ Further <span class="nb">help</span>:
 
 <p>可以方便的搜索、查看和安装和卸载软件，如下图所示：</p>
 
-<p><img src="/images/brew-action.png" alt="brew actions" title="brew actions" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/brew-action.png" alt="brew actions" title="brew actions" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>brew actions</figcaption>
+        </figure></p>
 
 <p>按照官方的介绍：</p>
 
 <ul>
-  <li>Homebrew installs <a href="https://github.com/Homebrew/homebrew/tree/master/Library/Formula">the stuff you need</a> that Apple didn’t. 是MAC OS生态的重要补充，提供了大量在Linux下喜闻乐见的工具，比如<code class="language-plaintext highlighter-rouge">curl</code>, <code class="language-plaintext highlighter-rouge">rename</code>, <code class="language-plaintext highlighter-rouge">wget</code>等等；</li>
-  <li>Homebrew installs packages to their own directory and then symlinks their files into <code class="language-plaintext highlighter-rouge">/usr/local</code>. 通过 brew 安装的软件可以和系统原软件完美兼容，互不影响；</li>
+  <li>Homebrew installs <a href="https://github.com/Homebrew/homebrew/tree/master/Library/Formula">the stuff you need</a> that Apple didn’t. 是MAC OS生态的重要补充，提供了大量在Linux下喜闻乐见的工具，比如<span class="codespan">curl</span>, <span class="codespan">rename</span>, <span class="codespan">wget</span>等等；</li>
+  <li>Homebrew installs packages to their own directory and then symlinks their files into <span class="codespan">/usr/local</span>. 通过 brew 安装的软件可以和系统原软件完美兼容，互不影响；</li>
   <li>Homebrew won’t install files outside its prefix, and you can place a Homebrew installation wherever you like. homebrew 安装的文件默认全部在其指定的目录下，不会安装在其他位置。方便删除，可以自定义 homebrew 的安装位置；</li>
   <li>Trivially create your own Homebrew packages. 方便的创建个人包；</li>
   <li>It's all git and ruby underneath, so hack away with the knowledge that you can easily revert your modifications and merge upstream updates. 通过git管理所有安装配置，极易创建「私服」，把官方repo作为上游分支，可以自由定制。</li>
 </ul>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># brew edit wget 可以直接编辑wget的安装配置</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># brew edit wget 可以直接编辑wget的安装配置</span>
 <span class="k">class</span> <span class="nc">Wget</span> <span class="o">&lt;</span> <span class="no">Formula</span>
   <span class="n">homepage</span> <span class="s2">"https://www.gnu.org/software/wget/"</span>
   <span class="n">url</span> <span class="s2">"https://ftp.gnu.org/gnu/wget/wget-1.15.tar.gz"</span>
@@ -134,25 +140,25 @@ Further <span class="nb">help</span>:
 
 <p>我安装的软件有：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew list | <span class="nb">paste</span> <span class="nt">-sd</span> <span class="s1">','</span> -
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew list | <span class="nb">paste</span> <span class="nt">-sd</span> <span class="s1">','</span> -
 aspell,autoconf,autojump,automake,bash,boris,brew-cask,ccat,cloog,cmake,composer,coreutils,cscope,ctags,editorconfig,emacs-clang-complete-async,emacs-mac,fontconfig,freetype,gcc,gdbm,gettext,git,gmp,gnu-sed,gnutls,go,htop-osx,icu4c,imagemagick,isl,jpeg,leptonica,libevent,libmpc,libpng,libtasn1,libtiff,libtool,llvm,mercurial,mobile-shell,mpfr,nettle,newt,nvm,openssl,pcre,php56,pkg-config,popt,protobuf,proxychains-ng,pyenv,pyqt,python,qt,rbenv,rbenv-gem-rehash,readline,rename,ruby-build,s-lang,sip,sqlite,tesseract,the_silver_searcher,tig,tree,unixodbc,vim,wget,xz,zeromq,zlib,zsh
 </code></pre></div></div>
 
-<p>PS: 当希望用 brew 安装的软件替代系统自带的软件（比如 git）时，确保<code class="language-plaintext highlighter-rouge">$PATH</code>中 brew 安装的位置在系统位置<code class="language-plaintext highlighter-rouge">/usr/bin</code>之前，可以运行<code class="language-plaintext highlighter-rouge">brew doctor</code>查看。安装软件完成之后请查看安装成功的一些后续指导。</p>
+<p>PS: 当希望用 brew 安装的软件替代系统自带的软件（比如 git）时，确保<span class="codespan">$PATH</span>中 brew 安装的位置在系统位置<span class="codespan">/usr/bin</span>之前，可以运行<span class="codespan">brew doctor</span>查看。安装软件完成之后请查看安装成功的一些后续指导。</p>
 
-<p>PS: 执行<code class="language-plaintext highlighter-rouge">brew cleanup</code>清除安装产生的缓存文件。</p>
+<p>PS: 执行<span class="codespan">brew cleanup</span>清除安装产生的缓存文件。</p>
 
 <p>PS: 使用 <a href="https://github.com/jimbojsb/launchrocket">LaunchRocket</a> 管理 brew 安装的 service。</p>
 
 <h2 id="homebrew-cask">Homebrew Cask</h2>
 
-<p><a href="http://caskroom.io/">caskroom</a>(brew cask) 构建于 Homebrew，继承了其优雅和便捷性，提供安装 OS X 应用和二进制软件的新方法。可以这么简单理解，brew安装的是命令行工具，比如<code class="language-plaintext highlighter-rouge">curl</code>, <code class="language-plaintext highlighter-rouge">rename</code>, <code class="language-plaintext highlighter-rouge">wget</code>；brew cask安装的是应用软件，比如<code class="language-plaintext highlighter-rouge">google chrome</code>, <code class="language-plaintext highlighter-rouge">dropbox</code>等。通过brew cask 安装软件，只需要简单的一条命令<code class="language-plaintext highlighter-rouge">brew cask install google-chrome</code>即可，再也不需要以前的打开网页、找到链接、下载软件、解压包、放到程序目录，删除安装文件，再来启动它这么复杂的步骤了。一键完成！<sup id="fnref:yangzhiping" role="doc-noteref"><a href="#fn:yangzhiping" class="footnote" rel="footnote">2</a></sup></p>
+<p><a href="http://caskroom.io/">caskroom</a>(brew cask) 构建于 Homebrew，继承了其优雅和便捷性，提供安装 OS X 应用和二进制软件的新方法。可以这么简单理解，brew安装的是命令行工具，比如<span class="codespan">curl</span>, <span class="codespan">rename</span>, <span class="codespan">wget</span>；brew cask安装的是应用软件，比如<span class="codespan">google chrome</span>, <span class="codespan">dropbox</span>等。通过brew cask 安装软件，只需要简单的一条命令<span class="codespan">brew cask install google-chrome</span>即可，再也不需要以前的打开网页、找到链接、下载软件、解压包、放到程序目录，删除安装文件，再来启动它这么复杂的步骤了。一键完成！<sup id="fnref:yangzhiping"><a href="#fn:yangzhiping" class="footnote" rel="footnote" role="doc-noteref">2</a></sup></p>
 
-<p>虽然通过 Mac App Store 安装软件一样很简单，但是 Mac App Store 生态圈远不完善，审核流程过长，限制太多，维护成本过高让很多应用开发者被迫离开。大量软件缺失。<sup id="fnref:ksmx" role="doc-noteref"><a href="#fn:ksmx" class="footnote" rel="footnote">3</a></sup></p>
+<p>虽然通过 Mac App Store 安装软件一样很简单，但是 Mac App Store 生态圈远不完善，审核流程过长，限制太多，维护成本过高让很多应用开发者被迫离开。大量软件缺失。<sup id="fnref:ksmx"><a href="#fn:ksmx" class="footnote" rel="footnote" role="doc-noteref">3</a></sup></p>
 
-<p>安装<code class="language-plaintext highlighter-rouge">brew install caskroom/cask/brew-cask</code>，安装完毕后执行<code class="language-plaintext highlighter-rouge">brew cask</code>，可以看到 cask 提供的命令基本上继承自 brew：</p>
+<p>安装<span class="codespan">brew install caskroom/cask/brew-cask</span>，安装完毕后执行<span class="codespan">brew cask</span>，可以看到 cask 提供的命令基本上继承自 brew：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew cask
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> brew cask
 brew-cask provides a friendly homebrew-style CLI workflow <span class="k">for </span>the
 administration of Mac applications distributed as binaries.
 
@@ -182,9 +188,9 @@ Commands:
 See also <span class="s2">"man brew-cask"</span>
 </code></pre></div></div>
 
-<p>通过 brew 安装的软件都在<code class="language-plaintext highlighter-rouge">/opt/homebrew-cask/Caskroom</code>下：</p>
+<p>通过 brew 安装的软件都在<span class="codespan">/opt/homebrew-cask/Caskroom</span>下：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="nb">cd</span> /opt/homebrew-cask/Caskroom
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="nb">cd</span> /opt/homebrew-cask/Caskroom
 
 /opt/homebrew-cask/Caskroom
 <span class="o">&gt;</span> <span class="nb">ls
@@ -196,16 +202,16 @@ evernote         jumpcut          rdm              utopia
 firefox          lilypond         skitch           vagrant
 </code></pre></div></div>
 
-<p>同时在<code class="language-plaintext highlighter-rouge">~/Applications</code>下创建了链接文件：</p>
+<p>同时在<span class="codespan">~/Applications</span>下创建了链接文件：</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> ll ~/Applications
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> ll ~/Applications
 lrwxr-xr-x  1 haidao  staff    62B Jun 13  2014 AliWangwang.app -&gt; /opt/homebrew-cask/Caskroom/aliwangwang/latest/AliWangwang.app
 ...
 </code></pre></div></div>
 
 <p>你也可以像 brew 那样自由定制，假如你觉得某个软件全球的用户都需要，就可以向官方 repo 发起 pull request。</p>
 
-<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cask</span> <span class="ss">:v1</span> <span class="o">=&gt;</span> <span class="s1">'dropbox'</span> <span class="k">do</span>
+<div  class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cask</span> <span class="ss">:v1</span> <span class="o">=&gt;</span> <span class="s1">'dropbox'</span> <span class="k">do</span>
   <span class="n">version</span> <span class="ss">:latest</span>
   <span class="n">sha256</span> <span class="ss">:no_check</span>
 
@@ -220,23 +226,23 @@ lrwxr-xr-x  1 haidao  staff    62B Jun 13  2014 AliWangwang.app -&gt; /opt/homeb
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>更有趣的是，你的重装系统将变得极为简单！把你的常用软件列表记下来，然后执行<code class="language-plaintext highlighter-rouge">brew cask install software-1 software-2 ... software-n</code>，然后睡一觉就一切搞定了~ 个人文档数据通过<code class="language-plaintext highlighter-rouge">dropbox</code>直接恢复~你的代码肯定都在 github~</p>
+<p>更有趣的是，你的重装系统将变得极为简单！把你的常用软件列表记下来，然后执行<span class="codespan">brew cask install software-1 software-2 ... software-n</span>，然后睡一觉就一切搞定了~ 个人文档数据通过<span class="codespan">dropbox</span>直接恢复~你的代码肯定都在 github~</p>
 
-<p>PS: cask 重装软件，<code class="language-plaintext highlighter-rouge">brew cask uninstall xxx &amp;&amp; brew cask install xxx</code>或<code class="language-plaintext highlighter-rouge">brew cask install xxx --force</code>。</p>
+<p>PS: cask 重装软件，<span class="codespan">brew cask uninstall xxx &amp;&amp; brew cask install xxx</span>或<span class="codespan">brew cask install xxx --force</span>。</p>
 
-<p>PS: alfred 支持，<code class="language-plaintext highlighter-rouge">brew cask alfred link</code>。</p>
+<p>PS: alfred 支持，<span class="codespan">brew cask alfred link</span>。</p>
 
 <p>PS: brew 和 brew cask 的下载都是断点续传的。</p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:linfan" role="doc-endnote">
+    <li id="fn:linfan">
       <p><a href="http://linfan.info/blog/2012/02/25/homebrew-installation-and-usage/">Homebrew的安装与使用</a> <a href="#fnref:linfan" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:yangzhiping" role="doc-endnote">
+    <li id="fn:yangzhiping">
       <p><a href="http://www.yangzhiping.com/tech/homebrew-cask.html">Mac安装软件新方法：Homebrew-cask</a> <a href="#fnref:yangzhiping" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:ksmx" role="doc-endnote">
+    <li id="fn:ksmx">
       <p><a href="http://ksmx.me/homebrew-cask-cli-workflow-to-install-mac-applications/">简洁优雅的Mac OS X软件安装体验 - homebrew-cask</a> <a href="#fnref:ksmx" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

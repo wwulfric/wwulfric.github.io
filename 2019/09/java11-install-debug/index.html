@@ -15,7 +15,6 @@
 
   <title>JAVA 11 MAC 源码安装与调试</title>
   <meta name="description" content="JAVA 11 是 JAVA 8 之后的第一个 LTS 版本，为了了解下一代 JAVA 版本更新的内容，也为了能调试到 JAVA 的内部代码，所以笔者决定源码安装试试。
-
 ">
   <meta name="keywords" content="java">
   <link rel="canonical" href="https://wulfric.me/2019/09/java11-install-debug/">
@@ -72,14 +71,14 @@
 
 <h2 id="安装">安装</h2>
 
-<p>官方给出的安装教程<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>是这样的：</p>
+<p>官方给出的安装教程<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>是这样的：</p>
 
 <ol>
-  <li>下载源码：<code class="language-plaintext highlighter-rouge">hg clone http://hg.openjdk.java.net/jdk/jdk</code></li>
-  <li>执行configure：<code class="language-plaintext highlighter-rouge">bash configure</code>。缺失依赖会导致 configure 失败，但错误日志都会给出操作建议，根据建议安装依赖即可</li>
-  <li>执行 make：<code class="language-plaintext highlighter-rouge">make images</code></li>
-  <li>验证新构建的 java 可用：<code class="language-plaintext highlighter-rouge">./build/*/images/jdk/bin/java -version</code></li>
-  <li>测试：<code class="language-plaintext highlighter-rouge">make run-test-tier1</code></li>
+  <li>下载源码：<span class="codespan">hg clone http://hg.openjdk.java.net/jdk/jdk</span></li>
+  <li>执行configure：<span class="codespan">bash configure</span>。缺失依赖会导致 configure 失败，但错误日志都会给出操作建议，根据建议安装依赖即可</li>
+  <li>执行 make：<span class="codespan">make images</span></li>
+  <li>验证新构建的 java 可用：<span class="codespan">./build/*/images/jdk/bin/java -version</span></li>
+  <li>测试：<span class="codespan">make run-test-tier1</span></li>
 </ol>
 
 <p>这个安装步骤大体上没问题，但是有些差异需要指出，因此我也给出我的安装步骤。</p>
@@ -94,20 +93,27 @@
 
 <h3 id="获取源码">获取源码</h3>
 
-<p>从 jdk 10 开始，源码不再分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错需要重试)，而是直接下载整个源码包，如下图示。</p>
+<p>从 jdk 10 开始，源码不再分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错需要重试)，而是直接下载整个源码包，如下图示。</p>
 
-<p><img src="/images/java/jdk11-download.png" alt="jdk11 download" title="jdk11 download" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-download.png" alt="jdk11 download" title="jdk11 download" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 download</figcaption>
+        </figure></p>
 
 <h3 id="编译">编译</h3>
 
 <p>执行 configure，为了 debug，需要加上对应的参数。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sh configure <span class="nt">--with-target-bits</span><span class="o">=</span>64 <span class="nt">--enable-ccache</span> <span class="nt">--with-jvm-variants</span><span class="o">=</span>server  <span class="nt">--with-boot-jdk-jvmargs</span><span class="o">=</span><span class="s2">"-Xlint:deprecation -Xlint:unchecked"</span> <span class="nt">--disable-warnings-as-errors</span> <span class="nt">--with-debug-level</span><span class="o">=</span>slowdebug 2&gt;&amp;1 | <span class="nb">tee </span>configure_mac_x64.log
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sh configure <span class="nt">--with-target-bits</span><span class="o">=</span>64 <span class="nt">--enable-ccache</span> <span class="nt">--with-jvm-variants</span><span class="o">=</span>server  <span class="nt">--with-boot-jdk-jvmargs</span><span class="o">=</span><span class="s2">"-Xlint:deprecation -Xlint:unchecked"</span> <span class="nt">--disable-warnings-as-errors</span> <span class="nt">--with-debug-level</span><span class="o">=</span>slowdebug 2&gt;&amp;1 | <span class="nb">tee </span>configure_mac_x64.log
 </code></pre></div></div>
 
 <p>一般第一次执行总是会遇到些小问题，但编译 jdk 11 的问题比 jdk8，9少多了，根据提示很容易就可以解决。当看到如下返回即表明配置成功。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">====================================================</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">====================================================</span>
 A new configuration has been successfully created <span class="k">in</span>
 /Users/haidao/Downloads/openjdk11/build/macosx-x86_64-normal-server-slowdebug
 using configure arguments <span class="s1">'--with-target-bits=64 --enable-ccache --with-jvm-variants=server --with-boot-jdk-jvmargs='</span><span class="nt">-Xlint</span>:deprecation <span class="nt">-Xlint</span>:unchecked<span class="s1">' --disable-warnings-as-errors --with-debug-level=slowdebug'</span><span class="nb">.</span>
@@ -132,34 +138,34 @@ Build performance summary:
 <span class="k">*</span> ccache status:  Active <span class="o">(</span>3.7.2<span class="o">)</span>
 </code></pre></div></div>
 
-<p>然后执行 make 即可。根据 build 文档<sup id="fnref:1:2" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>，执行 make 不带任何参数等同于<code class="language-plaintext highlighter-rouge">make default</code>和<code class="language-plaintext highlighter-rouge">make jdk</code>，这会 build 出一个较小的编译结果，并提供一个 exploded image。不知道怎么翻译 exploded image，大概意思是，这是一个分解开的镜像，可以直接使用，各个模块都是解压好的，不包含源码。这种设计是为了方便 jdk 的开发者渐进式开发，每次 make 只会 recompile 变化的部分。</p>
+<p>然后执行 make 即可。根据 build 文档<sup id="fnref:1:2"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>，执行 make 不带任何参数等同于<span class="codespan">make default</span>和<span class="codespan">make jdk</span>，这会 build 出一个较小的编译结果，并提供一个 exploded image。不知道怎么翻译 exploded image，大概意思是，这是一个分解开的镜像，可以直接使用，各个模块都是解压好的，不包含源码。这种设计是为了方便 jdk 的开发者渐进式开发，每次 make 只会 recompile 变化的部分。</p>
 
 <p>其他 make 的常用 target 如下：</p>
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">hotspot</code> - Build all of hotspot (but only hotspot)</li>
-  <li><code class="language-plaintext highlighter-rouge">hotspot-&lt;variant&gt;</code> - Build just the specified jvm variant</li>
-  <li><code class="language-plaintext highlighter-rouge">images</code> or <code class="language-plaintext highlighter-rouge">product-images</code> - Build the JDK image</li>
-  <li><code class="language-plaintext highlighter-rouge">docs</code> or <code class="language-plaintext highlighter-rouge">docs-image</code> - Build the documentation image</li>
-  <li><code class="language-plaintext highlighter-rouge">test-image</code> - Build the test image</li>
-  <li><code class="language-plaintext highlighter-rouge">all</code> or <code class="language-plaintext highlighter-rouge">all-images</code> - Build all images (product, docs and test)</li>
-  <li><code class="language-plaintext highlighter-rouge">bootcycle-images</code> - Build images twice, second time with newly built JDK (good for testing)</li>
-  <li><code class="language-plaintext highlighter-rouge">clean</code> - Remove all files generated by make, but not those generated by configure</li>
-  <li><code class="language-plaintext highlighter-rouge">dist-clean</code> - Remove all files, including configuration</li>
+  <li><span class="codespan">hotspot</span> - Build all of hotspot (but only hotspot)</li>
+  <li><span class="codespan">hotspot-&lt;variant&gt;</span> - Build just the specified jvm variant</li>
+  <li><span class="codespan">images</span> or <span class="codespan">product-images</span> - Build the JDK image</li>
+  <li><span class="codespan">docs</span> or <span class="codespan">docs-image</span> - Build the documentation image</li>
+  <li><span class="codespan">test-image</span> - Build the test image</li>
+  <li><span class="codespan">all</span> or <span class="codespan">all-images</span> - Build all images (product, docs and test)</li>
+  <li><span class="codespan">bootcycle-images</span> - Build images twice, second time with newly built JDK (good for testing)</li>
+  <li><span class="codespan">clean</span> - Remove all files generated by make, but not those generated by configure</li>
+  <li><span class="codespan">dist-clean</span> - Remove all files, including configuration</li>
 </ul>
 
-<p>我们以 $BUILD 表示构建结果目录<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>，构建结果目录如下<sup id="fnref:1:3" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>：</p>
+<p>我们以 $BUILD 表示构建结果目录<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>，构建结果目录如下<sup id="fnref:1:3"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>：</p>
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">jdk</code>: 这就是之前所说的 exploded image 的目录。执行<code class="language-plaintext highlighter-rouge">make jdk</code>之后，你可以通过运行<code class="language-plaintext highlighter-rouge">$BUILD/jdk/bin/java</code>直接启动新构建的 JDK。</li>
-  <li><code class="language-plaintext highlighter-rouge">images</code>: 这个目录是 make *-image 的输出位置。例如，<code class="language-plaintext highlighter-rouge">make jdk-image</code> 会构建出 jdk image， 目录是<code class="language-plaintext highlighter-rouge">images/jdk</code>。</li>
-  <li><code class="language-plaintext highlighter-rouge">test-results</code>: 测试结果目录。</li>
-  <li><code class="language-plaintext highlighter-rouge">support</code>:  这个目录保存的是 build 过程中的中间文件，比如源码，对象文件，类文件等。<code class="language-plaintext highlighter-rouge">support</code>中比较重要的是<code class="language-plaintext highlighter-rouge">gensrc</code>，它包含生成的源码；<code class="language-plaintext highlighter-rouge">modules_*</code> 包含了按模块层级分布的文件，它会在之后合并到 jdk 目录下。</li>
+  <li><span class="codespan">jdk</span>: 这就是之前所说的 exploded image 的目录。执行<span class="codespan">make jdk</span>之后，你可以通过运行<span class="codespan">$BUILD/jdk/bin/java</span>直接启动新构建的 JDK。</li>
+  <li><span class="codespan">images</span>: 这个目录是 make *-image 的输出位置。例如，<span class="codespan">make jdk-image</span> 会构建出 jdk image， 目录是<span class="codespan">images/jdk</span>。</li>
+  <li><span class="codespan">test-results</span>: 测试结果目录。</li>
+  <li><span class="codespan">support</span>:  这个目录保存的是 build 过程中的中间文件，比如源码，对象文件，类文件等。<span class="codespan">support</span>中比较重要的是<span class="codespan">gensrc</span>，它包含生成的源码；<span class="codespan">modules_*</span> 包含了按模块层级分布的文件，它会在之后合并到 jdk 目录下。</li>
 </ul>
 
 <p>由于我们执行的是最简构建，我们主要看下 $BUILD/jdk 和 $BUILD/images/jdk 的差异：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$BUILD</span>/images/jdk         <span class="nv">$BUILD</span>/jdk
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$BUILD</span>/images/jdk         <span class="nv">$BUILD</span>/jdk
 ├── bin                   ├── _packages_attribute.done
 ├── conf                  ├── bin
 ├── demo                  ├── conf
@@ -179,23 +185,44 @@ Build performance summary:
 
 <p>除了这些区别之外，二者在使用上没啥差别。</p>
 
-<p>现在，可以直接通过 $BUILD/jdk/bin/java 来使用编译出来的 JAVA11。你也可以配置 jenv：<code class="language-plaintext highlighter-rouge">jenv add $BUILD/jdk</code>。关于 jenv 的使用请参看 <a href="/2017/03/macos-jenv/">Mac OS 使用 jenv 管理 java 版本</a>。</p>
+<p>现在，可以直接通过 $BUILD/jdk/bin/java 来使用编译出来的 JAVA11。你也可以配置 jenv：<span class="codespan">jenv add $BUILD/jdk</span>。关于 jenv 的使用请参看 <a href="/2017/03/macos-jenv/">Mac OS 使用 jenv 管理 java 版本</a>。</p>
 
 <h2 id="配置-idea">配置 IDEA</h2>
 
 <p>增加 SDK，配置 classpath 和 sourcepath。配置好 sourcepath 便可以正常查看代码了。</p>
 
-<p><img src="/images/java/jdk11-classpath.png" alt="jdk11 classpath" title="jdk11 classpath" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-classpath.png" alt="jdk11 classpath" title="jdk11 classpath" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 classpath</figcaption>
+        </figure></p>
 
 <p>如果使用的是 $BUILD/images/jdk，直接将该目录加入到 classpath 即可，IDE 会自动识别 src.zip 并放在 sourcepath 中；</p>
 
 <p>如果使用的是 $BUILD/jdk，由于这是 exploded image jdk，不包含源码，所以需要分别加入 classpath 和 sourcepath，sourcepath 即下载的 openjdk 下的 src 目录。</p>
 
-<p><img src="/images/java/jdk11-sourcepath.png" alt="jdk11 sourcepath" title="jdk11 sourcepath" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-sourcepath.png" alt="jdk11 sourcepath" title="jdk11 sourcepath" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 sourcepath</figcaption>
+        </figure></p>
 
 <p>其他需要修改的配置不在赘述，如下图示。</p>
 
-<p><img src="/images/java/jdk11-ide-conf.png" alt="jdk11 ide conf" title="jdk11 ide conf" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-ide-conf.png" alt="jdk11 ide conf" title="jdk11 ide conf" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 ide conf</figcaption>
+        </figure></p>
 
 <h2 id="配置调试">配置调试</h2>
 
@@ -205,24 +232,45 @@ Build performance summary:
 
 <p>首先导入源码。使用 New Cmake Project from Sources，这样可以自动创建 CMakeLists.txt 文件。然后按照引导即可导入源码。你可以导入 src/hotspot，也可以整个导入 src。</p>
 
-<p><img src="/images/java/clion-debug-jvm.png" alt="clion debug jvm" title="clion debug jvm" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/clion-debug-jvm.png" alt="clion debug jvm" title="clion debug jvm" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>clion debug jvm</figcaption>
+        </figure></p>
 
 <p>导入之后，具体的 cpp 文件会报错，但是不影响调试，可以暂时忽略。</p>
 
 <p>导入成功，reload CMakeLists.txt 之后，会自动生成一个 debug configuration。下面配置 debug configuration。如图所示，将 executable 改为你的 java 二进制文件，然后在 program arguments 里设置程序参数。我们先设置为 -version。</p>
 
-<p><img src="/images/java/jdk11-debug1.png" alt="jdk11 debug1" title="jdk11 debug1" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-debug1.png" alt="jdk11 debug1" title="jdk11 debug1" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 debug1</figcaption>
+        </figure></p>
 
-<p>此时我们在<code class="language-plaintext highlighter-rouge">share/prims/jni.cpp</code>文件上打一个断点，然后执行 debug，就可以看到效果了。</p>
+<p>此时我们在<span class="codespan">share/prims/jni.cpp</span>文件上打一个断点，然后执行 debug，就可以看到效果了。</p>
 
-<p><img src="/images/java/jdk11-debug2.png" alt="jdk11 debug2" title="jdk11 debug2" /></p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/java/jdk11-debug2.png" alt="jdk11 debug2" title="jdk11 debug2" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>jdk11 debug2</figcaption>
+        </figure></p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p>每个下载的 jdk 中都有一个 build 文档，一般在 doc 目录下。这是编译安装该 jdk 的最权威的参考文档。jdk11 的在线 build 文档是：<a href="https://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html">Building the JDK 11</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:1:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a> <a href="#fnref:1:2" class="reversefootnote" role="doc-backlink">&#8617;<sup>3</sup></a> <a href="#fnref:1:3" class="reversefootnote" role="doc-backlink">&#8617;<sup>4</sup></a></p>
     </li>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p>$BUILD 表示你构建出来的结果的目录，一般是你下载的 openjdk11 下的 build/xxx，xxx 是一个动态的名称，和你的开发机类型、编译参数有关，在我的机器上是 ./openjdk11/build/macosx-x86_64-normal-server-slowdebug。 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

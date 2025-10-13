@@ -15,7 +15,6 @@
 
   <title>nginx 502 和 504 超时演示</title>
   <meta name="description" content="最近线上 nginx 遇到了一些较难排查的 502 和 504 错误，顺便了解了一下 nginx 的相关配置。我发现网上很多介绍 nginx 超时配置只是列了这几个配置的含义和数值，并没有解释什么原因会触发哪个配置。因此趁这个机会演示一下，如何让 nginx 符合预期正确出现 502 和 504。
-
 ">
   <meta name="keywords" content="nginx,php-fpm,php">
   <link rel="canonical" href="https://wulfric.me/2018/07/nginx-demo/">
@@ -85,7 +84,7 @@
 
 <p>你需要 3 个逻辑组件：nginx 服务器，php-fpm，client 访问客户端。3 个组件可以在同一台机器中，我用的是 docker 来配置 PHP 和 nginx 环境，在宿主机上访问。如果你很熟悉这 3 个组件，这部分可以跳过。用 docker 来做各种测试和实验非常方便，这里就不展开了。docker-compose 的配置参考了这篇<a href="http://geekyplatypus.com/dockerise-your-php-application-with-nginx-and-php7-fpm/">文章</a>。我的 docker composer 文件如下：</p>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">3'</span>
+<div  class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">3'</span>
 <span class="na">services</span><span class="pi">:</span>
   <span class="na">web</span><span class="pi">:</span>
     <span class="na">image</span><span class="pi">:</span> <span class="s">nginx:alpine</span>
@@ -105,14 +104,14 @@
 
 <p>使用的镜像都是基于 <a href="https://hub.docker.com/_/alpine/">alpine</a> 制作的，非常小巧：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>REPOSITORY  TAG               SIZE
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>REPOSITORY  TAG               SIZE
 php         7.1-fpm-alpin     69.5MB
 nginx       alpine            18.6MB
 </code></pre></div></div>
 
 <p>nginx 的配置：</p>
 
-<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
+<div  class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
   <span class="kn">index</span> <span class="s">index.php</span> <span class="s">index.html</span><span class="p">;</span>
   <span class="kn">server_name</span> <span class="s">php-docker.local</span><span class="p">;</span>
   <span class="kn">error_log</span>  <span class="n">/var/log/nginx/error.log</span><span class="p">;</span>
@@ -136,7 +135,7 @@ nginx       alpine            18.6MB
 
 <p>php-fpm 的配置</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>global]
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>global]
 <span class="nv">include</span><span class="o">=</span>etc/php-fpm.d/<span class="k">*</span>.conf
 <span class="nv">request_terminate_timeout</span><span class="o">=</span>3s
 </code></pre></div></div>
@@ -145,7 +144,7 @@ nginx       alpine            18.6MB
 
 <h2 id="关键参数">关键参数</h2>
 
-<p>在这个演示中，PHP 的关键参数有两个，一个是 PHP 脚本的 max_execution_time，这个配置在<code class="language-plaintext highlighter-rouge">php.ini</code>中；另一个是 php-fpm 的 request_terminate_timeout，在<code class="language-plaintext highlighter-rouge">php-fpm.conf</code>中。当以 php-fpm 提供服务时，request_terminate_timeout 设置会覆盖 max_execution_time 的设置，因此我们这里只测试 request_terminate_timeout。</p>
+<p>在这个演示中，PHP 的关键参数有两个，一个是 PHP 脚本的 max_execution_time，这个配置在<span class="codespan">php.ini</span>中；另一个是 php-fpm 的 request_terminate_timeout，在<span class="codespan">php-fpm.conf</span>中。当以 php-fpm 提供服务时，request_terminate_timeout 设置会覆盖 max_execution_time 的设置，因此我们这里只测试 request_terminate_timeout。</p>
 
 <p>request_terminate_timeout 的意思是 php-fpm 接受的请求的超时时间，超过这个时间 php-fpm 会 kill 掉执行脚本的 worker 进程。</p>
 
@@ -157,12 +156,12 @@ nginx       alpine            18.6MB
 
 <p>首先启动 nginx 和 PHP：</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-compose up
+<div  class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-compose up
 </code></pre></div></div>
 
 <p>在 code 文件夹下添加一个 index.php 文件：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nb">sleep</span><span class="p">(</span><span class="mi">70</span><span class="p">);</span>
 <span class="k">echo</span> <span class="s1">'hello world'</span><span class="p">;</span>
 </code></pre></div></div>
@@ -171,9 +170,9 @@ nginx       alpine            18.6MB
 
 <p>访问 php-docker.local:8080/index.php，报错 502 bad gateway。而且是在 3s 之后报的错，说明触发了 request_terminate_timeout 设置，php-fpm 关闭了连接。</p>
 
-<p>通过观察 <code class="language-plaintext highlighter-rouge">ps aux | grep php</code> 可以发现，php-fpm 是通过杀掉超时的进程来解决进程超时问题的（pid 每次有一个会变化，说明一个进程杀掉了，并启动了另一个进程。这和 php-fpm 的进程池设定有关，你的设定未必会重新启动一个新的进程）。</p>
+<p>通过观察 <span class="codespan">ps aux | grep php</span> 可以发现，php-fpm 是通过杀掉超时的进程来解决进程超时问题的（pid 每次有一个会变化，说明一个进程杀掉了，并启动了另一个进程。这和 php-fpm 的进程池设定有关，你的设定未必会重新启动一个新的进程）。</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/var/www/html <span class="c"># ps aux | grep php</span>
+<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/var/www/html <span class="c"># ps aux | grep php</span>
     1 root       0:00 php-fpm: master process <span class="o">(</span>/usr/local/etc/php-fpm.conf<span class="o">)</span>
     6 www-data   0:00 php-fpm: pool www
     7 www-data   0:00 php-fpm: pool www
@@ -189,14 +188,14 @@ nginx       alpine            18.6MB
 
 <p>在这种情况下，nginx 日志中的错误是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>recv() failed (104: Connection reset by peer) while reading response header from upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>recv() failed (104: Connection reset by peer) while reading response header from upstream
 </code></pre></div></div>
 
 <p>即连接被服务端（PHP）reset 了，也就很好理解了。</p>
 
 <p>注意，在这种情况下，php-fpm 的日志中也会记录的：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>php_1  | [18-Jul-2018 16:33:42] WARNING: [pool www] child 5, script '/code/index.php' (request: "GET /index.php") execution timed out (3.040130 sec), terminating
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>php_1  | [18-Jul-2018 16:33:42] WARNING: [pool www] child 5, script '/code/index.php' (request: "GET /index.php") execution timed out (3.040130 sec), terminating
 php_1  | [18-Jul-2018 16:33:42] WARNING: [pool www] child 5 exited on signal 15 (SIGTERM) after 30.035736 seconds from start
 php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 </code></pre></div></div>
@@ -207,12 +206,12 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 
 <p>删掉 request_terminate_timeout 配置，重启应用：</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-compose down <span class="o">&amp;&amp;</span> docker-compose up
+<div  class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-compose down <span class="o">&amp;&amp;</span> docker-compose up
 </code></pre></div></div>
 
 <p>此时，PHP 脚本将要执行 70s，肯定超过 nginx 设置的超时时间，get 一下发现确实如此，8s 之后抛出 504 Gateway Time-out 错误，nginx 日志是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while reading response header from upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while reading response header from upstream
 </code></pre></div></div>
 
 <p>说明触发了 fastcgi_read_timeout 设置。</p>
@@ -221,19 +220,19 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 
 <p>关掉 PHP 服务：</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-composer stop php
+<div  class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker-composer stop php
 </code></pre></div></div>
 
 <p>PHP 服务停掉之后第一次访问，得到 504 错误，错误是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while connecting to upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while connecting to upstream
 </code></pre></div></div>
 
 <p>超时时间为 fastcgi_connect_timeout 的设置。说明这个时候 tcp 连接还在，但是尝试连接的时候失败了。</p>
 
 <p>再次访问，得到 502 错误，错误是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (113: Host is unreachable) while connecting to upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (113: Host is unreachable) while connecting to upstream
 </code></pre></div></div>
 
 <p>502 的原因很容易理解，上游服务挂了，同时因为之前访问的时候发现连接不上就把连接断掉了，再次连接的时候便无法找到 host 了。</p>
@@ -242,28 +241,28 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 
 <p>如果将 nginx fastcgi_pass 配置为 127.0.0.1:9000（本地没有这个端口），则马上就会抛出 502 错误，错误为：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (111: Connection refused) while connecting to upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (111: Connection refused) while connecting to upstream
 </code></pre></div></div>
 
 <p>登入 nginx 服务，使用 tcpdump 监控 9000 上的通信：</p>
 
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tcpdump <span class="nt">-i</span> eth0 <span class="nt">-nnA</span> tcp port 9000
+<div  class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tcpdump <span class="nt">-i</span> eth0 <span class="nt">-nnA</span> tcp port 9000
 <span class="c"># 如果你的 PHP 在本地，eth0 应该改成 lo</span>
 </code></pre></div></div>
 
-<p>我们发现，当 PHP 关闭之后第一次访问，nginx 会尝试向 PHP 发起若干次 TCP SYN 请求，但 PHP 显然不会响应，这个时候 nginx 就返回了 504。第二次访问的时候 nginx 根本不会发起任何请求，直接 502 了<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">1</a></sup>。如果我们这个时候执行<code class="language-plaintext highlighter-rouge">nginx -t</code>会发现，nginx 已经认为配置文件有问题了：nginx: configuration file /etc/nginx/nginx.conf test failed。</p>
+<p>我们发现，当 PHP 关闭之后第一次访问，nginx 会尝试向 PHP 发起若干次 TCP SYN 请求，但 PHP 显然不会响应，这个时候 nginx 就返回了 504。第二次访问的时候 nginx 根本不会发起任何请求，直接 502 了<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。如果我们这个时候执行<span class="codespan">nginx -t</span>会发现，nginx 已经认为配置文件有问题了：nginx: configuration file /etc/nginx/nginx.conf test failed。</p>
 
 <h3 id="换一种配置">换一种配置</h3>
 
-<p><a href="https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/">这篇文章</a> 提到，我们之前的 nginx 配置并不合理<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">2</a></sup>，我们重新设置 nginx：</p>
+<p><a href="https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/">这篇文章</a> 提到，我们之前的 nginx 配置并不合理<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>，我们重新设置 nginx：</p>
 
-<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
+<div  class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
   <span class="kn">index</span> <span class="s">index.php</span> <span class="s">index.html</span><span class="p">;</span>
   <span class="kn">server_name</span> <span class="s">php-docker.local</span><span class="p">;</span>
   <span class="kn">error_log</span>  <span class="n">/var/log/nginx/error.log</span><span class="p">;</span>
   <span class="kn">access_log</span> <span class="n">/var/log/nginx/access.log</span><span class="p">;</span>
   <span class="kn">root</span> <span class="n">/code</span><span class="p">;</span>
-  <span class="kn">resolver</span> <span class="mi">127</span><span class="s">.0.0.11</span><span class="p">;</span>  <span class="c1"># here</span>
+  <span class="kn">resolver</span> <span class="mf">127.0</span><span class="s">.0.11</span><span class="p">;</span>  <span class="c1"># here</span>
   <span class="kn">location</span> <span class="p">~</span> <span class="sr">\.php$</span> <span class="p">{</span>
     <span class="kn">set</span> <span class="nv">$upstream</span> <span class="nf">php</span><span class="p">:</span><span class="mi">9000</span><span class="p">;</span> <span class="c1"># here</span>
     <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="p">=</span><span class="mi">404</span><span class="p">;</span>
@@ -286,15 +285,15 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 
 <p>在 keepalive 期间，抛出 504 错误，超时时间为 fastcgi_connect_timeout，错误是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while connecting to upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>upstream timed out (110: Operation timed out) while connecting to upstream
 </code></pre></div></div>
 
 <p>keepalive 断线之后，抛出 502 错误，超时时间不定，错误是：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (113: Host is unreachable) while connecting to upstream
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>connect() failed (113: Host is unreachable) while connecting to upstream
 </code></pre></div></div>
 
-<p>按照<a href="https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/">这篇文章</a>所说，这种配置 nginx 不会认为有问题，执行<code class="language-plaintext highlighter-rouge">nginx -t</code>确实如此。在 <strong>一段时间</strong> 内，每次请求 nginx 都会向 upstream 发送 SYN，这段时间的状态码都是 504，之后再访问就不再发 TCP 包，状态码也变成 502。</p>
+<p>按照<a href="https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/">这篇文章</a>所说，这种配置 nginx 不会认为有问题，执行<span class="codespan">nginx -t</span>确实如此。在 <strong>一段时间</strong> 内，每次请求 nginx 都会向 upstream 发送 SYN，这段时间的状态码都是 504，之后再访问就不再发 TCP 包，状态码也变成 502。</p>
 
 <h3 id="其他">其他</h3>
 
@@ -306,16 +305,16 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
 
 <p>504 的原因比较简单，一般都是上游服务的执行时间超过了 nginx 的等待时间，这种情况是由于上游服务的业务太过耗时导致的，或者连接到上游服务器超时。从上面的实验来看，后者的原因比较难以追踪，因为这种情况下连接是存在的，但是却连不上，好在这种 504 一般都会在一段时间后转为 502。</p>
 
-<p>502 的原因是由于上游服务器的故障，比如停机，进程被杀死，上游服务 reset 了连接，进程僵死等各种原因。在 nginx 的日志中我们能够发现 502 错误的具体原因，分别为：<code class="language-plaintext highlighter-rouge">104: Connection reset by peer</code>，<code class="language-plaintext highlighter-rouge">113: Host is unreachable</code>，<code class="language-plaintext highlighter-rouge">111: Connection refused</code>。</p>
+<p>502 的原因是由于上游服务器的故障，比如停机，进程被杀死，上游服务 reset 了连接，进程僵死等各种原因。在 nginx 的日志中我们能够发现 502 错误的具体原因，分别为：<span class="codespan">104: Connection reset by peer</span>，<span class="codespan">113: Host is unreachable</span>，<span class="codespan">111: Connection refused</span>。</p>
 
 <p>有一些细节上的差别和 nginx 的工作原理有关，这部分尚未深挖。</p>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p>按理说，既然 nginx 已经知道 PHP 不可达，不去发 TCP 请求了，那么应该立即 502 才是。实验中发现，这种情况下的 502 有 3s 左右的延时，不知何故。 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p><a href="https://sandro-keil.de/blog/2017/07/24/let-nginx-start-if-upstream-host-is-unavailable-or-down/">这篇文章</a> 表明，我们之前的设置中，如果 PHP 没有先启动起来，那么 nginx 也是启动不起来的，这种设置并不合理：nginx 的一台上游服务有问题，结果 nginx 就无法提供服务了。但这和我们的演示关系不大，因此并没有在正文中过多描述。 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

@@ -15,7 +15,6 @@
 
   <title>PHP7 安装 xhprof</title>
   <meta name="description" content="xhprof 是 Facebook 09 年出的一个很优秀的 PHP profiler 工具，但 Facebook 后来迁移到 hhvm，早已不再维护，它在 PHP7 下有诸多 bug。
-
 ">
   <meta name="keywords" content="php7,xhprof,php">
   <link rel="canonical" href="https://wulfric.me/2017/08/php7-xhprof/">
@@ -72,23 +71,23 @@
 
 <h2 id="使用兼容的-xhprof-安装">使用兼容的 xhprof 安装</h2>
 
-<p>xhprof 已经很久没有更新了，使用他人的repo<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>:</p>
+<p>xhprof 已经很久没有更新了，使用他人的repo<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>:</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
 git clone https://github.com/longxinH/xhprof
 <span class="nb">cd </span>xhprof/extension/
 </code></pre></div></div>
 
 <p>查找 php7 下的 phpize 的位置。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>which php71 <span class="c"># 查看 php71 的位置</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>which php71 <span class="c"># 查看 php71 的位置</span>
 ll /usr/bin/php71 <span class="c"># 查看软链接的位置</span>
 <span class="nb">ls</span> /opt/remi/php71/root/usr/bin/ <span class="c"># 查看所有命令</span>
 </code></pre></div></div>
 
 <p>安装插件。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/opt/remi/php71/root/usr/bin/phpize
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/opt/remi/php71/root/usr/bin/phpize
 ./configure <span class="nt">--with-php-config</span><span class="o">=</span>/opt/remi/php71/root/usr/bin/php-config  <span class="nt">--enable-xhprof</span>
 <span class="nb">sudo </span>make
 <span class="nb">sudo </span>make <span class="nb">install</span>
@@ -96,13 +95,13 @@ ll /usr/bin/php71 <span class="c"># 查看软链接的位置</span>
 
 <p>重启 php-fpm。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>service php71-php-fpm restart
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>service php71-php-fpm restart
 php71 <span class="nt">-m</span> | <span class="nb">grep </span>xhprof
 </code></pre></div></div>
 
 <p>此时，安装成功。我们配置一下 xhprof 插件：</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>xhprof]
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>xhprof]
 <span class="nv">extension</span><span class="o">=</span>xhprof.so<span class="p">;</span>
 xhprof.output_dir<span class="o">=</span>/var/tmp/xhprof
 </code></pre></div></div>
@@ -113,9 +112,9 @@ xhprof.output_dir<span class="o">=</span>/var/tmp/xhprof
 
 <p>当生成 .xhprof 文件之后，我们就可以利用 xhprof_lib 来展示结果了。</p>
 
-<p>创建文件夹 /var/www/html/xhprof，然后配置 nginx 如下<sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>：</p>
+<p>创建文件夹 /var/www/html/xhprof，然后配置 nginx 如下<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>：</p>
 
-<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
+<div  class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
     <span class="kn">listen</span> <span class="mi">80</span><span class="p">;</span>
     <span class="kn">root</span> <span class="n">/var/www/html/xhprof/</span><span class="p">;</span>
     <span class="kn">server_name</span> <span class="s">your_host</span><span class="p">;</span>
@@ -133,7 +132,7 @@ xhprof.output_dir<span class="o">=</span>/var/tmp/xhprof
 
 <p>在 /var/www/html/xhprof/xhprof_html 下创建 index.php</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
     <span class="k">echo</span> <span class="nb">phpinfo</span><span class="p">();</span>
 <span class="cp">?&gt;</span>
 </code></pre></div></div>
@@ -142,11 +141,11 @@ xhprof.output_dir<span class="o">=</span>/var/tmp/xhprof
 
 <p>当配置成功之后，将 xhprof 中的 xhprof_lib 和 xhprof_html 两个文件夹复制到 /var/www/html/xhprof/ 下，然后访问 http://your_host/xhprof_html/index.php 即可。</p>
 
-<p>PS：安装 <code class="language-plaintext highlighter-rouge">yum install graphviz</code> 查看图形界面。</p>
+<p>PS：安装 <span class="codespan">yum install graphviz</span> 查看图形界面。</p>
 
 <p>修改 nginx 配置中的 root 直接指向 xhprof_html，配置如下：</p>
 
-<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
+<div  class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">server</span> <span class="p">{</span>
     <span class="kn">listen</span> <span class="mi">80</span><span class="p">;</span>
     <span class="kn">root</span> <span class="n">/var/www/html/xhprof/xhprof_html</span><span class="p">;</span>
     <span class="kn">server_name</span> <span class="s">your_host</span><span class="p">;</span>
@@ -164,7 +163,7 @@ xhprof.output_dir<span class="o">=</span>/var/tmp/xhprof
 
 <p>因为 xhprof_html 下已经有 index.php 了，所以可以直接访问 http://your_host。</p>
 
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># nginx 指向的路径</span>
+<div  class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># nginx 指向的路径</span>
 <span class="nv">$ </span><span class="nb">ls</span> /var/www/html/xhprof
 footer.php  header.php  index.php  xhprof_html  xhprof_lib
 
@@ -177,7 +176,7 @@ footer.php  header.php  index.php  xhprof_html  xhprof_lib
 
 <p>和之前一样，将要检查性能的代码包裹起来就可以了。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="nb">xhprof_enable</span><span class="p">(</span><span class="no">XHPROF_FLAGS_CPU</span> <span class="o">+</span> <span class="no">XHPROF_FLAGS_MEMORY</span><span class="p">);</span>
  
 <span class="c1">// 要检查性能的代码</span>
@@ -185,13 +184,13 @@ footer.php  header.php  index.php  xhprof_html  xhprof_lib
 <span class="nv">$xhprof_data</span> <span class="o">=</span> <span class="nb">xhprof_disable</span><span class="p">();</span>
 <span class="k">include_once</span>  <span class="s1">'/var/www/html/xhprof/xhprof_lib/utils/xhprof_lib.php'</span><span class="p">;</span>
 <span class="k">include_once</span>  <span class="s1">'/var/www/html/xhprof/xhprof_lib/utils/xhprof_runs.php'</span><span class="p">;</span>
-<span class="nv">$xhprof_runs</span> <span class="o">=</span> <span class="k">new</span> <span class="err">\</span><span class="nf">XHProfRuns_Default</span><span class="p">();</span>
+<span class="nv">$xhprof_runs</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">\XHProfRuns_Default</span><span class="p">();</span>
 <span class="nv">$run_id</span> <span class="o">=</span> <span class="nv">$xhprof_runs</span><span class="o">-&gt;</span><span class="nf">save_run</span><span class="p">(</span><span class="nv">$xhprof_data</span><span class="p">,</span> <span class="s1">'your_project'</span><span class="p">);</span>
 </code></pre></div></div>
 
 <p>当然这里也可以将前后的代码单独开一个php文件：header.php 和 footer.php。</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// header.php
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// header.php
 <span class="cp">&lt;?php</span>
 <span class="k">if</span> <span class="p">(</span><span class="nb">extension_loaded</span><span class="p">(</span><span class="s1">'xhprof'</span><span class="p">))</span> <span class="p">{</span>
     <span class="k">include_once</span> <span class="s1">'xhprof_lib/utils/xhprof_lib.php'</span><span class="p">;</span>
@@ -201,7 +200,7 @@ footer.php  header.php  index.php  xhprof_html  xhprof_lib
 <span class="cp">?&gt;</span>
 </code></pre></div></div>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// footer.php
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// footer.php
 <span class="cp">&lt;?php</span>
 <span class="k">if</span> <span class="p">(</span><span class="nb">extension_loaded</span><span class="p">(</span><span class="s1">'xhprof'</span><span class="p">))</span> <span class="p">{</span>
     <span class="nv">$profiler_namespace</span> <span class="o">=</span> <span class="s1">'your_project'</span><span class="p">;</span>
@@ -214,19 +213,19 @@ footer.php  header.php  index.php  xhprof_html  xhprof_lib
 
 <p>然后用这两个文件包裹代码。如果是 Apache，可以在项目的 .htaccess 文件中添加：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#php_value auto_prepend_file /var/www/html/xhprof/header.php
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#php_value auto_prepend_file /var/www/html/xhprof/header.php
 #php_value auto_append_file /var/www/html/xhprof/footer.php
 </code></pre></div></div>
 
 <p>如果是 nginx + php-fpm，可以在php-fpm.d/www.conf 添加：</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>php_value[auto_prepend_file] = /var/www/html/xhprof/header.php
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>php_value[auto_prepend_file] = /var/www/html/xhprof/header.php
 php_value[auto_append_file] = /var/www/html/xhprof/footer.php
 </code></pre></div></div>
 
 <p>个人还是更喜欢在需要的地方手动 require：</p>
 
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
 <span class="k">include_once</span>  <span class="s1">'/var/www/html/xhprof/header.php'</span><span class="p">;</span>
 
 <span class="c1">// 要检查性能的代码</span>
@@ -240,8 +239,8 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
 
 <ol>
   <li>如果遇到错误 failed to execute cmd: " dot -Tpng". stderr: ` (<a href="http://process:24220/">process:24220</a>): Pango-WARNING **: Invalid UTF-8 string passed to pango_layout_set_text() '。暂时不清楚怎么解决，可以选择避开它。将 xhprof_lib/utils/callgraph_utils.php 的 121，122 行的打印和 exit 注释掉。</li>
-  <li>如果遇到错误 <code class="language-plaintext highlighter-rouge">Error: either we can not find profile data for run_id xxx or the threshold 0.01 is too small or you do not have 'dot' image generation utility installed</code>，无法生成 png 图片，可能是因为生成的文件中有不能识别的字符，修复如下<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">3</a></sup>：
-    <div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$cmd</span> <span class="o">=</span> <span class="s2">" dot -T"</span><span class="mf">.</span><span class="nv">$type</span><span class="p">;</span>
+  <li>如果遇到错误 <span class="codespan">Error: either we can not find profile data for run_id xxx or the threshold 0.01 is too small or you do not have 'dot' image generation utility installed</span>，无法生成 png 图片，可能是因为生成的文件中有不能识别的字符，修复如下<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>：
+    <div  class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$cmd</span> <span class="o">=</span> <span class="s2">" dot -T"</span><span class="mf">.</span><span class="nv">$type</span><span class="p">;</span>
 <span class="c1">// 在 cmd 之后添加一个转码工作就可以了</span>
 <span class="nv">$dot_script</span> <span class="o">=</span> <span class="nb">iconv</span><span class="p">(</span><span class="s2">"UTF-8"</span><span class="p">,</span> <span class="s2">"ASCII//IGNORE"</span><span class="p">,</span> <span class="nv">$dot_script</span><span class="p">);</span>
 </code></pre></div>    </div>
@@ -250,6 +249,7 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
   <li>下面是一些参数说明</li>
 </ol>
 
+<div class="table-container">
 <table>
   <thead>
     <tr>
@@ -284,16 +284,17 @@ php_value[auto_append_file] = /var/www/html/xhprof/footer.php
     </tr>
   </tbody>
 </table>
+</div>
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
-    <li id="fn:1" role="doc-endnote">
+    <li id="fn:1">
       <p><a href="https://github.com/phacility/xhprof/issues/82">xhprof issue</a> 和<a href="http://www.jianshu.com/p/c420ebe6ce39">某博文</a>提到了一些替代 repo，除此之外还有 <a href="https://github.com/tideways/php-profiler-extension">tideways</a> 等 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:2" role="doc-endnote">
+    <li id="fn:2">
       <p>nginx 的配置参考了 <a href="https://wizardforcel.gitbooks.io/nginx-doc/content/Text/6.5_nginx_php_fpm.html"> 某 gitbook</a> 和 <a href="https://www.nginx.com/resources/wiki/start/topics/examples/phpfcgi/">nginx wiki</a> <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
-    <li id="fn:3" role="doc-endnote">
+    <li id="fn:3">
       <p>这个在网上很难找到解决方案，我在 PHP 的 bug 平台找到了它：<a href="https://bugs.php.net/bug.php?id=58655">链接</a> <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>

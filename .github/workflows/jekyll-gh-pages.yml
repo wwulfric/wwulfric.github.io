@@ -27,11 +27,11 @@ jobs:
       run: |
         mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
         sed -i 's#(images\/#(\/images\/#g' ${{ github.workspace }}/_posts/*.md
-    - name: Build the site in the jekyll/builder container
-      run: |
-        docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:4 /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+    - name: Build jekyll
+      uses: actions/jekyll-build-pages@v1
+      with:
+        source: ./
+        destination: ./_site
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:

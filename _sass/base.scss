@@ -4,15 +4,15 @@
 // $main-color : #2E313D; //333
 @use "sass:color";
 $main-color : #333;
-$lighter-color : color.scale( $main-color, $lightness:20% ); //666
-$lightest-color : color.scale( $main-color, $lightness:40% ); //999
-$border-color : color.scale( $main-color, $lightness:67% ); //ddd
-$darker-bg-color : color.scale( $main-color, $lightness:77% ); //f8f8f8
-$bg-color : color.scale( $main-color, $lightness:80% );
+$lighter-color: color.adjust($main-color, $lightness: 20%); //666
+$lightest-color: color.adjust($main-color, $lightness: 40%); //999
+$border-color: color.adjust($main-color, $lightness: 67%); //ddd
+$darker-bg-color: color.adjust($main-color, $lightness: 77%); //f8f8f8
+$bg-color: color.adjust($main-color, $lightness: 80%);
 
 $header-color : #9C0; //#B7C11E;
 $link-color : #008D00; //#23A38F;
-$link-hover-color : color.scale( $link-color, $lightness:-20% );
+$link-hover-color: color.adjust($link-color, $lightness: -20%);
 
 $em-color : #F0563D; // 用于红色强调
 

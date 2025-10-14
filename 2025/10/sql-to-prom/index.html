@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>一个简单的通过 sql 查询 prometheus 的转换器实现</title>
+  <meta name="description" content="背景
+">
+  <meta name="keywords" content="prometheus,sql,calcite">
+  <link rel="canonical" href="https://wulfric.me/2025/10/sql-to-prom/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>14</div>
+        <div class='month'>OCT</div>
+      </div>
+      <div class='year pull-left'>2025</div>
+    </div>
+    <h1 class="post-title">一个简单的通过 sql 查询 prometheus 的转换器实现</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <h2 id="背景">背景</h2>
+
+<p>可观测的一个重要的趋势是链路、日志、指标的统一存储和使用。大模型时代，在业务层实现链路、日志、指标的统一查询语言将是一个重要的过渡方案。本文尝试实现一个简单的通过 sql 查询 prometheus 指标的工具。</p>
+
+<h2 id="实现步骤">实现步骤</h2>
+
+<p>经调研，我决定基于 <a href="https://calcite.apache.org/">Apache Calcite</a>，实现 sql 解析并对接真实的 promql 查询终端。</p>
+
+<p>Apache Calcite 是一个优秀的动态数据管理框架，提供了如：SQL 解析、SQL 校验、SQL 查询优化、SQL 生成以及数据连接查询等典型数据库管理功能<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
+
+<p>在Calcite中，查询处理分为逻辑计划和物理计划两个层次，这种分离使得优化更加灵活和模块化。逻辑计划描述了查询要做什么，而不关心具体如何执行。它是对SQL语句的抽象表示，专注于查询的语义而非执行细节。物理计划描述了查询如何执行，包含了具体的算法选择和执行策略。它是逻辑计划的具体实现，考虑了底层存储系统的特性和约束。</p>
+
+<p>我的思路是，利用calcite自带的 sql 解析和逻辑计划分析能力，手动解析最终的物理计划逻辑，并翻译为 prom ql 和实际的查询动作。</p>
+
+<h3 id="效果预期">效果预期</h3>
+
+<div  class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">select</span> <span class="nv">`app_name`</span><span class="p">,</span> <span class="nv">`timestamp`</span> <span class="p">,</span> <span class="nv">`value`</span> <span class="k">from</span> <span class="n">prometheus</span><span class="p">.</span><span class="n">system_metrics_cpu_util</span> <span class="k">where</span> <span class="n">app_name</span> <span class="o">=</span> <span class="s1">'my_app'</span> <span class="k">and</span> <span class="n">hostname</span> <span class="o">=</span> <span class="s1">'host1'</span> <span class="k">and</span> <span class="nv">`timestamp`</span> <span class="o">&gt;=</span> <span class="mi">1696118400000</span> <span class="k">and</span> <span class="nv">`timestamp`</span> <span class="o">&lt;=</span> <span class="mi">1696204800000</span>
+</code></pre></div></div>
+
+<p>应翻译为 prometheus 查询</p>
+
+<pre><code class="language-promql">system_metrics_cpu_util{app_name = 'my_app', hostname = 'host1'}
+</code></pre>
+
+<p>并查询出 JSON/CSV 数据，示例如下</p>
+
+<pre><code class="language-csv">app_name, timestamp, value
+my_app, 1696118460000, 0.01
+my_app, 1696118520000, 0.02
+</code></pre>
+
+<p>查询的方式是标准的 jdbc 连接和查询语法。如下图所示</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">Properties</span> <span class="n">info</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Properties</span><span class="o">();</span>
+<span class="n">info</span><span class="o">.</span><span class="na">setProperty</span><span class="o">(</span><span class="nc">CalciteConnectionProperty</span><span class="o">.</span><span class="na">LEX</span><span class="o">.</span><span class="na">camelName</span><span class="o">(),</span> <span class="nc">Lex</span><span class="o">.</span><span class="na">MYSQL</span><span class="o">.</span><span class="na">name</span><span class="o">());</span>
+<span class="c1">// 获取连接</span>
+<span class="nc">Connection</span> <span class="n">connection</span> <span class="o">=</span> <span class="nc">DriverManager</span><span class="o">.</span><span class="na">getConnection</span><span class="o">(</span><span class="s">"jdbc:calcite:"</span><span class="o">,</span> <span class="n">info</span><span class="o">);</span>
+<span class="c1">// 获取Calcite连接</span>
+<span class="nc">CalciteConnection</span> <span class="n">calciteConnection</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="na">unwrap</span><span class="o">(</span><span class="nc">CalciteConnection</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+<span class="c1">// 获取根模式</span>
+<span class="nc">SchemaPlus</span> <span class="n">rootSchema</span> <span class="o">=</span> <span class="n">calciteConnection</span><span class="o">.</span><span class="na">getRootSchema</span><span class="o">();</span>
+
+<span class="c1">// 注册Prometheus Schema</span>
+<span class="nc">String</span> <span class="n">dstStr</span> <span class="o">=</span> <span class="sh">"""
+                      [
+          {
+            "tableName": "system_metrics_cpu_util",
+            "fields": [
+              {"fieldName": "timestamp", "fieldType": "BIGINT"},
+              {"fieldName": "app_name", "fieldType": "VARCHAR"},
+              {"fieldName": "hostname", "fieldType": "VARCHAR"},
+              {"fieldName": "value", "fieldType": "DOUBLE"}
+            ]
+          }
+        ]
+        """</span><span class="o">;</span>
+<span class="nc">List</span><span class="o">&lt;</span><span class="nc">DataSourceTable</span><span class="o">&gt;</span> <span class="n">dataSourceTables</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="na">parseArray</span><span class="o">(</span><span class="n">dstStr</span><span class="o">,</span> <span class="nc">DataSourceTable</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+<span class="nc">Sql2PrometheusSchema</span> <span class="n">promSchema</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Sql2PrometheusSchema</span><span class="o">(</span><span class="n">dataSourceTables</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+<span class="n">rootSchema</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">"prometheus"</span><span class="o">,</span> <span class="n">promSchema</span><span class="o">);</span>
+<span class="c1">// 创建语句对象</span>
+<span class="nc">Statement</span> <span class="n">statement</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="na">createStatement</span><span class="o">();</span>
+
+<span class="c1">// 执行查询语句</span>
+<span class="nc">String</span> <span class="n">sql</span> <span class="o">=</span> <span class="s">"select `timestamp` , `value` from prometheus.system_metrics_cpu_util where app_name = 'my_app' and hostname = 'host1' and `timestamp` &gt;= 1696118400000 and `timestamp` &lt;= 1696204800000"</span><span class="o">;</span>
+<span class="nc">ResultSet</span> <span class="n">rs</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="na">executeQuery</span><span class="o">(</span><span class="n">sql</span><span class="o">);</span>
+<span class="nc">List</span><span class="o">&lt;</span><span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Object</span><span class="o">&gt;&gt;</span> <span class="n">list</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span> <span class="c1">// 转换 rs 为最终结果</span>
+<span class="nc">ResultSetMetaData</span> <span class="n">metaData</span> <span class="o">=</span> <span class="n">rs</span><span class="o">.</span><span class="na">getMetaData</span><span class="o">();</span>
+<span class="kt">int</span> <span class="n">columnCount</span> <span class="o">=</span> <span class="n">metaData</span><span class="o">.</span><span class="na">getColumnCount</span><span class="o">();</span>
+</code></pre></div></div>
+
+<h3 id="设计并实现一个-schema">设计并实现一个 schema</h3>
+
+<p>从上面代码的使用可以看到，我们需要先实现一个 Sql2PrometheusSchema。calcite 里的 schema 和 Postgres 的schema的概念比较像。在PostgreSQL中，schema是一个逻辑容器，用于组织和管理数据库中的对象（如表、视图、函数、索引等）。它类似于一个命名空间，可以将相关的数据库对象分组在一起。在 MySQL中，类似的概念是 database。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Sql2PrometheusSchema</span> <span class="kd">extends</span> <span class="nc">AbstractSchema</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Table</span><span class="o">&gt;</span> <span class="n">tableMap</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">public</span> <span class="nf">Sql2PrometheusSchema</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">DataSourceTable</span><span class="o">&gt;</span> <span class="n">dataSourceTables</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">enableQuery</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">Objects</span><span class="o">.</span><span class="na">isNull</span><span class="o">(</span><span class="n">dataSourceTables</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s">"dataSourceTables can not be null"</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">DataSourceTable</span> <span class="n">dataSourceTable</span> <span class="o">:</span> <span class="n">dataSourceTables</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">tableName</span> <span class="o">=</span> <span class="n">dataSourceTable</span><span class="o">.</span><span class="na">getTableName</span><span class="o">();</span>
+            <span class="n">tableMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">tableName</span><span class="o">,</span> <span class="k">new</span> <span class="nc">Sql2PrometheusTable</span><span class="o">(</span><span class="n">tableName</span><span class="o">,</span> <span class="n">dataSourceTable</span><span class="o">.</span><span class="na">getFields</span><span class="o">(),</span> <span class="n">enableQuery</span><span class="o">));</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span>
+    <span class="kd">protected</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Table</span><span class="o">&gt;</span> <span class="nf">getTableMap</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">tableMap</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>注意到我们在初始化 Sql2PrometheusSchema 的时候，传入了表的定义 <span class="codespan">List&lt;DataSourceTable&gt; dataSourceTables</span>，表的定义对应不同的 promtheus 的指标和 label，一个 promtheus 指标对应一张表，每个指标的所有 label 即为表的字段。每个表还有额外的2个字段：<span class="codespan">timestamp</span> 和 <span class="codespan">value</span>。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">DataSourceTable</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="nc">String</span> <span class="n">tableName</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">List</span><span class="o">&lt;</span><span class="nc">DataSourceTableField</span><span class="o">&gt;</span> <span class="n">fields</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">DataSourceTableField</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="nc">String</span> <span class="n">fieldName</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">String</span> <span class="n">fieldType</span><span class="o">;</span> <span class="c1">// e.g., "STRING", "DOUBLE", "LONG"</span>
+    <span class="kd">private</span> <span class="nc">Boolean</span> <span class="n">metricField</span><span class="o">;</span> <span class="c1">// 是否为指标字段</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="设计并实现一个-table">设计并实现一个 table</h3>
+
+<p><span class="codespan">Sql2PrometheusTable</span> 是该方案的核心。table 的scan方法就是执行解析后的物理计划的地方。只需要解析物理计划，并翻译成 prometheus 的查询语句，然后将查询动作包装成一个Enumerator即可。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Sql2PrometheusTable</span> <span class="kd">extends</span> <span class="nc">AbstractTable</span> <span class="kd">implements</span> <span class="nc">FilterableTable</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">String</span> <span class="no">TIMESTAMP_FIELD</span> <span class="o">=</span> <span class="s">"timestamp"</span><span class="o">;</span>
+    <span class="nd">@Getter</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">metricTable</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">DataSourceTableField</span><span class="o">&gt;</span> <span class="n">fields</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">boolean</span> <span class="n">enableQuery</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Integer</span><span class="o">&gt;</span> <span class="n">fieldIndexMap</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">indexFieldMap</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="nd">@Getter</span>
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">active</span><span class="o">;</span>
+    <span class="nd">@Getter</span>
+    <span class="kd">private</span> <span class="nc">String</span> <span class="n">query</span><span class="o">;</span>
+    <span class="nd">@Getter</span>
+    <span class="kd">private</span> <span class="nc">String</span> <span class="n">activeQuery</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">Sql2PrometheusTable</span><span class="o">(</span><span class="nc">String</span> <span class="n">metricTable</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">DataSourceTableField</span><span class="o">&gt;</span> <span class="n">fields</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">enableQuery</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">metricTable</span> <span class="o">=</span> <span class="n">metricTable</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">fields</span> <span class="o">=</span> <span class="n">fields</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">enableQuery</span> <span class="o">=</span> <span class="n">enableQuery</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">fields</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="n">fieldIndexMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">fields</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="na">getFieldName</span><span class="o">(),</span> <span class="n">i</span><span class="o">);</span>
+            <span class="n">indexFieldMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">i</span><span class="o">,</span> <span class="n">fields</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="na">getFieldName</span><span class="o">());</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">Enumerable</span><span class="o">&lt;</span><span class="nc">Object</span><span class="o">[]&gt;</span> <span class="nf">scan</span><span class="o">(</span><span class="nc">DataContext</span> <span class="n">root</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">RexNode</span><span class="o">&gt;</span> <span class="n">filters</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">active</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="nc">JavaTypeFactory</span> <span class="n">typeFactory</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="na">getTypeFactory</span><span class="o">();</span>
+
+        <span class="k">return</span> <span class="k">new</span> <span class="nc">AbstractEnumerable</span><span class="o">&lt;&gt;()</span> <span class="o">{</span>
+            <span class="kd">public</span> <span class="nc">Enumerator</span><span class="o">&lt;</span><span class="nc">Object</span><span class="o">[]&gt;</span> <span class="nf">enumerator</span><span class="o">()</span> <span class="o">{</span>
+                <span class="c1">// 在这里处理过滤逻辑</span>
+                <span class="c1">// 具体实现取决于filters中的条件</span>
+                <span class="k">return</span> <span class="k">new</span> <span class="nf">Sql2PrometheusEnumerator</span><span class="o">(</span><span class="n">buildMetricsQueryRequest</span><span class="o">(</span><span class="n">typeFactory</span><span class="o">,</span> <span class="n">filters</span><span class="o">),</span> <span class="n">fieldIndexMap</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">};</span>
+    <span class="o">}</span>
+
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">RelDataType</span> <span class="nf">getRowType</span><span class="o">(</span><span class="nc">RelDataTypeFactory</span> <span class="n">relDataTypeFactory</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// 这里应该返回 table 的 schema</span>
+        <span class="nc">RelDataTypeFactory</span><span class="o">.</span><span class="na">Builder</span> <span class="n">builder</span> <span class="o">=</span> <span class="n">relDataTypeFactory</span><span class="o">.</span><span class="na">builder</span><span class="o">();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">DataSourceTableField</span> <span class="n">field</span> <span class="o">:</span> <span class="n">fields</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">SqlTypeName</span> <span class="n">fieldType</span> <span class="o">=</span> <span class="nc">SqlTypeName</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">field</span><span class="o">.</span><span class="na">getFieldType</span><span class="o">());</span>
+            <span class="nc">Objects</span><span class="o">.</span><span class="na">requireNonNull</span><span class="o">(</span><span class="n">fieldType</span><span class="o">,</span> <span class="s">"fieldType is null"</span><span class="o">);</span>
+            <span class="n">builder</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">field</span><span class="o">.</span><span class="na">getFieldName</span><span class="o">(),</span> <span class="n">fieldType</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">builder</span><span class="o">.</span><span class="na">build</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">MetricsQueryRequest</span> <span class="nf">buildMetricsQueryRequest</span><span class="o">(</span><span class="nc">JavaTypeFactory</span> <span class="n">typeFactory</span><span class="o">,</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">RexNode</span><span class="o">&gt;</span> <span class="n">filters</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">StringBuilder</span> <span class="n">labelSelectors</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">(</span><span class="n">metricTable</span><span class="o">).</span><span class="na">append</span><span class="o">(</span><span class="s">"{"</span><span class="o">);</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">RexNode</span><span class="o">&gt;</span> <span class="n">filtersRemoveTs</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">TimeRange</span><span class="o">&gt;</span> <span class="n">timeRanges</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">RexNode</span> <span class="n">filter</span> <span class="o">:</span> <span class="n">filters</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">TimestampVisitor</span> <span class="n">timestampVisitor</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">TimestampVisitor</span><span class="o">(</span><span class="n">fieldIndexMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="no">TIMESTAMP_FIELD</span><span class="o">),</span> <span class="n">typeFactory</span><span class="o">);</span>
+            <span class="n">filtersRemoveTs</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">filter</span><span class="o">.</span><span class="na">accept</span><span class="o">(</span><span class="n">timestampVisitor</span><span class="o">));</span>
+            <span class="n">timeRanges</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">timestampVisitor</span><span class="o">.</span><span class="na">getTimeRange</span><span class="o">());</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">timeRanges</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s">"Time range is required"</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="nc">TimeRange</span> <span class="n">timeRange</span> <span class="o">=</span> <span class="n">timeRanges</span><span class="o">.</span><span class="na">getFirst</span><span class="o">();</span>
+
+        <span class="k">for</span> <span class="o">(</span><span class="nc">RexNode</span> <span class="n">filter</span> <span class="o">:</span> <span class="n">filtersRemoveTs</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">PromQLConverterVisitor</span> <span class="n">visitor</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">PromQLConverterVisitor</span><span class="o">(</span><span class="n">typeFactory</span><span class="o">,</span> <span class="n">indexFieldMap</span><span class="o">);</span>
+            <span class="nc">String</span> <span class="n">labelSelector</span> <span class="o">=</span> <span class="n">filter</span><span class="o">.</span><span class="na">accept</span><span class="o">(</span><span class="n">visitor</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(!</span><span class="n">labelSelector</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+                <span class="n">labelSelectors</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">labelSelector</span><span class="o">).</span><span class="na">append</span><span class="o">(</span><span class="s">", "</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+
+        <span class="k">if</span> <span class="o">(</span><span class="n">labelSelectors</span><span class="o">.</span><span class="na">lastIndexOf</span><span class="o">(</span><span class="s">","</span><span class="o">)</span> <span class="o">==</span> <span class="n">labelSelectors</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="mi">2</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">labelSelectors</span><span class="o">.</span><span class="na">delete</span><span class="o">(</span><span class="n">labelSelectors</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="mi">2</span><span class="o">,</span> <span class="n">labelSelectors</span><span class="o">.</span><span class="na">length</span><span class="o">());</span>
+        <span class="o">}</span>
+        <span class="n">labelSelectors</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="s">"}"</span><span class="o">);</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">query</span> <span class="o">=</span> <span class="n">labelSelectors</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">MetricsQueryRequest</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">query</span><span class="o">,</span> <span class="n">timeRange</span><span class="o">.</span><span class="na">start</span><span class="o">(),</span> <span class="n">timeRange</span><span class="o">.</span><span class="na">end</span><span class="o">(),</span> <span class="k">this</span><span class="o">.</span><span class="na">enableQuery</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="包装成enumerator">包装成Enumerator</h3>
+
+<p>上面的scan方法返回的是一个Enumerator：<span class="codespan">Sql2PrometheusEnumerator</span>。其入参即 prometheus 的 <a href="https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries">query range</a> 参数。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MetricsQueryRequest</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">query</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">start</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">end</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>在Enumerator里把 prom 查询包装起来，并提供Enumerator接口。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Sql2PrometheusEnumerator</span> <span class="kd">implements</span> <span class="nc">Enumerator</span><span class="o">&lt;</span><span class="nc">Object</span><span class="o">[]&gt;</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="nc">Iterator</span><span class="o">&lt;</span><span class="nc">Object</span><span class="o">[]&gt;</span> <span class="n">iterator</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Integer</span><span class="o">&gt;</span> <span class="n">fieldIndexMap</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Object</span><span class="o">[]</span> <span class="n">currentElement</span><span class="o">;</span>  <span class="c1">// 用于存储当前元素的成员变量</span>
+
+    <span class="kd">public</span> <span class="nf">Sql2PrometheusEnumerator</span><span class="o">(</span><span class="nc">MetricsQueryRequest</span> <span class="n">metricsQueryRequest</span><span class="o">,</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Integer</span><span class="o">&gt;</span> <span class="n">fieldIndexMap</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">fieldIndexMap</span> <span class="o">=</span> <span class="n">fieldIndexMap</span><span class="o">;</span>
+        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="n">metricsQueryRequest</span><span class="o">.</span><span class="na">getStart</span><span class="o">();</span>
+        <span class="kt">long</span> <span class="n">end</span> <span class="o">=</span> <span class="n">metricsQueryRequest</span><span class="o">.</span><span class="na">getEnd</span><span class="o">();</span>
+        <span class="nc">String</span> <span class="n">query</span> <span class="o">=</span> <span class="n">metricsQueryRequest</span><span class="o">.</span><span class="na">getQuery</span><span class="o">();</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"MetricsQueryRequest: "</span> <span class="o">+</span> <span class="n">query</span> <span class="o">+</span> <span class="s">", start: "</span> <span class="o">+</span> <span class="n">start</span> <span class="o">+</span> <span class="s">", end: "</span> <span class="o">+</span> <span class="n">end</span><span class="o">);</span>
+        <span class="c1">// todo 执行 prom 查询，并将查询结果转换为 Iterator</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">iterator</span> <span class="o">=</span> <span class="n">fetchData</span><span class="o">(</span><span class="n">metricsQueryRequest</span><span class="o">).</span><span class="na">iterator</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">Object</span><span class="o">[]</span> <span class="nf">current</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">currentElement</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">NoSuchElementException</span><span class="o">(</span><span class="s">"No current element, call moveNext() first."</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">currentElement</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">moveNext</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">iterator</span><span class="o">.</span><span class="na">hasNext</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">currentElement</span> <span class="o">=</span> <span class="n">iterator</span><span class="o">.</span><span class="na">next</span><span class="o">();</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="n">currentElement</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>  <span class="c1">// 当没有更多元素时，清除当前元素</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">reset</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">iterator</span> <span class="o">=</span> <span class="n">convertData</span><span class="o">().</span><span class="na">iterator</span><span class="o">();</span>
+        <span class="n">currentElement</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>  <span class="c1">// 重置时也应清除当前元素</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">close</span><span class="o">()</span> <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h2 id="解析物理计划">解析物理计划</h2>
+
+<p>介绍完实现步骤，我们再来重点看下物理计划的解析。物理计划解析的入口是<span class="codespan">Sql2PrometheusTable</span> 的buildMetricsQueryRequest方法。</p>
+
+<h3 id="时间戳提取">时间戳提取</h3>
+
+<p>sql 里是包含时间的过滤条件的，但是 prometheus 的查询语法里，时间戳范围和 query 是分开的。因此，我们的第一步是从物理计划里把时间戳相关的查询提取出来。即<span class="codespan">TimestampVisitor</span>。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">TimestampVisitor</span> <span class="kd">extends</span> <span class="nc">RexShuttle</span> <span class="o">{</span>
+    <span class="cm">/**
+     * 时间戳列的索引
+     */</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">tsIndex</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">RexBuilder</span> <span class="n">rexBuilder</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Long</span> <span class="n">start</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Long</span> <span class="n">end</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">TimestampVisitor</span><span class="o">(</span><span class="kt">int</span> <span class="n">tsIndex</span><span class="o">,</span> <span class="nc">JavaTypeFactory</span> <span class="n">typeFactory</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Pass true to visit each node only once</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">tsIndex</span> <span class="o">=</span> <span class="n">tsIndex</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">rexBuilder</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">RexBuilder</span><span class="o">(</span><span class="n">typeFactory</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">RexNode</span> <span class="nf">visitCall</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">isTimestampFilter</span><span class="o">(</span><span class="n">call</span><span class="o">))</span> <span class="o">{</span>
+            <span class="nc">RexNode</span> <span class="n">right</span> <span class="o">=</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+
+            <span class="n">setTimeRange</span><span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperator</span><span class="o">(),</span> <span class="o">(</span><span class="nc">RexLiteral</span><span class="o">)</span> <span class="n">right</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">rexBuilder</span><span class="o">.</span><span class="na">makeLiteral</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">visitCall</span><span class="o">(</span><span class="n">call</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">isTimestampFilter</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">size</span><span class="o">()</span> <span class="o">!=</span> <span class="mi">2</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="c1">// 检查是否包含时间戳列</span>
+        <span class="nc">RexNode</span> <span class="n">left</span> <span class="o">=</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">getFirst</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">left</span> <span class="k">instanceof</span> <span class="nc">RexInputRef</span> <span class="n">ref</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nc">Objects</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">tsIndex</span><span class="o">,</span> <span class="n">ref</span><span class="o">.</span><span class="na">getIndex</span><span class="o">());</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">setTimeRange</span><span class="o">(</span><span class="nc">SqlOperator</span> <span class="n">sqlOperator</span><span class="o">,</span> <span class="nc">RexLiteral</span> <span class="n">literal</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">SqlKind</span> <span class="n">kind</span> <span class="o">=</span> <span class="n">sqlOperator</span><span class="o">.</span><span class="na">getKind</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">SqlKind</span><span class="o">.</span><span class="na">GREATER_THAN</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">kind</span><span class="o">)</span> <span class="o">||</span> <span class="nc">SqlKind</span><span class="o">.</span><span class="na">GREATER_THAN_OR_EQUAL</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">kind</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// ts &gt;, ts &gt;=</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">"greater than"</span><span class="o">);</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="nc">Optional</span><span class="o">.</span><span class="na">ofNullable</span><span class="o">((</span><span class="nc">BigDecimal</span><span class="o">)</span> <span class="n">literal</span><span class="o">.</span><span class="na">getValue</span><span class="o">()).</span><span class="na">map</span><span class="o">(</span><span class="nl">BigDecimal:</span><span class="o">:</span><span class="n">longValue</span><span class="o">).</span><span class="na">orElse</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="nc">SqlKind</span><span class="o">.</span><span class="na">LESS_THAN</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">kind</span><span class="o">)</span> <span class="o">||</span> <span class="nc">SqlKind</span><span class="o">.</span><span class="na">LESS_THAN_OR_EQUAL</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">kind</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// ts &lt;, ts &lt;=</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">"less than"</span><span class="o">);</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="nc">Optional</span><span class="o">.</span><span class="na">ofNullable</span><span class="o">((</span><span class="nc">BigDecimal</span><span class="o">)</span> <span class="n">literal</span><span class="o">.</span><span class="na">getValue</span><span class="o">()).</span><span class="na">map</span><span class="o">(</span><span class="nl">BigDecimal:</span><span class="o">:</span><span class="n">longValue</span><span class="o">).</span><span class="na">orElse</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="nc">SqlKind</span><span class="o">.</span><span class="na">SEARCH</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">kind</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// ts between</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">literal</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="nc">Sarg</span><span class="o">&lt;?&gt;</span> <span class="n">sarg</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">"sarg: {}"</span><span class="o">,</span> <span class="n">sarg</span><span class="o">);</span>
+                <span class="nc">Range</span><span class="o">&lt;</span><span class="nc">BigDecimal</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Range</span><span class="o">&lt;</span><span class="nc">BigDecimal</span><span class="o">&gt;)</span> <span class="n">sarg</span><span class="o">.</span><span class="na">rangeSet</span><span class="o">.</span><span class="na">span</span><span class="o">();</span>
+                <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">range</span><span class="o">.</span><span class="na">lowerEndpoint</span><span class="o">().</span><span class="na">longValue</span><span class="o">();</span>
+                <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">range</span><span class="o">.</span><span class="na">upperEndpoint</span><span class="o">().</span><span class="na">longValue</span><span class="o">();</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="nc">TimeRange</span> <span class="nf">getTimeRange</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// start 不能是 null，但是 end 可以是 null</span>
+        <span class="nc">Objects</span><span class="o">.</span><span class="na">requireNonNull</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">start</span><span class="o">,</span> <span class="s">"start is null"</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">Objects</span><span class="o">.</span><span class="na">isNull</span><span class="o">(</span><span class="n">end</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Date</span><span class="o">().</span><span class="na">getTime</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">TimeRange</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">start</span><span class="o">,</span> <span class="k">this</span><span class="o">.</span><span class="na">end</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="label查询条件拼接">label查询条件拼接</h3>
+
+<p>第二步，是将除了时间戳之外的 where 查询条件拼接为 prometheus 查询的 label 条件。支持的 where 条件包含 =、!=、like、not like，分别对应 prometheus 查询的 =、!=、=~、!~。</p>
+
+<div  class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PromQLConverterVisitor</span> <span class="kd">extends</span> <span class="nc">RexVisitorImpl</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">indexFieldMap</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">PromQLConverterVisitor</span><span class="o">(</span><span class="nc">JavaTypeFactory</span> <span class="n">typeFactory</span><span class="o">,</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">indexFieldMap</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">indexFieldMap</span> <span class="o">=</span> <span class="n">indexFieldMap</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">visitCall</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">SqlOperator</span> <span class="n">operator</span> <span class="o">=</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperator</span><span class="o">();</span>
+
+        <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">AND</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">handleAndCondition</span><span class="o">(</span><span class="n">call</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">OR</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">handleOrCondition</span><span class="o">(</span><span class="n">call</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">handleComparisonOperator</span><span class="o">(</span><span class="n">call</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">visitInputRef</span><span class="o">(</span><span class="nc">RexInputRef</span> <span class="n">inputRef</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">indexFieldMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">inputRef</span><span class="o">.</span><span class="na">getIndex</span><span class="o">());</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">visitLiteral</span><span class="o">(</span><span class="nc">RexLiteral</span> <span class="n">literal</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">literal</span><span class="o">.</span><span class="na">isAlwaysTrue</span><span class="o">())</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">""</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">literal</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="nc">Sarg</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">handleSargLiteral</span><span class="o">(</span><span class="n">literal</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="nc">Object</span> <span class="n">value</span> <span class="o">=</span> <span class="n">literal</span><span class="o">.</span><span class="na">getValue2</span><span class="o">();</span>
+        <span class="k">return</span> <span class="n">value</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">value</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">:</span> <span class="s">"null"</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">visitNode</span><span class="o">(</span><span class="nc">RexNode</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="k">instanceof</span> <span class="nc">RexCall</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">visitCall</span><span class="o">((</span><span class="nc">RexCall</span><span class="o">)</span> <span class="n">node</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="k">instanceof</span> <span class="nc">RexInputRef</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">visitInputRef</span><span class="o">((</span><span class="nc">RexInputRef</span><span class="o">)</span> <span class="n">node</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="k">instanceof</span> <span class="nc">RexLiteral</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nf">visitLiteral</span><span class="o">((</span><span class="nc">RexLiteral</span><span class="o">)</span> <span class="n">node</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="s">""</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">handleAndCondition</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">conditions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">RexNode</span> <span class="n">operand</span> <span class="o">:</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">condition</span> <span class="o">=</span> <span class="n">visitNode</span><span class="o">(</span><span class="n">operand</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(!</span><span class="n">condition</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+                <span class="n">conditions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">condition</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="nc">String</span><span class="o">.</span><span class="na">join</span><span class="o">(</span><span class="s">","</span><span class="o">,</span> <span class="n">conditions</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">handleOrCondition</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">orGroups</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">RexNode</span> <span class="n">operand</span> <span class="o">:</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">branchConditions</span> <span class="o">=</span> <span class="n">extractBranchConditions</span><span class="o">(</span><span class="n">operand</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(!</span><span class="n">branchConditions</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+                <span class="n">orGroups</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">branchConditions</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="nf">combineOrConditions</span><span class="o">(</span><span class="n">orGroups</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="nf">extractBranchConditions</span><span class="o">(</span><span class="nc">RexNode</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">conditions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="k">instanceof</span> <span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperator</span><span class="o">()</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">AND</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">for</span> <span class="o">(</span><span class="nc">RexNode</span> <span class="n">operand</span> <span class="o">:</span> <span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">())</span> <span class="o">{</span>
+                    <span class="nc">String</span> <span class="n">condition</span> <span class="o">=</span> <span class="n">visitNode</span><span class="o">(</span><span class="n">operand</span><span class="o">);</span>
+                    <span class="k">if</span> <span class="o">(!</span><span class="n">condition</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+                        <span class="n">conditions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">condition</span><span class="o">);</span>
+                    <span class="o">}</span>
+                <span class="o">}</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="nc">String</span> <span class="n">condition</span> <span class="o">=</span> <span class="n">visitNode</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(!</span><span class="n">condition</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+                    <span class="n">conditions</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">condition</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">conditions</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">handleComparisonOperator</span><span class="o">(</span><span class="nc">RexCall</span> <span class="n">call</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">size</span><span class="o">()</span> <span class="o">!=</span> <span class="mi">2</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">""</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="nc">String</span> <span class="n">columnName</span> <span class="o">=</span> <span class="n">visitNode</span><span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">));</span>
+        <span class="nc">String</span> <span class="n">value</span> <span class="o">=</span> <span class="n">visitNode</span><span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperands</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="mi">1</span><span class="o">));</span>
+        <span class="nc">String</span> <span class="n">operator</span> <span class="o">=</span> <span class="n">convertOperator</span><span class="o">(</span><span class="n">call</span><span class="o">.</span><span class="na">getOperator</span><span class="o">());</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">Strings</span><span class="o">.</span><span class="na">isNullOrEmpty</span><span class="o">(</span><span class="n">columnName</span><span class="o">)</span> <span class="o">||</span> <span class="nc">Strings</span><span class="o">.</span><span class="na">isNullOrEmpty</span><span class="o">(</span><span class="n">value</span><span class="o">)</span> <span class="o">||</span> <span class="nc">Strings</span><span class="o">.</span><span class="na">isNullOrEmpty</span><span class="o">(</span><span class="n">operator</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">""</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"%s%s\"%s\""</span><span class="o">,</span> <span class="n">columnName</span><span class="o">,</span> <span class="n">operator</span><span class="o">,</span> <span class="n">escapeValue</span><span class="o">(</span><span class="n">value</span><span class="o">));</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">combineOrConditions</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">orGroups</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">labelValueMap</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;();</span>
+
+        <span class="k">for</span> <span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">orGroups</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">condition</span> <span class="o">:</span> <span class="n">group</span><span class="o">)</span> <span class="o">{</span>
+                <span class="nc">String</span><span class="o">[]</span> <span class="n">parts</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">"="</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">parts</span><span class="o">.</span><span class="na">length</span> <span class="o">==</span> <span class="mi">2</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="nc">String</span> <span class="n">label</span> <span class="o">=</span> <span class="n">parts</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
+                    <span class="nc">String</span> <span class="n">value</span> <span class="o">=</span> <span class="n">parts</span><span class="o">[</span><span class="mi">1</span><span class="o">].</span><span class="na">replaceAll</span><span class="o">(</span><span class="s">"\""</span><span class="o">,</span> <span class="s">""</span><span class="o">);</span>
+                    <span class="n">labelValueMap</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">label</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span> <span class="k">new</span> <span class="nc">HashSet</span><span class="o">&lt;&gt;()).</span><span class="na">add</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">combined</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">Map</span><span class="o">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">entry</span> <span class="o">:</span> <span class="n">labelValueMap</span><span class="o">.</span><span class="na">entrySet</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">label</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="na">getKey</span><span class="o">();</span>
+            <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">values</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="na">getValue</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">==</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">combined</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"%s=\"%s\""</span><span class="o">,</span> <span class="n">label</span><span class="o">,</span> <span class="n">values</span><span class="o">.</span><span class="na">iterator</span><span class="o">().</span><span class="na">next</span><span class="o">()));</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="n">combined</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"%s=~\"%s\""</span><span class="o">,</span>
+                        <span class="n">label</span><span class="o">,</span>
+                        <span class="nc">String</span><span class="o">.</span><span class="na">join</span><span class="o">(</span><span class="s">"|"</span><span class="o">,</span> <span class="n">values</span><span class="o">)));</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+
+        <span class="k">return</span> <span class="nc">String</span><span class="o">.</span><span class="na">join</span><span class="o">(</span><span class="s">","</span><span class="o">,</span> <span class="n">combined</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">convertOperator</span><span class="o">(</span><span class="nc">SqlOperator</span> <span class="n">operator</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">EQUALS</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"="</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">NOT_EQUALS</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"!="</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">LIKE</span> <span class="o">||</span> <span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">SEARCH</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"=~"</span><span class="o">;</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">operator</span> <span class="o">==</span> <span class="nc">SqlStdOperatorTable</span><span class="o">.</span><span class="na">NOT_LIKE</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"!~"</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="s">""</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">escapeValue</span><span class="o">(</span><span class="nc">String</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">replace</span><span class="o">(</span><span class="s">"\""</span><span class="o">,</span> <span class="s">"\\\""</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">handleSargLiteral</span><span class="o">(</span><span class="nc">RexLiteral</span> <span class="n">literal</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">Sarg</span><span class="o">&lt;</span><span class="nc">NlsString</span><span class="o">&gt;</span> <span class="n">sarg</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Sarg</span><span class="o">&lt;</span><span class="nc">NlsString</span><span class="o">&gt;)</span> <span class="n">literal</span><span class="o">.</span><span class="na">getValue</span><span class="o">();</span>
+        <span class="nc">Objects</span><span class="o">.</span><span class="na">requireNonNull</span><span class="o">(</span><span class="n">sarg</span><span class="o">,</span> <span class="s">"Sarg value is null"</span><span class="o">);</span>
+        <span class="c1">// 处理范围类型</span>
+        <span class="k">return</span> <span class="nf">handleSargPoints</span><span class="o">(</span><span class="n">sarg</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">handleSargPoints</span><span class="o">(</span><span class="nc">Sarg</span><span class="o">&lt;</span><span class="nc">NlsString</span><span class="o">&gt;</span> <span class="n">sarg</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">points</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+
+        <span class="k">for</span> <span class="o">(</span><span class="nc">Range</span><span class="o">&lt;</span><span class="nc">NlsString</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">:</span> <span class="n">sarg</span><span class="o">.</span><span class="na">rangeSet</span><span class="o">.</span><span class="na">asRanges</span><span class="o">())</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="nc">RangeSets</span><span class="o">.</span><span class="na">isPoint</span><span class="o">(</span><span class="n">range</span><span class="o">))</span> <span class="o">{</span>
+                <span class="n">points</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">range</span><span class="o">.</span><span class="na">lowerEndpoint</span><span class="o">().</span><span class="na">getValue</span><span class="o">());</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Invalid range: {}"</span><span class="o">,</span> <span class="n">range</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+
+        <span class="k">if</span> <span class="o">(</span><span class="n">points</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">==</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"%s"</span><span class="o">,</span> <span class="n">points</span><span class="o">.</span><span class="na">getFirst</span><span class="o">());</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="c1">// 多个点使用正则表达式匹配</span>
+            <span class="k">return</span> <span class="nc">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"%s"</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">join</span><span class="o">(</span><span class="s">"|"</span><span class="o">,</span> <span class="n">points</span><span class="o">));</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">private</span> <span class="nc">String</span> <span class="nf">formatValue</span><span class="o">(</span><span class="nc">Object</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"null"</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="k">instanceof</span> <span class="nc">String</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="s">"\""</span> <span class="o">+</span> <span class="n">escapeValue</span><span class="o">((</span><span class="nc">String</span><span class="o">)</span> <span class="n">value</span><span class="o">)</span> <span class="o">+</span> <span class="s">"\""</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>至此，我们实现了一个建议的通过 sql 查询 prometheus 数据的工具。打印日志为：</p>
+
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MetricsQueryRequest: system_metrics_cpu_util{app_name="my_app",hostname="host1"}, start: 1696118400000, end: 1696204800000
+</code></pre></div></div>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1">
+      <p>https://strongduanmu.com/blog/apache-calcite-learning-materials.html 挺不错的系列文章 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- prometheus, sql, calcite -->
+
+    <a class='tag' href="/tags/prometheus">
+      prometheus
+    </a>
+
+    <a class='tag' href="/tags/sql">
+      sql
+    </a>
+
+    <a class='tag' href="/tags/calcite">
+      calcite
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2025. All rights reserved.
+</footer>
+
+
+    </div>
+    <script src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+ -->
+    <!-- <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+ -->
+  </body>
+
+</html>

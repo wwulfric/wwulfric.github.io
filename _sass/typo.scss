@@ -204,10 +204,10 @@ pre{
 /* 一致化 horizontal rule */
 hr{
   border:none;
-  border-bottom:$normal-border;
+  border-bottom: $dashed-border;
   margin-bottom:10px;
   *color:pink; *filter:chroma(color=pink);
-  height:10px;
+  //height:10px;
   *margin:-7px 0 2px;
 }
 

@@ -69,3 +69,4 @@ $font-google-mono: "Cutive Mono", monospace;
 .box { @include border-radius(10px); }
 
 $normal-border: 1px solid $border-color;
+$dashed-border: 1px dashed $border-color;

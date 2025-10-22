@@ -170,6 +170,7 @@ my_app, 1696118520000, 0.02
     <span class="kd">private</span> <span class="nc">String</span> <span class="n">fieldType</span><span class="o">;</span> <span class="c1">// e.g., "STRING", "DOUBLE", "LONG"</span>
     <span class="kd">private</span> <span class="nc">Boolean</span> <span class="n">metricField</span><span class="o">;</span> <span class="c1">// 是否为指标字段</span>
 <span class="o">}</span>
+<span class="kd">public</span> <span class="kd">record</span> <span class="nf">TimeRange</span><span class="o">(</span><span class="kt">long</span> <span class="n">start</span><span class="o">,</span> <span class="kt">long</span> <span class="n">end</span><span class="o">)</span> <span class="o">{}</span>
 </code></pre></div></div>
 
 <h3 id="设计并实现一个-table">设计并实现一个 table</h3>
@@ -592,7 +593,7 @@ my_app, 1696118520000, 0.02
 <span class="o">}</span>
 </code></pre></div></div>
 
-<p>至此，我们实现了一个建议的通过 sql 查询 prometheus 数据的工具。打印日志为：</p>
+<p>至此，我们实现了一个简易的通过 sql 查询 prometheus 数据的工具。执行的打印日志为：</p>
 
 <div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MetricsQueryRequest: system_metrics_cpu_util{app_name="my_app",hostname="host1"}, start: 1696118400000, end: 1696204800000
 </code></pre></div></div>

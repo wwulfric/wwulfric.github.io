@@ -6,8 +6,8 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Tue, 14 Oct 2025 14:27:23 +0000</pubDate>
-    <lastBuildDate>Tue, 14 Oct 2025 14:27:23 +0000</lastBuildDate>
+    <pubDate>Wed, 22 Oct 2025 15:52:40 +0000</pubDate>
+    <lastBuildDate>Wed, 22 Oct 2025 15:52:40 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2025. All rights reserved.</rights>
     
@@ -116,6 +116,7 @@ my_app, 1696118520000, 0.02
     &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fieldType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// e.g., &quot;STRING&quot;, &quot;DOUBLE&quot;, &quot;LONG&quot;&lt;/span&gt;
     &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Boolean&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;metricField&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 是否为指标字段&lt;/span&gt;
 &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;record&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;TimeRange&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;h3 id=&quot;设计并实现一个-table&quot;&gt;设计并实现一个 table&lt;/h3&gt;
@@ -538,7 +539,7 @@ my_app, 1696118520000, 0.02
 &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;至此，我们实现了一个建议的通过 sql 查询 prometheus 数据的工具。打印日志为：&lt;/p&gt;
+&lt;p&gt;至此，我们实现了一个简易的通过 sql 查询 prometheus 数据的工具。执行的打印日志为：&lt;/p&gt;
 
 &lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;MetricsQueryRequest: system_metrics_cpu_util{app_name=&quot;my_app&quot;,hostname=&quot;host1&quot;}, start: 1696118400000, end: 1696204800000
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
@@ -2291,7 +2292,33 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 &lt;p&gt;以保护基于 agent 的 AI 环境。（话说 langchain 的问题还真多……）&lt;/p&gt;
 
-&lt;h2 id=&quot;编程语言-weekly&quot;&gt;编程语言 weekly&lt;/h2&gt;
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://grafana.com/docs/grafana-cloud/knowledge-graph/introduction/&quot;&gt;Introduction to the knowledge graph&lt;/a&gt; 介绍了 grafana cloud 的知识图谱工具，它为可观测性工具栈增加了一个关键层：使用基于 SLO 的分析，自动洞察服务健康状况、性能和可靠性。与显示所有内容的仪表板不同，知识图谱仅在出现问题时显示相关上下文，帮助用户专注于最重要的内容。重要概念：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;entities（实体）：环境中的对象及其属性，例如服务、节点或 Pod&lt;/li&gt;
+  &lt;li&gt;entity catalog（实体目录）：提供了知识图谱自动监控元素的综合列表视图&lt;/li&gt;
+  &lt;li&gt;entity graph（实体图）：知识图谱通过检测系统中的实体及其相关属性来构建实体图。实体图帮助用户查看服务和系统之间的依赖关系，并了解任何问题的来源。&lt;/li&gt;
+  &lt;li&gt;insights（洞察）：洞察持续跟踪资源饱和度、更正（例如，部署和扩展事件）、请求、资源、延迟异常、系统故障以及用户的黄金信号和健康指标上的错误。Insights 是精简的时间序列数据，专门捕获系统中的重大事件。与传统的警报相比，Insights 具有独特的用途，因为它们并非设计用来通知值班人员。相反，它们是知识图谱提供的自动化生命体征，随时可用于故障排查。&lt;/li&gt;
+  &lt;li&gt;RCA workbench（根因分析工作台）：RCA 工作台提供对特定问题随时间推移的潜在原因和依赖关系的全面探索，可访问相关指标、日志和跟踪信息，以实现高效的故障排除和分析。&lt;/li&gt;
+  &lt;li&gt;workbench AI：工作台 AI 帮助用户根据根因分析形成假设，并提供解决性能问题的推荐步骤。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.datadoghq.com/blog/engineering/rethinking-reliability/&quot;&gt;Failure is inevitable: Learning from a large outage, and building for reliability in depth at Datadog&lt;/a&gt; 这是datadog对2023年的一个故障的思考：一个没有经过审查的全局变更，导致相互重启，继而导致生产环境中大约 50–60% 的 Kubernetes 节点失去了连接。在用户层面的行为表现是监控、日志、告警、链路等功能都不可用。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;datadog的思考1: 从datadog的视角来看，即使在高峰期，大约 40–50% 的 Kubernetes 节点仍在运行并保持连接。但从用户的角度来看，该平台似乎完全瘫痪。一个重要的原因是，datadog为了保证数据的准确性，会等待数据完全处理完成才给出监控指标结果。但在该故障下，因故障导致不完整=&amp;gt;数据等待完整性计算=&amp;gt;完整性计算排队处理=&amp;gt;处理必然失败，导致永远加载不出数据。datadog认为之前的设计有问题，为了实现数据完整性，忽略了相关的降级方案。&lt;/li&gt;
+  &lt;li&gt;蚂蚁的监控系统在这方面的实践不错：监控给数据的时候，顺便也会给出数据齐全度报告，即使数据一直不齐全，监控数据仍然可以持续输出。&lt;/li&gt;
+  &lt;li&gt;datadog的思考2: datadog 在故障复盘中也提出，数据应该有优先级（比如实时数据优于历史数据），在定时任务处理时，应基于优先级分配任务。&lt;/li&gt;
+  &lt;li&gt;datadog的思考3: 系统的自动恢复动作（处理积压数据、重试等）在故障恢复的时候有可能会使恢复速度变慢。这些都需要在架构设计时做出优化，如1）重试应尽量分布在不同机器上，且使用强退避机制来减少过载，并更快地回退到死信队列，以避免在单个“坏”数据包上hang住；2）对积压数据的恢复处理进行限流，确保旧数据不会抢占实时数据处理。&lt;/li&gt;
+  &lt;li&gt;datadog的思考4: 引入混沌工程，实现持续、全自动的混沌测试。&lt;/li&gt;
+  &lt;li&gt;datadog的思考5: 故障一定会发生，要按照这个思路来构建系统。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;rd-weekly&quot;&gt;RD weekly&lt;/h2&gt;
 
 &lt;h3 id=&quot;w41-1&quot;&gt;w41&lt;/h3&gt;
 
@@ -2299,6 +2326,20 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 
 &lt;p&gt;个人比较看好&lt;a href=&quot;https://docs.python.org/zh-cn/3.14/whatsnew/3.14.html#whatsnew314-remote-debugging&quot;&gt;安全的 CPython 外部调试器接口&lt;/a&gt;和&lt;a href=&quot;https://docs.python.org/zh-cn/3.14/whatsnew/3.14.html#whatsnew314-free-threaded-now-supported&quot;&gt;自由线程&lt;/a&gt;这2个功能。预计开源社区会陆续带来相关功能更新和优化。&lt;/p&gt;
 
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://inside.java/2025/10/14/devoxxbelgium-java-for-ai/&quot;&gt;Java for AI&lt;/a&gt;: 介绍了 java 在 AI 时代的一些动作，重点是 Foreign Function and Memory API 和 Vector API。后者可以利用 CPU 的 SIMD 特性，前者可以方便快速的接入 c/c++ 的 GPU 库，使用体验要强于 JNI。&lt;/p&gt;
+
+&lt;h3 id=&quot;w42-1&quot;&gt;w42&lt;/h3&gt;
+
+&lt;p&gt;What’s New in Java 25 in 2 Minutes - Sip of Java](https://inside.java/2025/10/17/new-in-jdk-25-2-mins/) JDK 25 于 9 月 16 日发布，包括 18 个 JEP，并有多个功能已最终确定。个人觉得比较重要的 JEP 有：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;JEP 506 - Scoped Values: 提供了一种新的线程局部数据共享机制，允许在方法调用链中安全地传递不可变数据，比ThreadLocal更高效且内存友好。&lt;/li&gt;
+  &lt;li&gt;JEP 511 - Module Import Declarations: 简化模块系统的使用，允许在模块声明中直接导入其他模块的所有导出包，减少重复的import语句。&lt;/li&gt;
+  &lt;li&gt;JEP 513 - Flexible Constructor Bodies放宽构造函数的语法限制，允许在调用super()或this()之前执行一些语句，提供更灵活的构造函数编写方式。&lt;/li&gt;
+  &lt;li&gt;JEP 519 - Compact Object Headers: 优化对象头部结构以减少内存占用，通过重新设计对象布局来提高内存效率和性能。&lt;/li&gt;
+&lt;/ul&gt;
 </description>
         <pubDate>Sat, 11 Oct 2025 00:00:00 +0000</pubDate>
         <link>https://wulfric.me/2025/10/tech-weekly-oct/</link>

@@ -6,8 +6,8 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Wed, 22 Oct 2025 15:52:40 +0000</pubDate>
-    <lastBuildDate>Wed, 22 Oct 2025 15:52:40 +0000</lastBuildDate>
+    <pubDate>Sun, 26 Oct 2025 16:18:00 +0000</pubDate>
+    <lastBuildDate>Sun, 26 Oct 2025 16:18:00 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2025. All rights reserved.</rights>
     
@@ -2318,6 +2318,27 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
   &lt;li&gt;datadog的思考5: 故障一定会发生，要按照这个思路来构建系统。&lt;/li&gt;
 &lt;/ul&gt;
 
+&lt;h3 id=&quot;w43&quot;&gt;w43&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.datadoghq.com/blog/updog-ai/&quot;&gt;datadog 推出 updog&lt;/a&gt;，它展示了 30 多家热门 SaaS 提供商（例如 OpenAI、Zoom 和 GitHub）以及 13 项 AWS 服务的实时运行状况。这个功能还是挺厉害的，需要为掌握不了的基础设施提供可用性观测。datadog 自述他们通过如下方法实现该目的&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;聚合了来自数千个组织的匿名 APM 遥测数据&lt;/li&gt;
+  &lt;li&gt;一个贝叶斯模型，用于推断跨独立客户环境的异常错误率&lt;/li&gt;
+  &lt;li&gt;确认跨客户和区域的关联，以确认降级是否具有系统性&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;https://imgix.datadoghq.com/img/blog/updog-ai/updog-main.png?auto=compress%2Cformat&amp;amp;cs=origin&amp;amp;lossless=true&amp;amp;fit=max&amp;amp;q=75&amp;amp;w=&amp;amp;h=&amp;amp;dpr=1&quot; alt=&quot;&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;这种方法使 Datadog 能够比供应商控制的页面更快地检测到问题。例如，Updog.ai 最近在亚马逊 DynamoDB 降级 32 分钟前就发现了这个问题，而 AWS 尚未更新其自己的状态页面。 这个结果是一个可靠的、人工智能驱动的信号，反映了全球用户的真实体验。&lt;/p&gt;
+
 &lt;h2 id=&quot;rd-weekly&quot;&gt;RD weekly&lt;/h2&gt;
 
 &lt;h3 id=&quot;w41-1&quot;&gt;w41&lt;/h3&gt;
@@ -2340,6 +2361,20 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
   &lt;li&gt;JEP 513 - Flexible Constructor Bodies放宽构造函数的语法限制，允许在调用super()或this()之前执行一些语句，提供更灵活的构造函数编写方式。&lt;/li&gt;
   &lt;li&gt;JEP 519 - Compact Object Headers: 优化对象头部结构以减少内存占用，通过重新设计对象布局来提高内存效率和性能。&lt;/li&gt;
 &lt;/ul&gt;
+
+&lt;h3 id=&quot;w43-1&quot;&gt;w43&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://devecosystem-2025.jetbrains.com/tools-and-trends&quot;&gt;jetbrains tools and trends&lt;/a&gt; 2025 年 jetbrains 的语言承诺指数和其他社区统计指标。一些看点：1）Python和Java是最主要的编程语言；2）从2025年开始，Postgres 超越 MySQL 成为最受欢迎的数据库；3）TypeScript是过去五年增长最迅速的语言。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/Abinesh-Mathivanan/go-torch&quot;&gt;Go torch&lt;/a&gt; Go 语言实现的 Torch 风格深度学习框架 — 一个完全用 Go 语言从头构建的开源深度学习框架。&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://go-echarts.github.io/go-echarts/#/&quot;&gt;Go echarts&lt;/a&gt; 使用 Apache ECharts 的图表和数据可视化库。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://x.com/karpathy/status/1980397031542989305&quot;&gt;Andrej Karpathy 评 DeepSeek OCR&lt;/a&gt; 也许图片比 token 更适合作为 LLM 的输入。DeepSeek OCR&lt;/p&gt;
 </description>
         <pubDate>Sat, 11 Oct 2025 00:00:00 +0000</pubDate>
         <link>https://wulfric.me/2025/10/tech-weekly-oct/</link>

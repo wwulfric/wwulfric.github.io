@@ -148,6 +148,27 @@
   <li>datadog的思考5: 故障一定会发生，要按照这个思路来构建系统。</li>
 </ul>
 
+<h3 id="w43">w43</h3>
+
+<p><a href="https://www.datadoghq.com/blog/updog-ai/">datadog 推出 updog</a>，它展示了 30 多家热门 SaaS 提供商（例如 OpenAI、Zoom 和 GitHub）以及 13 项 AWS 服务的实时运行状况。这个功能还是挺厉害的，需要为掌握不了的基础设施提供可用性观测。datadog 自述他们通过如下方法实现该目的</p>
+
+<ul>
+  <li>聚合了来自数千个组织的匿名 APM 遥测数据</li>
+  <li>一个贝叶斯模型，用于推断跨独立客户环境的异常错误率</li>
+  <li>确认跨客户和区域的关联，以确认降级是否具有系统性</li>
+</ul>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="https://imgix.datadoghq.com/img/blog/updog-ai/updog-main.png?auto=compress%2Cformat&amp;cs=origin&amp;lossless=true&amp;fit=max&amp;q=75&amp;w=&amp;h=&amp;dpr=1" alt="" width= height= />
+          </picture>
+          
+        </figure></p>
+
+<p>这种方法使 Datadog 能够比供应商控制的页面更快地检测到问题。例如，Updog.ai 最近在亚马逊 DynamoDB 降级 32 分钟前就发现了这个问题，而 AWS 尚未更新其自己的状态页面。 这个结果是一个可靠的、人工智能驱动的信号，反映了全球用户的真实体验。</p>
+
 <h2 id="rd-weekly">RD weekly</h2>
 
 <h3 id="w41-1">w41</h3>
@@ -170,6 +191,20 @@
   <li>JEP 513 - Flexible Constructor Bodies放宽构造函数的语法限制，允许在调用super()或this()之前执行一些语句，提供更灵活的构造函数编写方式。</li>
   <li>JEP 519 - Compact Object Headers: 优化对象头部结构以减少内存占用，通过重新设计对象布局来提高内存效率和性能。</li>
 </ul>
+
+<h3 id="w43-1">w43</h3>
+
+<p><a href="https://devecosystem-2025.jetbrains.com/tools-and-trends">jetbrains tools and trends</a> 2025 年 jetbrains 的语言承诺指数和其他社区统计指标。一些看点：1）Python和Java是最主要的编程语言；2）从2025年开始，Postgres 超越 MySQL 成为最受欢迎的数据库；3）TypeScript是过去五年增长最迅速的语言。</p>
+
+<hr />
+
+<p><a href="https://github.com/Abinesh-Mathivanan/go-torch">Go torch</a> Go 语言实现的 Torch 风格深度学习框架 — 一个完全用 Go 语言从头构建的开源深度学习框架。</p>
+
+<p><a href="https://go-echarts.github.io/go-echarts/#/">Go echarts</a> 使用 Apache ECharts 的图表和数据可视化库。</p>
+
+<hr />
+
+<p><a href="https://x.com/karpathy/status/1980397031542989305">Andrej Karpathy 评 DeepSeek OCR</a> 也许图片比 token 更适合作为 LLM 的输入。DeepSeek OCR</p>
 
   </article>
 

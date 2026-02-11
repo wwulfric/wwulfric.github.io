@@ -75,24 +75,24 @@
 
 <p>以下是我们尝试的方法、我们学到的经验，以及如何在自己的 Next.js 项目中设置这一功能。</p>
 
-<h2 id="我们试图解决的问题"><strong>我们试图解决的问题</strong></h2>
+<h2 id="我们试图解决的问题">我们试图解决的问题</h2>
 
 <p>AI 编码代理依赖于会过时的训练数据。Next.js 16 引入了 <span class="codespan">'use cache'</span>、<span class="codespan">connection()</span> 和 <span class="codespan">forbidden()</span> 等 API，这些 API 并不在当前模型的训练数据中。当代理不了解这些 API 时，它们会生成不正确的代码或回退到旧的模式。</p>
 
 <p>反之也可能发生——你运行的是较旧版本的 Next.js，而模型建议了你的项目中尚不存在的新 API。我们希望通过向代理提供版本匹配的文档来解决这个问题。</p>
 
-<h2 id="教授代理框架知识的两种方法"><strong>教授代理框架知识的两种方法</strong></h2>
+<h2 id="教授代理框架知识的两种方法">教授代理框架知识的两种方法</h2>
 
 <p>在深入探讨结果之前，先简要介绍一下我们测试的两种方法：</p>
 
 <ul>
   <li><strong>技能</strong>是一种开放标准，用于封装编码代理可以使用的领域知识。一个技能将代理可以按需调用的提示、工具和文档捆绑在一起。其理念是代理在意识到需要特定框架的帮助时调用该技能，并获取相关文档。</li>
-  <li><strong><span class="codespan">AGENTS.md</span></strong> 是项目根目录中的一个 Markdown 文件，为编码代理提供持久上下文。无论你在 <span class="codespan">AGENTS.md</span> 中放入什么内容，代理在每个回合都可以使用，而无需代理决定加载它。Claude Code 使用 <span class="codespan">CLAUDE.md</span> 来达到相同的目的。</li>
+  <li><span class="codespan">AGENTS.md</span> 是项目根目录中的一个 Markdown 文件，为编码代理提供持久上下文。无论你在 <span class="codespan">AGENTS.md</span> 中放入什么内容，代理在每个回合都可以使用，而无需代理决定加载它。Claude Code 使用 <span class="codespan">CLAUDE.md</span> 来达到相同的目的。</li>
 </ul>
 
 <p>我们构建了一个 Next.js 文档技能和一个 <span class="codespan">AGENTS.md</span> 文档索引，然后将它们通过我们的评估套件，看看哪种表现更好。</p>
 
-<h2 id="我们最初押注于技能"><strong>我们最初押注于技能</strong></h2>
+<h2 id="我们最初押注于技能">我们最初押注于技能</h2>
 
 <p>技能似乎是正确的抽象。你将框架文档打包成一个技能，代理在处理 Next.js 任务时调用它，然后你就能得到正确的代码。职责分离清晰，上下文开销最小，代理只加载它需要的内容。甚至在 skills.sh 上还有一个不断增长的现成技能目录。</p>
 
@@ -100,7 +100,7 @@
 
 <p>然后我们运行了评估。</p>
 
-<h2 id="技能没有被可靠地触发"><strong>技能没有被可靠地触发</strong></h2>
+<h2 id="技能没有被可靠地触发">技能没有被可靠地触发</h2>
 
 <p>在 56% 的评估案例中，技能从未被调用。代理可以访问文档但没有使用它。添加技能相比基线没有产生任何改进：</p>
 
@@ -108,9 +108,9 @@
 <table>
   <thead>
     <tr>
-      <th><strong>配置</strong></th>
-      <th><strong>通过率</strong></th>
-      <th><strong>相比基线</strong></th>
+      <th>配置</th>
+      <th>通过率</th>
+      <th>相比基线</th>
     </tr>
   </thead>
   <tbody>
@@ -132,7 +132,7 @@
 
 <p>这并非我们设置所独有。代理不能可靠地使用可用工具是当前模型的一个已知局限性。</p>
 
-<h2 id="明确指令有帮助但措辞很脆弱"><strong>明确指令有帮助，但措辞很脆弱</strong></h2>
+<h2 id="明确指令有帮助但措辞很脆弱">明确指令有帮助，但措辞很脆弱</h2>
 
 <p>我们尝试在 <span class="codespan">AGENTS.md</span> 中添加明确指示，告诉代理使用该技能。</p>
 
@@ -146,9 +146,9 @@ then invoke the nextjs-doc skill for documentation.
 <table>
   <thead>
     <tr>
-      <th><strong>配置</strong></th>
-      <th><strong>通过率</strong></th>
-      <th><strong>相比基线</strong></th>
+      <th>配置</th>
+      <th>通过率</th>
+      <th>相比基线</th>
     </tr>
   </thead>
   <tbody>
@@ -173,15 +173,15 @@ then invoke the nextjs-doc skill for documentation.
 
 <p>一个实质性的改进。但我们发现指令措辞影响代理行为的方式有些出乎意料。</p>
 
-<p><strong>不同的措辞产生了截然不同的结果：</strong></p>
+<p>不同的措辞产生了截然不同的结果：</p>
 
 <div class="table-container">
 <table>
   <thead>
     <tr>
-      <th><strong>指令</strong></th>
-      <th><strong>行为</strong></th>
-      <th><strong>结果</strong></th>
+      <th>指令</th>
+      <th>行为</th>
+      <th>结果</th>
     </tr>
   </thead>
   <tbody>
@@ -205,13 +205,13 @@ then invoke the nextjs-doc skill for documentation.
 
 <p>这种脆弱性让我们担心。如果微小的措辞调整会导致巨大的行为变化，这种方法在生产环境中感觉会很脆弱。</p>
 
-<h2 id="构建我们可以信任的评估"><strong>构建我们可以信任的评估</strong></h2>
+<h2 id="构建我们可以信任的评估">构建我们可以信任的评估</h2>
 
 <p>在得出结论之前，我们需要能够信任的评估。我们的初始测试套件存在模棱两可的提示、验证实现细节而非可观察行为的测试，以及关注模型训练数据中已有的 API。我们没有测量我们真正关心的东西。</p>
 
 <p>我们通过移除测试泄露、解决矛盾以及转向基于行为的断言来强化评估套件。最重要的是，我们添加了针对不在模型训练数据中的 Next.js 16 API 的测试。</p>
 
-<p><strong>我们重点评估套件中的 API：</strong></p>
+<p>我们重点评估套件中的 API：</p>
 
 <ul>
   <li><span class="codespan">connection()</span> 用于动态渲染</li>
@@ -225,7 +225,7 @@ then invoke the nextjs-doc skill for documentation.
 
 <p>以下所有结果都来自这个强化的评估套件。每种配置都根据相同的测试进行判断，并通过重试排除模型差异。</p>
 
-<h2 id="产生回报的直觉"><strong>产生回报的直觉</strong></h2>
+<h2 id="产生回报的直觉">产生回报的直觉</h2>
 
 <p>如果我们完全移除决策会怎样？与其希望代理调用技能，我们可以直接在 <span class="codespan">AGENTS.md</span> 中嵌入文档索引。不是完整的文档，只是一个告诉代理在哪里找到与你的项目 Next.js 版本匹配的特定文档文件的索引。然后代理可以根据需要读取这些文件，无论你是使用最新版本还是维护旧项目，都能获得版本准确的信息。</p>
 
@@ -237,19 +237,19 @@ for any Next.js tasks.
 
 <p>这告诉代理查阅文档，而不是依赖可能过时的训练数据。</p>
 
-<h2 id="结果让我们惊讶"><strong>结果让我们惊讶</strong></h2>
+<h2 id="结果让我们惊讶">结果让我们惊讶</h2>
 
 <p>我们在所有四种配置上运行了强化评估套件：</p>
 
-<p><strong>最终通过率：</strong></p>
+<p>最终通过率：</p>
 
 <div class="table-container">
 <table>
   <thead>
     <tr>
-      <th><strong>配置</strong></th>
-      <th><strong>通过率</strong></th>
-      <th><strong>相比基线</strong></th>
+      <th>配置</th>
+      <th>通过率</th>
+      <th>相比基线</th>
     </tr>
   </thead>
   <tbody>
@@ -269,9 +269,9 @@ for any Next.js tasks.
       <td>+26pp</td>
     </tr>
     <tr>
-      <td><strong><span class="codespan">AGENTS.md</span> 文档索引</strong></td>
-      <td><strong>100%</strong></td>
-      <td><strong>+47pp</strong></td>
+      <td><span class="codespan">AGENTS.md</span> 文档索引</td>
+      <td>100%</td>
+      <td>+47pp</td>
     </tr>
   </tbody>
 </table>
@@ -283,10 +283,10 @@ for any Next.js tasks.
 <table>
   <thead>
     <tr>
-      <th><strong>配置</strong></th>
-      <th><strong>构建</strong></th>
-      <th><strong>Lint</strong></th>
-      <th><strong>测试</strong></th>
+      <th>配置</th>
+      <th>构建</th>
+      <th>Lint</th>
+      <th>测试</th>
     </tr>
   </thead>
   <tbody>
@@ -309,10 +309,10 @@ for any Next.js tasks.
       <td>84%</td>
     </tr>
     <tr>
-      <td><strong><span class="codespan">AGENTS.md</span></strong></td>
-      <td><strong>100%</strong></td>
-      <td><strong>100%</strong></td>
-      <td><strong>100%</strong></td>
+      <td><span class="codespan">AGENTS.md</span></td>
+      <td>100%</td>
+      <td>100%</td>
+      <td>100%</td>
     </tr>
   </tbody>
 </table>
@@ -320,17 +320,17 @@ for any Next.js tasks.
 
 <p>这并非我们所预期的。"简单"的方法（静态 Markdown 文件）表现优于更复杂的基于技能的检索，即使我们微调了技能触发器。</p>
 
-<p><strong>为什么被动上下文能胜过主动检索？</strong></p>
+<p>为什么被动上下文能胜过主动检索？</p>
 
 <p>我们的工作理论归结为三个因素。</p>
 
 <ol>
-  <li><strong>没有决策点。</strong> 使用 <span class="codespan">AGENTS.md</span>，代理不需要决定"我应该查找这个吗？"的时刻。信息已经存在。</li>
-  <li><strong>一致的可用性。</strong> 技能异步加载且仅在调用时加载。<span class="codespan">AGENTS.md</span> 内容在每个回合的系统提示中都可用。</li>
-  <li><strong>没有顺序问题。</strong> 技能创建排序决策（先读文档 vs 先探索项目）。被动上下文完全避免了这个问题。</li>
+  <li>没有决策点。 使用 <span class="codespan">AGENTS.md</span>，代理不需要决定"我应该查找这个吗？"的时刻。信息已经存在。</li>
+  <li>一致的可用性。 技能异步加载且仅在调用时加载。<span class="codespan">AGENTS.md</span> 内容在每个回合的系统提示中都可用。</li>
+  <li>没有顺序问题。 技能创建排序决策（先读文档 vs 先探索项目）。被动上下文完全避免了这个问题。</li>
 </ol>
 
-<h2 id="解决上下文膨胀的担忧"><strong>解决上下文膨胀的担忧</strong></h2>
+<h2 id="解决上下文膨胀的担忧">解决上下文膨胀的担忧</h2>
 
 <p>在 <span class="codespan">AGENTS.md</span> 中嵌入文档有膨胀上下文窗口的风险。我们通过压缩来解决这个问题。</p>
 
@@ -346,7 +346,7 @@ for any Next.js tasks.
 
 <p>代理知道在哪里可以找到文档，而无需在上下文中包含完整内容。当它需要特定信息时，它会从 <span class="codespan">.next-docs/</span> 目录读取相关文件。</p>
 
-<h2 id="亲自尝试"><strong>亲自尝试</strong></h2>
+<h2 id="亲自尝试">亲自尝试</h2>
 
 <p>一条命令即可为你的 Next.js 项目设置：</p>
 
@@ -364,19 +364,19 @@ for any Next.js tasks.
 
 <p>如果你使用支持 <span class="codespan">AGENTS.md</span> 的代理（如 Cursor 或其他工具），同样的方法也适用。</p>
 
-<h2 id="这对框架作者意味着什么"><strong>这对框架作者意味着什么</strong></h2>
+<h2 id="这对框架作者意味着什么">这对框架作者意味着什么</h2>
 
 <p>技能并非无用。<span class="codespan">AGENTS.md</span> 方法在所有任务中提供代理与 Next.js 协作的广泛、横向改进。技能更适合用户明确触发的垂直、特定于操作的工作流，如"升级我的 Next.js 版本"、"迁移到 App Router"或应用框架最佳实践。这两种方法相辅相成。</p>
 
 <p>也就是说，对于一般框架知识，被动上下文目前优于按需检索。如果你维护一个框架并希望编码代理生成正确的代码，请考虑提供一个 <span class="codespan">AGENTS.md</span> 片段供用户添加到他们的项目中。</p>
 
-<p><strong>实用建议：</strong></p>
+<p>实用建议：</p>
 
 <ul>
-  <li><strong>不要等待技能改进。</strong> 随着模型在工具使用方面变得更好，差距可能会缩小，但结果现在就很重要。</li>
-  <li><strong>积极压缩。</strong> 你不需要上下文中的完整文档。指向可检索文件的索引同样有效。</li>
-  <li><strong>使用评估进行测试。</strong> 构建针对训练数据中不存在的 API 的评估。这是文档访问最重要的地方。</li>
-  <li><strong>为检索而设计。</strong> 构建你的文档结构，以便代理可以找到并读取特定文件，而不需要预先获取所有内容。</li>
+  <li>不要等待技能改进。 随着模型在工具使用方面变得更好，差距可能会缩小，但结果现在就很重要。</li>
+  <li>积极压缩。 你不需要上下文中的完整文档。指向可检索文件的索引同样有效。</li>
+  <li>使用评估进行测试。 构建针对训练数据中不存在的 API 的评估。这是文档访问最重要的地方。</li>
+  <li>为检索而设计。 构建你的文档结构，以便代理可以找到并读取特定文件，而不需要预先获取所有内容。</li>
 </ul>
 
 <p>目标是将代理从预训练主导的推理转变为检索主导的推理。<span class="codespan">AGENTS.md</span> 结果证明是实现这一目标的最可靠方法。</p>
@@ -387,7 +387,7 @@ for any Next.js tasks.
 
 <hr />
 
-<p><strong>原文链接</strong>：https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals</p>
+<p>原文链接：https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals</p>
 
   </article>
 

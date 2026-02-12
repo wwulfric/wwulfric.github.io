@@ -18,7 +18,7 @@
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>翻译：AGENTS.md 在我们的 Agent 评估中优于 Skills</title>
+  <title>翻译：AGENTS.md 在我们的智能体评估中优于 Skills</title>
   <meta name="description" content="翻译自 Vercel 博客文章：AGENTS.md outperforms skills in our agent evals
 ">
   <meta name="keywords" content="ai,agent">
@@ -58,7 +58,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">翻译：AGENTS.md 在我们的 Agent 评估中优于 Skills</h1>
+    <h1 class="post-title">翻译：AGENTS.md 在我们的智能体评估中优于 Skills</h1>
   </header>
 
   
@@ -74,40 +74,40 @@
   <article class="post-content">
     <p>翻译自 Vercel 博客文章：<a href="https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals">AGENTS.md outperforms skills in our agent evals</a></p>
 
-<p>我们原本期望技能是教授编码代理框架特定知识的解决方案。在构建专注于 Next.js 16 API 的评估后，我们发现了意想不到的结果。</p>
+<p>我们原本期望技能是教授编码智能体框架特定知识的解决方案。在构建专注于 Next.js 16 API 的评估后，我们发现了意想不到的结果。</p>
 
-<p>直接嵌入在 <span class="codespan">AGENTS.md</span> 中的压缩版 8KB 文档索引实现了 100% 的通过率，而技能即使在明确指示代理使用它们的情况下，最高也只能达到 79%。如果没有这些指示，技能的表现与完全没有文档时没有区别。</p>
+<p>直接嵌入在 <span class="codespan">AGENTS.md</span> 中的压缩版 8KB 文档索引实现了 100% 的通过率，而技能即使在明确指示智能体使用它们的情况下，最高也只能达到 79%。如果没有这些指示，技能的表现与完全没有文档时没有区别。</p>
 
 <p>以下是我们尝试的方法、我们学到的经验，以及如何在自己的 Next.js 项目中设置这一功能。</p>
 
 <h2 id="我们试图解决的问题">我们试图解决的问题</h2>
 
-<p>AI 编码代理依赖于会过时的训练数据。Next.js 16 引入了 <span class="codespan">'use cache'</span>、<span class="codespan">connection()</span> 和 <span class="codespan">forbidden()</span> 等 API，这些 API 并不在当前模型的训练数据中。当代理不了解这些 API 时，它们会生成不正确的代码或回退到旧的模式。</p>
+<p>AI 编码智能体依赖于会过时的训练数据。Next.js 16 引入了 <span class="codespan">'use cache'</span>、<span class="codespan">connection()</span> 和 <span class="codespan">forbidden()</span> 等 API，这些 API 并不在当前模型的训练数据中。当智能体不了解这些 API 时，它们会生成不正确的代码或回退到旧的模式。</p>
 
-<p>反之也可能发生——你运行的是较旧版本的 Next.js，而模型建议了你的项目中尚不存在的新 API。我们希望通过向代理提供版本匹配的文档来解决这个问题。</p>
+<p>反之也可能发生——你运行的是较旧版本的 Next.js，而模型建议了你的项目中尚不存在的新 API。我们希望通过向智能体提供版本匹配的文档来解决这个问题。</p>
 
-<h2 id="教授代理框架知识的两种方法">教授代理框架知识的两种方法</h2>
+<h2 id="教授智能体框架知识的两种方法">教授智能体框架知识的两种方法</h2>
 
 <p>在深入探讨结果之前，先简要介绍一下我们测试的两种方法：</p>
 
 <ul>
-  <li><strong>技能</strong>是一种开放标准，用于封装编码代理可以使用的领域知识。一个技能将代理可以按需调用的提示、工具和文档捆绑在一起。其理念是代理在意识到需要特定框架的帮助时调用该技能，并获取相关文档。</li>
-  <li><span class="codespan">AGENTS.md</span> 是项目根目录中的一个 Markdown 文件，为编码代理提供持久上下文。无论你在 <span class="codespan">AGENTS.md</span> 中放入什么内容，代理在每个回合都可以使用，而无需代理决定加载它。Claude Code 使用 <span class="codespan">CLAUDE.md</span> 来达到相同的目的。</li>
+  <li><strong>技能</strong>是一种开放标准，用于封装编码智能体可以使用的领域知识。一个技能将智能体可以按需调用的提示、工具和文档捆绑在一起。其理念是智能体在意识到需要特定框架的帮助时调用该技能，并获取相关文档。</li>
+  <li><span class="codespan">AGENTS.md</span> 是项目根目录中的一个 Markdown 文件，为编码智能体提供持久上下文。无论你在 <span class="codespan">AGENTS.md</span> 中放入什么内容，智能体在每个回合都可以使用，而无需智能体决定加载它。Claude Code 使用 <span class="codespan">CLAUDE.md</span> 来达到相同的目的。</li>
 </ul>
 
 <p>我们构建了一个 Next.js 文档技能和一个 <span class="codespan">AGENTS.md</span> 文档索引，然后将它们通过我们的评估套件，看看哪种表现更好。</p>
 
 <h2 id="我们最初押注于技能">我们最初押注于技能</h2>
 
-<p>技能似乎是正确的抽象。你将框架文档打包成一个技能，代理在处理 Next.js 任务时调用它，然后你就能得到正确的代码。职责分离清晰，上下文开销最小，代理只加载它需要的内容。甚至在 skills.sh 上还有一个不断增长的现成技能目录。</p>
+<p>技能似乎是正确的抽象。你将框架文档打包成一个技能，智能体在处理 Next.js 任务时调用它，然后你就能得到正确的代码。职责分离清晰，上下文开销最小，智能体只加载它需要的内容。甚至在 skills.sh 上还有一个不断增长的现成技能目录。</p>
 
-<p>我们期望代理遇到 Next.js 任务，调用技能，阅读版本匹配的文档，然后生成正确的代码。</p>
+<p>我们期望智能体遇到 Next.js 任务，调用技能，阅读版本匹配的文档，然后生成正确的代码。</p>
 
 <p>然后我们运行了评估。</p>
 
 <h2 id="技能没有被可靠地触发">技能没有被可靠地触发</h2>
 
-<p>在 56% 的评估案例中，技能从未被调用。代理可以访问文档但没有使用它。添加技能相比基线没有产生任何改进：</p>
+<p>在 56% 的评估案例中，技能从未被调用。智能体可以访问文档但没有使用它。添加技能相比基线没有产生任何改进：</p>
 
 <div class="table-container">
 <table>
@@ -133,13 +133,13 @@
 </table>
 </div>
 
-<p>零改进。技能存在，代理可以使用它，但代理选择不使用。在详细的构建/Lint/测试细分中，技能在某些指标上实际上表现比基线更差（测试方面为 58% vs 63%），这表明环境中未使用的技能可能会引入噪声或干扰。</p>
+<p>零改进。技能存在，智能体可以使用它，但智能体选择不使用。在详细的构建/Lint/测试细分中，技能在某些指标上实际上表现比基线更差（测试方面为 58% vs 63%），这表明环境中未使用的技能可能会引入噪声或干扰。</p>
 
-<p>这并非我们设置所独有。代理不能可靠地使用可用工具是当前模型的一个已知局限性。</p>
+<p>这并非我们设置所独有。智能体不能可靠地使用可用工具是当前模型的一个已知局限性。</p>
 
 <h2 id="明确指令有帮助但措辞很脆弱">明确指令有帮助，但措辞很脆弱</h2>
 
-<p>我们尝试在 <span class="codespan">AGENTS.md</span> 中添加明确指示，告诉代理使用该技能。</p>
+<p>我们尝试在 <span class="codespan">AGENTS.md</span> 中添加明确指示，告诉智能体使用该技能。</p>
 
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Before writing code, first explore the project structure,
 then invoke the nextjs-doc skill for documentation.
@@ -176,7 +176,7 @@ then invoke the nextjs-doc skill for documentation.
 </table>
 </div>
 
-<p>一个实质性的改进。但我们发现指令措辞影响代理行为的方式有些出乎意料。</p>
+<p>一个实质性的改进。但我们发现指令措辞影响智能体行为的方式有些出乎意料。</p>
 
 <p>不同的措辞产生了截然不同的结果：</p>
 
@@ -232,7 +232,7 @@ then invoke the nextjs-doc skill for documentation.
 
 <h2 id="产生回报的直觉">产生回报的直觉</h2>
 
-<p>如果我们完全移除决策会怎样？与其希望代理调用技能，我们可以直接在 <span class="codespan">AGENTS.md</span> 中嵌入文档索引。不是完整的文档，只是一个告诉代理在哪里找到与你的项目 Next.js 版本匹配的特定文档文件的索引。然后代理可以根据需要读取这些文件，无论你是使用最新版本还是维护旧项目，都能获得版本准确的信息。</p>
+<p>如果我们完全移除决策会怎样？与其希望智能体调用技能，我们可以直接在 <span class="codespan">AGENTS.md</span> 中嵌入文档索引。不是完整的文档，只是一个告诉智能体在哪里找到与你的项目 Next.js 版本匹配的特定文档文件的索引。然后智能体可以根据需要读取这些文件，无论你是使用最新版本还是维护旧项目，都能获得版本准确的信息。</p>
 
 <p>我们在注入的内容中添加了一个关键指令。</p>
 
@@ -240,7 +240,7 @@ then invoke the nextjs-doc skill for documentation.
 for any Next.js tasks.
 </code></pre></div></div>
 
-<p>这告诉代理查阅文档，而不是依赖可能过时的训练数据。</p>
+<p>这告诉智能体查阅文档，而不是依赖可能过时的训练数据。</p>
 
 <h2 id="结果让我们惊讶">结果让我们惊讶</h2>
 
@@ -330,7 +330,7 @@ for any Next.js tasks.
 <p>我们的工作理论归结为三个因素。</p>
 
 <ol>
-  <li>没有决策点。 使用 <span class="codespan">AGENTS.md</span>，代理不需要决定"我应该查找这个吗？"的时刻。信息已经存在。</li>
+  <li>没有决策点。 使用 <span class="codespan">AGENTS.md</span>，智能体不需要决定"我应该查找这个吗？"的时刻。信息已经存在。</li>
   <li>一致的可用性。 技能异步加载且仅在调用时加载。<span class="codespan">AGENTS.md</span> 内容在每个回合的系统提示中都可用。</li>
   <li>没有顺序问题。 技能创建排序决策（先读文档 vs 先探索项目）。被动上下文完全避免了这个问题。</li>
 </ol>
@@ -349,7 +349,7 @@ for any Next.js tasks.
 
 <p>完整索引涵盖 Next.js 文档的每个部分。</p>
 
-<p>代理知道在哪里可以找到文档，而无需在上下文中包含完整内容。当它需要特定信息时，它会从 <span class="codespan">.next-docs/</span> 目录读取相关文件。</p>
+<p>智能体知道在哪里可以找到文档，而无需在上下文中包含完整内容。当它需要特定信息时，它会从 <span class="codespan">.next-docs/</span> 目录读取相关文件。</p>
 
 <h2 id="亲自尝试">亲自尝试</h2>
 
@@ -367,13 +367,13 @@ for any Next.js tasks.
   <li>将压缩索引注入到你的 <span class="codespan">AGENTS.md</span> 中</li>
 </ol>
 
-<p>如果你使用支持 <span class="codespan">AGENTS.md</span> 的代理（如 Cursor 或其他工具），同样的方法也适用。</p>
+<p>如果你使用支持 <span class="codespan">AGENTS.md</span> 的智能体（如 Cursor 或其他工具），同样的方法也适用。</p>
 
 <h2 id="这对框架作者意味着什么">这对框架作者意味着什么</h2>
 
-<p>技能并非无用。<span class="codespan">AGENTS.md</span> 方法在所有任务中提供代理与 Next.js 协作的广泛、横向改进。技能更适合用户明确触发的垂直、特定于操作的工作流，如"升级我的 Next.js 版本"、"迁移到 App Router"或应用框架最佳实践。这两种方法相辅相成。</p>
+<p>技能并非无用。<span class="codespan">AGENTS.md</span> 方法在所有任务中提供智能体与 Next.js 协作的广泛、横向改进。技能更适合用户明确触发的垂直、特定于操作的工作流，如"升级我的 Next.js 版本"、"迁移到 App Router"或应用框架最佳实践。这两种方法相辅相成。</p>
 
-<p>也就是说，对于一般框架知识，被动上下文目前优于按需检索。如果你维护一个框架并希望编码代理生成正确的代码，请考虑提供一个 <span class="codespan">AGENTS.md</span> 片段供用户添加到他们的项目中。</p>
+<p>也就是说，对于一般框架知识，被动上下文目前优于按需检索。如果你维护一个框架并希望编码智能体生成正确的代码，请考虑提供一个 <span class="codespan">AGENTS.md</span> 片段供用户添加到他们的项目中。</p>
 
 <p>实用建议：</p>
 
@@ -381,10 +381,10 @@ for any Next.js tasks.
   <li>不要等待技能改进。 随着模型在工具使用方面变得更好，差距可能会缩小，但结果现在就很重要。</li>
   <li>积极压缩。 你不需要上下文中的完整文档。指向可检索文件的索引同样有效。</li>
   <li>使用评估进行测试。 构建针对训练数据中不存在的 API 的评估。这是文档访问最重要的地方。</li>
-  <li>为检索而设计。 构建你的文档结构，以便代理可以找到并读取特定文件，而不需要预先获取所有内容。</li>
+  <li>为检索而设计。 构建你的文档结构，以便智能体可以找到并读取特定文件，而不需要预先获取所有内容。</li>
 </ul>
 
-<p>目标是将代理从预训练主导的推理转变为检索主导的推理。<span class="codespan">AGENTS.md</span> 结果证明是实现这一目标的最可靠方法。</p>
+<p>目标是将智能体从预训练主导的推理转变为检索主导的推理。<span class="codespan">AGENTS.md</span> 结果证明是实现这一目标的最可靠方法。</p>
 
 <hr />
 

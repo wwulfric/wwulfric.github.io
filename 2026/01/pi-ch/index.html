@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="theme-color" content="#9C0">
+
+  <!-- Resource hints for performance -->
+  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>翻译：Pi：OpenClaw 中的最小智能体</title>
+  <meta name="description" content="翻译自 Armin Ronacher 博客文章：Pi: The Minimal Agent Within OpenClaw
+">
+  <meta name="keywords" content="ai,agent,coding">
+  <link rel="canonical" href="https://wulfric.me/2026/01/pi-ch/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>31</div>
+        <div class='month'>JAN</div>
+      </div>
+      <div class='year pull-left'>2026</div>
+    </div>
+    <h1 class="post-title">翻译：Pi：OpenClaw 中的最小智能体</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>翻译自 Armin Ronacher 博客文章：<a href="https://lucumr.pocoo.org/2026/1/31/pi/">Pi: The Minimal Agent Within OpenClaw</a></p>
+
+<p>如果你最近没有与世隔绝的话，你会注意到本周我的朋友 Peter 的一个项目在互联网上爆火了。它有很多名字，最近的名字是 <a href="https://openclaw.ai/">OpenClaw</a>，但在新闻中你可能会看到它被称为 ClawdBot 或 MoltBot，具体取决于你什么时候读到它。它是一个连接到你选择的通信渠道的智能体，<a href="https://lucumr.pocoo.org/2025/7/3/tools/">只是运行代码</a>。</p>
+
+<p>你可能不太熟悉的是，OpenClaw 底层其实是一个叫做 <a href="https://github.com/badlogic/pi-mono/">Pi</a> 的小型编码智能体。而 Pi 恰好是我目前几乎专门使用的编码智能体。在过去几周里，我越来越成为这个小智能体的推销员。在我最近做了一次关于它的演讲后，我意识到我实际上还没有在这个博客上写过关于 Pi 的文章，所以我觉得应该提供一些背景，解释为什么我对它如此着迷，以及它与 OpenClaw 的关系。</p>
+
+<p>Pi 是由 <a href="https://mariozechner.at/">Mario Zechner</a> 编写的，与 Peter 追求"带有一丝疯狂的科幻感"不同，Mario 非常务实。尽管方法不同，但 OpenClaw 和 Pi 都遵循同样的理念：LLM 非常擅长编写和运行代码，所以要充分利用这一点。在某种程度上，我认为这不是偶然的，因为是 Peter 让我和 Mario 在去年迷上了这个想法和智能体。</p>
+
+<h2 id="什么是-pi">什么是 Pi？</h2>
+
+<p>Pi 是一个编码智能体。市面上有很多编码智能体。实际上，我认为你现在基本上可以随便挑一个现成的，就能体验智能体编程是什么样的。在这个博客的评测中，我积极谈到过 AMP，我与 AMP 产生共鸣的原因之一是，它确实感觉像是一个由既沉迷于智能体编程、又尝试过几种不同方法以了解哪些有效的人构建的产品，而不仅仅是在它周围构建一个花哨的 UI。</p>
+
+<p>Pi 对我来说有趣主要有两个原因：</p>
+
+<ul>
+  <li>首先，它有一个极小的核心。它拥有我所知道的最短的系统提示词，并且只有四个工具：Read（读取）、Write（写入）、Edit（编辑）、Bash（命令行）。</li>
+  <li>其次，它通过提供一个扩展系统来弥补其极小的核心，该系统还允许扩展将状态持久化到会话中，这非常强大。</li>
+</ul>
+
+<p>还有一个小福利：Pi 本身就像优秀的软件一样编写。它不会闪烁，不会消耗大量内存，不会随机崩溃，非常可靠，并且由一个非常关心软件质量的人编写。</p>
+
+<p>Pi 也是一系列小组件的集合，你可以在其上构建自己的智能体。OpenClaw 就是这样构建的，我自己的小 Telegram 机器人也是这样构建的，Mario 构建了他的 <a href="https://github.com/badlogic/pi-mono/tree/main/packages/mom">mom</a>。如果你想构建自己的智能体，连接到某个地方，将 Pi 指向它自己和 mom，它就会为你创造一个。</p>
+
+<h2 id="pi-中没有什么">Pi 中没有什么</h2>
+
+<p>要理解 Pi 中有什么，更重要的是要理解 Pi 中没有什么、为什么没有，以及更重要的是：为什么不会有。最明显的遗漏是对 MCP 的支持。它没有 MCP 支持。虽然你可以为它构建一个扩展，但你也可以像 OpenClaw 那样做来支持 MCP，即使用 <a href="https://github.com/steipete/mcporter">mcporter</a>。mcporter 通过 CLI 接口或 TypeScript 绑定暴露 MCP 调用，也许你的智能体可以用它做些什么。或者不能，我不知道 :)</p>
+
+<p>这不是一个懒惰的遗漏。这源于 Pi 工作原理的哲学。Pi 的整个理念是，如果你想让智能体做它还不能做的事情，你不需要去下载扩展或技能之类的东西。你让智能体扩展自己。它推崇编写和运行代码的理念。</p>
+
+<p>这并不是说你不能下载扩展。这是完全支持的。但与其一定要鼓励你下载别人的扩展，你也可以将你的智能体指向一个已经存在的扩展，比如说，按照你看到的那个东西构建它，但做出你喜欢的这些改变。</p>
+
+<h2 id="为构建智能体的智能体而构建的智能体">为构建智能体的智能体而构建的智能体</h2>
+
+<p>当你看 Pi 以及延伸的 OpenClaw 在做什么时，会发现这是一个像粘土一样可塑的软件示例。这对其底层架构设定了某些要求，这些要求在许多方面对系统设定了某些约束，这些约束确实需要融入核心设计中。</p>
+
+<p>例如，Pi 的底层 AI SDK 被设计成一个会话可以真正包含来自许多不同模型提供商的许多不同消息。它认识到会话在模型提供商之间的可移植性有些有限，因此它不会过度依赖任何无法转移到另一个提供商的特定模型提供商的功能集。</p>
+
+<p>其次，除了模型消息外，它还在会话文件中维护自定义消息，这些消息可以被扩展用来存储状态，或者被系统本身用来维护根本不发送给 AI 或只发送部分内容的信息。</p>
+
+<p>因为这个系统存在，扩展状态也可以持久化到磁盘，所以它内置了热重载功能，这样智能体就可以编写代码、重新加载、测试，然后循环，直到你的扩展实际上可以工作。它还附带了智能体本身可以用来扩展自己的文档和示例。更妙的是：Pi 中的会话是树状结构。你可以在会话内分支和导航，这开启了各种有趣的机会，比如启用工作流来进行旁支任务以修复损坏的智能体工具，而不会浪费主会话中的上下文。工具修复后，我可以将会话倒回到之前的状态，Pi 会总结在另一个分支上发生了什么。</p>
+
+<p>所有这些都很重要，因为例如，如果你考虑 MCP 的工作原理，在大多数模型提供商上，MCP 的工具，就像 LLM 的任何工具一样，需要在会话开始时加载到系统上下文或其工具部分中。这使得在不清除完整缓存或让 AI 对之前的调用如何以不同方式工作感到困惑的情况下，完全重新加载工具的功能变得非常困难或不可能。</p>
+
+<h2 id="上下文之外的工具">上下文之外的工具</h2>
+
+<p>Pi 中的扩展可以注册一个工具供 LLM 调用，我偶尔会发现这很有用。例如，尽管我对 Beads 的实现方式有批评，但我确实认为给智能体提供一个待办事项列表是非常有用的。我确实使用了一个在本地工作的智能体特定的问题跟踪器，这是我让智能体自己构建的。因为我希望智能体也能管理待办事项，在这种特殊情况下，我决定给它一个工具而不是 CLI。对于问题的范围来说，这感觉很合适，它目前是我加载到上下文中的唯一额外工具。</p>
+
+<p>但在大多数情况下，我添加到智能体的所有内容要么是技能，要么是 TUI 扩展，以使与智能体的工作对我来说更愉快。除了斜杠命令外，Pi 扩展还可以直接在终端中渲染自定义 TUI 组件：加载器、进度条、交互式文件选择器、数据表、预览窗格。TUI 足够灵活，Mario 证明了你可以<a href="https://x.com/badlogicgames/status/2008702661093454039">在其中运行 Doom</a>。虽然不实用，但如果你可以运行 Doom，你当然可以构建一个有用的仪表板或调试界面。</p>
+
+<p>我想重点介绍一些我的扩展，让你了解可能性。虽然你可以不加修改地使用它们，但整个理念实际上是你将智能体指向其中一个，然后随心所欲地重新混合它。</p>
+
+<h3 id="answer"><a href="https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts"><span class="codespan">/answer</span></a></h3>
+
+<p>我<a href="https://lucumr.pocoo.org/2025/12/17/what-is-plan-mode/">不使用计划模式</a>。我鼓励智能体提问，并进行富有成效的来回交流。但我不喜欢如果你给智能体一个问题工具就会出现的结构化问题对话框。我更喜欢智能体的自然散文，其中穿插着解释和图表。</p>
+
+<p>问题是：内联回答问题会变得混乱。所以 <span class="codespan">/answer</span> 读取智能体的最后一个响应，提取所有问题，并将它们重新格式化为一个漂亮的输入框。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/pi/pi-answer.png" alt="/answer 扩展显示问题对话框" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>/answer 扩展显示问题对话框</figcaption>
+        </figure></p>
+
+<h3 id="todos"><a href="https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/todos.ts"><span class="codespan">/todos</span></a></h3>
+
+<p>尽管我批评 <a href="https://github.com/steveyegge/beads">Beads</a> 的实现，但给智能体一个待办事项列表确实很有用。<span class="codespan">/todos</span> 命令会显示存储在 <span class="codespan">.pi/todos</span> 中的所有项目（作为 markdown 文件）。智能体和我都可以操作它们，会话可以认领任务以将其标记为进行中。</p>
+
+<iframe width="100%" style="aspect-ratio: 16/9" src="https://www.youtube.com/embed/ZcKbzxziA5k" frameborder="0" allowfullscreen=""></iframe>
+
+<h3 id="review"><a href="https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/review.ts"><span class="codespan">/review</span></a></h3>
+
+<p>随着越来越多的代码由智能体编写，在智能体先审查之前就将未完成的工作抛给人类几乎没有意义。因为 Pi 会话是树状结构，我可以分支到一个新的审查上下文，获得发现，然后将修复带回主会话。</p>
+
+<p>UI 是根据 Codex 建模的，它提供了易于审查的提交、差异、未提交的更改或远程 PR。提示词关注我关心的事情，所以我得到了我想要的提示（例如：我让它指出新添加的依赖项）。</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/pi/pi-review.png" alt="/review 扩展显示审查预设选项" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>/review 扩展显示审查预设选项</figcaption>
+        </figure></p>
+
+<h3 id="control"><a href="https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/control.ts"><span class="codespan">/control</span></a></h3>
+
+<p>一个我正在实验但不积极使用的扩展。它让一个 Pi 智能体向另一个发送提示。这是一个没有复杂编排的简单多智能体系统，对实验很有用。</p>
+
+<h3 id="files"><a href="https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/files.ts"><span class="codespan">/files</span></a></h3>
+
+<p>列出会话中更改或引用的所有文件。你可以在 Finder 中显示它们，在 VS Code 中对比差异，快速查看它们，或在提示中引用它们。<span class="codespan">shift+ctrl+r</span> 快速查看最近提到的文件，当智能体生成 PDF 时这很方便。</p>
+
+<p>其他人也构建了扩展：<a href="https://github.com/nicobailon/pi-subagents">Nico 的子智能体扩展</a>和 <a href="https://www.npmjs.com/package/pi-interactive-shell">interactive-shell</a>，它让 Pi 可以在可观察的 TUI 覆盖层中自主运行交互式 CLI。</p>
+
+<h2 id="软件构建软件">软件构建软件</h2>
+
+<p>这些都只是你可以用智能体做什么的想法。重点主要是这些都不是我写的，它们是智能体根据我的规格创建的。我告诉 Pi 制作一个扩展，它就做了。没有 MCP，没有社区技能，什么都没有。不要误会我的意思，我使用了大量的技能。但它们是由我的 clanker 手工制作的，而不是从任何地方下载的。例如，我用一个<a href="https://github.com/mitsuhiko/agent-stuff/blob/main/skills/web-browser/SKILL.md">只使用 CDP 的技能</a>完全取代了我所有用于浏览器自动化的 CLI 或 MCP。不是因为替代方案不起作用或不好，而是因为这样做简单自然。智能体维护自己的功能。</p>
+
+<p>我的智能体有<a href="https://github.com/mitsuhiko/agent-stuff/tree/main/skills">相当多的技能</a>，关键是如果我不需要它们，我会扔掉技能。例如，我给了它一个技能来阅读其他工程师分享的 Pi 会话，这有助于代码审查。或者我有一个技能来帮助智能体制作我想要的提交消息和提交行为，以及如何更新变更日志。这些最初是斜杠命令，但我目前正在将它们迁移到技能，看看这是否同样有效。我还有一个技能，希望能帮助 Pi 使用 <span class="codespan">uv</span> 而不是 <span class="codespan">pip</span>，但我也添加了一个自定义扩展来拦截对 <span class="codespan">pip</span> 和 <span class="codespan">python</span> 的调用，并将它们重定向到 <span class="codespan">uv</span>。</p>
+
+<p>使用像 Pi 这样的最小智能体给我的部分吸引力在于，它让你体验使用构建更多软件的软件的想法。极端情况是当你移除 UI 和输出，并将其连接到你的聊天时。这就是 OpenClaw 所做的，鉴于其巨大的增长，我真的越来越觉得这将以某种方式成为我们的未来。</p>
+
+<hr />
+
+<p>原文链接：https://lucumr.pocoo.org/2026/1/31/pi/</p>
+
+<p>相关资源：</p>
+<ul>
+  <li>Syntax 播客第 976 集：与 Armin Ronacher 和 Mario Zechner 讨论 Pi</li>
+  <li>OpenClaw 项目：https://openclaw.ai/</li>
+  <li>Pi GitHub 仓库：https://github.com/badlogic/pi-mono/</li>
+  <li>作者的扩展示例：https://github.com/mitsuhiko/agent-stuff/</li>
+</ul>
+
+<hr />
+
+<p>译者注：这篇文章展示了在 AI 智能体领域中一种反潮流的设计哲学——通过极简主义和自我扩展能力，而非功能堆砌，来实现真正的灵活性和可靠性。Pi 的核心理念是"让智能体编写代码来扩展自己"，这种方法将软件开发推向了一个新的范式：软件构建软件。</p>
+
+  </article>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- ai, agent, coding -->
+
+    <a class='tag' href="/tags/ai">
+      ai
+    </a>
+
+    <a class='tag' href="/tags/agent">
+      agent
+    </a>
+
+    <a class='tag' href="/tags/coding">
+      coding
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+       j.defer = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2026. All rights reserved.
+</footer>
+
+
+    </div>
+    <script defer src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+ -->
+    <!-- <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+ -->
+  </body>
+
+</html>

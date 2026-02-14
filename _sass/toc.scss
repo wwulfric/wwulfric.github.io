@@ -1,0 +1,139 @@
+@charset "utf-8";
+@use "base" as *;
+
+// Table of Contents Styles
+.toc-sidebar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 240px;
+  max-height: calc(100vh - 40px);
+  background: $bg-color;
+  border: $normal-border;
+  border-radius: 4px;
+  padding: 1em;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: 0.9em;
+
+  .toc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8em;
+    padding-bottom: 0.5em;
+    border-bottom: $normal-border;
+    font-weight: bold;
+    color: $main-color;
+  }
+
+  .toc-close {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: $lighter-color;
+    padding: 0;
+    line-height: 1;
+
+    &:hover {
+      color: $main-color;
+    }
+  }
+
+  .toc-nav {
+    a {
+      display: block;
+      color: $lighter-color;
+      text-decoration: none;
+      padding: 0.3em 0;
+      border-bottom: none;
+      line-height: 1.4;
+      transition: color 0.2s;
+
+      &:hover {
+        color: $link-color;
+      }
+
+      &.active {
+        color: $link-color;
+        font-weight: 500;
+      }
+    }
+
+    .toc-h2 {
+      padding-left: 0;
+    }
+
+    .toc-h3 {
+      padding-left: 1em;
+      font-size: 0.95em;
+    }
+
+    .toc-h4 {
+      padding-left: 2em;
+      font-size: 0.9em;
+    }
+  }
+}
+
+// Mobile toggle button - hidden on desktop
+.toc-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background: $main-color;
+  color: $bg-color;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.5em;
+  cursor: pointer;
+  z-index: 99;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: $lighter-color;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// Mobile responsive styles
+@media screen and (max-width: 1200px) {
+  .toc-sidebar {
+    right: -280px;
+    width: 260px;
+    top: 0;
+    max-height: 100vh;
+    border-radius: 0;
+    border-right: none;
+    transition: right 0.3s ease-in-out;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+
+    &.toc-open {
+      right: 0;
+    }
+
+    .toc-close {
+      display: block;
+    }
+  }
+
+  .toc-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// Hide TOC on very small screens if no headings
+.toc-sidebar:empty + .toc-toggle {
+  display: none;
+}

@@ -6,10 +6,837 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 14 Feb 2026 06:39:21 +0000</pubDate>
-    <lastBuildDate>Sat, 14 Feb 2026 06:39:21 +0000</lastBuildDate>
+    <pubDate>Sun, 19 Apr 2026 12:11:48 +0000</pubDate>
+    <lastBuildDate>Sun, 19 Apr 2026 12:11:48 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2026. All rights reserved.</rights>
+    
+      <item>
+        <title>理解 Python 进程注入：从 ptrace 到 PEP 768</title>
+        <description>&lt;p&gt;你有一个正在运行的 Python 进程——也许是一个生产环境中的 Web 服务，也许是一个跑了三小时的数据管道。它变慢了，或者出了某种诡异的 bug。你不能停掉它、不能重启它、不能加 print 语句。&lt;/p&gt;
+
+&lt;p&gt;怎么办？&lt;/p&gt;
+
+&lt;p&gt;答案是&lt;strong&gt;进程注入&lt;/strong&gt;（process injection）：在不重启目标进程的前提下，将诊断代码注入到一个正在运行的 Python 解释器中。这正是 &lt;a href=&quot;https://github.com/wwulfric/peeka&quot;&gt;peeka&lt;/a&gt;、&lt;a href=&quot;https://github.com/bloomberg/memray&quot;&gt;memray&lt;/a&gt;、&lt;a href=&quot;https://github.com/lmacken/pyrasite&quot;&gt;pyrasite&lt;/a&gt; 等工具的核心能力。&lt;/p&gt;
+
+&lt;p&gt;本文将从底层原理到工程实践，系统地拆解 Python 进程注入的三代技术方案。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;1-进程注入的本质问题&quot;&gt;1. 进程注入的本质问题&lt;/h2&gt;
+
+&lt;p&gt;要理解进程注入，先要理解我们面临的约束：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;地址空间隔离&lt;/strong&gt;：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;GIL（全局解释器锁）&lt;/strong&gt;：Python 的 C API 调用几乎都需要持有 GIL&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;执行时机&lt;/strong&gt;：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;所以，进程注入需要回答三个问题：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;如何进入目标进程的地址空间？&lt;/strong&gt;（跨进程控制）&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;如何安全地执行 Python 代码？&lt;/strong&gt;（GIL 获取）&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;何时执行才不会崩溃？&lt;/strong&gt;（时机选择）&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;不同的工具对这三个问题给出了不同的答案。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;2-第一代pyrasite-与-gdb-直接调用-c-api&quot;&gt;2. 第一代：pyrasite 与 GDB 直接调用 C API&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/lmacken/pyrasite&quot;&gt;pyrasite&lt;/a&gt;（2011 年）是最早的 Python 进程注入工具之一。它的方案简单直接：&lt;/p&gt;
+
+&lt;h3 id=&quot;原理&quot;&gt;原理&lt;/h3&gt;
+
+&lt;p&gt;利用 &lt;span class=&quot;codespan&quot;&gt;ptrace&lt;/span&gt; 系统调用暂停目标进程，然后通过 GDB 直接调用 Python 的 C API 执行任意 Python 代码。&lt;/p&gt;
+
+&lt;h3 id=&quot;核心代码&quot;&gt;核心代码&lt;/h3&gt;
+
+&lt;p&gt;pyrasite 的注入逻辑只有几行：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# pyrasite/injector.py（简化）
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gdb_cmds&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (int) PyGILState_Ensure()&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (int) PyRun_SimpleString(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;exec(open(&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;\\&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;).read())&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;filename&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (void) PyGILState_Release($1)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;subprocess&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Popen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;gdb -p %d -batch %s&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;-eval-command=&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call %s&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cmd&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cmd&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gdb_cmds&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;)),&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;shell&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;即：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;GDB 通过 &lt;span class=&quot;codespan&quot;&gt;ptrace(PTRACE_ATTACH)&lt;/span&gt; 暂停目标进程&lt;/li&gt;
+  &lt;li&gt;在&lt;strong&gt;暂停点&lt;/strong&gt;直接调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 获取 GIL&lt;/li&gt;
+  &lt;li&gt;调用 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString()&lt;/span&gt; 执行一段 Python 代码&lt;/li&gt;
+  &lt;li&gt;调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Release()&lt;/span&gt; 释放 GIL&lt;/li&gt;
+  &lt;li&gt;GDB detach，目标进程恢复执行&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;ptrace-是什么&quot;&gt;ptrace 是什么？&lt;/h3&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;ptrace&lt;/span&gt; 是 Linux 内核提供的进程调试接口。GDB、strace、lldb 的底层都依赖它。&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;调试器进程                    目标进程
+    │                           │
+    │── ptrace(ATTACH, pid) ───&amp;gt;│  暂停目标
+    │                           │  (SIGSTOP)
+    │── ptrace(PEEKTEXT) ──────&amp;gt;│  读内存
+    │── ptrace(POKETEXT) ──────&amp;gt;│  写内存
+    │── ptrace(GETREGS) ───────&amp;gt;│  读寄存器
+    │── ptrace(SETREGS) ───────&amp;gt;│  改寄存器 -&amp;gt; 修改执行流
+    │── ptrace(CONT) ──────────&amp;gt;│  恢复执行
+    │── ptrace(DETACH) ────────&amp;gt;│  脱离
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;GDB 正是利用 ptrace 的能力，在目标进程的上下文中&quot;调用&quot;C 函数。具体来说，GDB 每执行一条 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 命令，都会经历以下 6 步：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;保存目标进程当前的寄存器状态&lt;/li&gt;
+  &lt;li&gt;将函数参数写入寄存器/栈（遵循 ABI 调用约定）&lt;/li&gt;
+  &lt;li&gt;将指令指针（&lt;span class=&quot;codespan&quot;&gt;rip&lt;/span&gt;）设为目标函数地址&lt;/li&gt;
+  &lt;li&gt;设置断点用于在函数返回后接管控制&lt;/li&gt;
+  &lt;li&gt;恢复执行&lt;/li&gt;
+  &lt;li&gt;函数执行完毕后，GDB 命中断点，恢复原始寄存器&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;也就是说，pyrasite 的三条 GDB 命令（&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Ensure()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyRun_SimpleString(...)&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Release($1)&lt;/span&gt;）各自独立地经历这 6 步，而非 6 步整体对应 3 个函数。每次 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 都是一次完整的&quot;保存-&amp;gt;篡改-&amp;gt;执行-&amp;gt;恢复&quot;循环。&lt;/p&gt;
+
+&lt;h3 id=&quot;为什么这个方案危险&quot;&gt;为什么这个方案危险？&lt;/h3&gt;
+
+&lt;p&gt;问题出在&lt;strong&gt;时机&lt;/strong&gt;上。当 GDB attach 并暂停目标进程时，目标可能正处于任何状态：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;目标进程的执行时间线：
+... -&amp;gt; malloc() -&amp;gt; [GDB 在这里暂停] -&amp;gt; PyGILState_Ensure() -&amp;gt; 💥
+
+问题：malloc 内部持有 heap lock
+      PyRun_SimpleString 可能也要调 malloc
+      -&amp;gt; 死锁
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;更具体地说：&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;暂停时的状态&lt;/th&gt;
+      &lt;th&gt;调用 C API 的后果&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;malloc/free 中途&lt;/td&gt;
+      &lt;td&gt;堆锁重入 -&amp;gt; 死锁或内存损坏&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GC 扫描中&lt;/td&gt;
+      &lt;td&gt;对象引用计数不一致 -&amp;gt; 段错误&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;持有 GIL&lt;/td&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 死锁&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;持有 import 锁&lt;/td&gt;
+      &lt;td&gt;注入代码中的 import 死锁&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;pyrasite 本质上是在&quot;碰运气&quot;——大多数时候目标进程不在这些危险状态，所以注入成功。但在生产环境中，这种不确定性是不可接受的。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;3-第二代memraypeeka-的-dlopen--pthread-方案&quot;&gt;3. 第二代：memray/peeka 的 dlopen + pthread 方案&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/bloomberg/memray&quot;&gt;memray&lt;/a&gt;（Bloomberg 开源的内存分析器）和 &lt;a href=&quot;https://github.com/wwulfric/peeka&quot;&gt;peeka&lt;/a&gt; 在 Python 3.8-3.13 上采用了相似的改进方案。核心思路是：&lt;strong&gt;不在 ptrace 暂停点直接执行 Python 代码，而是注入一个 C 扩展，由 C 扩展在安全的时机执行代码&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h3 id=&quot;原理概览&quot;&gt;原理概览&lt;/h3&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;调试器(GDB/LLDB)                目标进程
+    │                              │
+    │── ptrace ATTACH ────────────&amp;gt;│  暂停
+    │── 等待安全断点命中 ────────────&amp;gt;│  malloc/PyMem_* 返回后
+    │                              │
+    │── dlopen(&quot;_inject.so&quot;) ─────&amp;gt;│  加载 C 扩展到目标地址空间
+    │── call peeka_spawn_agent() ─&amp;gt;│  创建新 pthread
+    │── ptrace DETACH ────────────&amp;gt;│  恢复执行
+    │                              │
+    │                              │  [新 pthread]
+    │                              │  ├─ connect() 回连调试器
+    │                              │  ├─ recv() 接收 agent 脚本
+    │                              │  ├─ PyGILState_Ensure() ← 等待安全时机
+    │                              │  ├─ PyEval_EvalCode() 执行 agent
+    │                              │  └─ PyGILState_Release()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;关键改进有三点：&lt;strong&gt;安全断点&lt;/strong&gt;、&lt;strong&gt;dlopen 注入&lt;/strong&gt;、&lt;strong&gt;独立线程&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h3 id=&quot;31-安全断点选择正确的时机&quot;&gt;3.1 安全断点——选择正确的时机&lt;/h3&gt;
+
+&lt;p&gt;pyrasite 在&lt;strong&gt;任意位置&lt;/strong&gt;暂停后就执行 C API，而 memray/peeka 等到&lt;strong&gt;安全位置&lt;/strong&gt;才注入。&lt;/p&gt;
+
+&lt;p&gt;以 peeka 的 GDB 脚本为例：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-gdb&quot;&gt;# peeka/core/_attach.gdb
+b malloc
+b calloc
+b realloc
+b free
+b PyMem_Malloc
+b PyMem_Calloc
+b PyMem_Realloc
+b PyMem_Free
+b PyErr_CheckSignals
+b PyCallable_Check
+
+commands 1-10
+    disable breakpoints
+    delete breakpoints
+    call (void*)dlopen($peeka_injector, $peeka_rtld_now)
+    call (int)peeka_spawn_agent($peeka_port)
+end
+
+continue
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;解读：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;在 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt; 等函数的&lt;strong&gt;入口&lt;/strong&gt;设置断点&lt;/li&gt;
+  &lt;li&gt;调用 &lt;span class=&quot;codespan&quot;&gt;Py_AddPendingCall(&amp;amp;PyCallable_Check, 0)&lt;/span&gt; 安排一个 pending call（确保 CPython 的 eval loop 会调用 &lt;span class=&quot;codespan&quot;&gt;PyCallable_Check&lt;/span&gt;，从而命中我们的断点）&lt;/li&gt;
+  &lt;li&gt;恢复执行（&lt;span class=&quot;codespan&quot;&gt;continue&lt;/span&gt;），等待目标进程&lt;strong&gt;自然地&lt;/strong&gt;调用这些函数&lt;/li&gt;
+  &lt;li&gt;断点命中时，我们知道当前位置是&lt;strong&gt;函数入口&lt;/strong&gt;——没有持有 heap lock、没有处于 GC 中途&lt;/li&gt;
+  &lt;li&gt;此时再执行 dlopen 和 spawn&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;这比 pyrasite 安全得多：我们不是在任意位置注入，而是在一个已知的安全点。&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;Py_AddPendingCall 的作用&lt;/strong&gt;：如果目标进程处于纯 Python 代码的 tight loop 中（不调用任何 C 函数），我们的 malloc/PyMem 断点可能永远不会命中。&lt;span class=&quot;codespan&quot;&gt;Py_AddPendingCall&lt;/span&gt; 注册的回调会在 Python eval loop 的下一个&quot;检查点&quot;被调用，确保断点一定会触发。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&quot;32-dlopen将-c-扩展加载到目标进程&quot;&gt;3.2 dlopen——将 C 扩展加载到目标进程&lt;/h3&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 &lt;span class=&quot;codespan&quot;&gt;dlopen(&quot;_inject.abi3.so&quot;, RTLD_NOW)&lt;/span&gt;，我们将一个编译好的 C 扩展加载到目标进程的地址空间中。&lt;/p&gt;
+
+&lt;p&gt;这比 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString&lt;/span&gt; 强大的关键在于：&lt;strong&gt;C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;peeka 在 macOS 上使用 LLDB 完成相同的工作：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-lldb&quot;&gt;# peeka/core/_attach.lldb
+expr auto $dlsym = (void* (*)(void*, const char*))&amp;amp;::dlsym
+expr auto $dlopen = $dlsym($rtld_default, &quot;dlopen&quot;)
+expr auto $dll = ((void*(*)(const char*, int))$dlopen)($libpath, $rtld_now)
+expr auto $spawn = $dlsym($dll, &quot;peeka_spawn_agent&quot;)
+p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&quot;33-独立线程解耦注入与执行&quot;&gt;3.3 独立线程——解耦注入与执行&lt;/h3&gt;
+
+&lt;p&gt;dlopen 之后，GDB 调用 C 扩展的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent()&lt;/span&gt; 函数。这个函数做了什么？&lt;/p&gt;
+
+&lt;div  class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// peeka/core/_inject.c（核心逻辑）&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;__attribute__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;visibility&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;default&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)))&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;peeka_spawn_agent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pthread_t&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pthread_create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;kr&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;thread_body&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uintptr_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;它&lt;strong&gt;不执行任何 Python 代码&lt;/strong&gt;。它只是创建一个 pthread，然后立即返回。这样 GDB 可以快速 detach，目标进程恢复正常执行。&lt;/p&gt;
+
+&lt;p&gt;真正的工作在新线程中完成：&lt;/p&gt;
+
+&lt;div  class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// 新线程的执行流程&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;uint16_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// 1. 通过 TCP 回连调试器，接收 agent 脚本&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;connect_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;recvall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script_len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// 2. 安全地执行 Python 代码&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;run_script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;errmsg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run_script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;**&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;errmsg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// 检查 Python 是否已初始化&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Py_IsInitialized&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;errmsg&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;copy_string&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Python is not initialized&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// 获取 GIL —— 这里会等待，直到安全&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyGILState_STATE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gstate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyGILState_Ensure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// 编译并执行 agent 脚本&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;run_script_impl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;errmsg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;PyGILState_Release&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gstate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run_script_impl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;**&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;errmsg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// 构建干净的 globals 字典&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyObject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builtins&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyImport_ImportModule&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;builtins&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyObject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;globals&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyDict_New&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyDict_SetItemString&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;globals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;__builtins__&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builtins&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// 编译 + 执行&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyObject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Py_CompileString&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                                       &lt;span class=&quot;s&quot;&gt;&quot;_peeka_attach_hook.py&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                                       &lt;span class=&quot;n&quot;&gt;Py_file_input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;PyObject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mod&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyEval_EvalCode&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;globals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;globals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// ...&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;为什么独立线程更安全？&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;在 pyrasite 方案中，&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 在 GDB 暂停目标进程时被调用——如果暂停的线程恰好持有 GIL，这里会死锁。&lt;/p&gt;
+
+&lt;p&gt;在 dlopen + pthread 方案中：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;GDB 执行 dlopen -&amp;gt; spawn -&amp;gt; &lt;strong&gt;立刻返回&lt;/strong&gt; -&amp;gt; GDB detach -&amp;gt; 目标进程恢复&lt;/li&gt;
+  &lt;li&gt;新线程调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 时，目标进程已经在正常运行&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 会&lt;strong&gt;等待&lt;/strong&gt; GIL 可用，而不是在暂停状态下强行获取&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;这消除了 GIL 死锁的主要原因。&lt;/p&gt;
+
+&lt;h3 id=&quot;34-反向连接agent-代码的传输&quot;&gt;3.4 反向连接——agent 代码的传输&lt;/h3&gt;
+
+&lt;p&gt;一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用&lt;strong&gt;反向连接&lt;/strong&gt;：&lt;/p&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[1] 调试器启动一个 TCP 服务，等待连接
+[2] GDB 将端口号传给 peeka_spawn_agent(port)
+[3] C 扩展中的新线程连接这个端口
+[4] 调试器将 agent.py 的完整内容通过 TCP 发送过去
+[5] C 扩展接收、编译、执行
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这样做的好处是：agent 代码可以任意长、包含任意字符，不受 GDB 命令行的转义限制。&lt;/p&gt;
+
+&lt;h3 id=&quot;35-legacy-回退没有-c-扩展时怎么办&quot;&gt;3.5 Legacy 回退——没有 C 扩展时怎么办？&lt;/h3&gt;
+
+&lt;p&gt;如果 C 扩展不可用（比如没有编译、或者 GLIBC 版本不兼容），peeka 会回退到类似 pyrasite 的方式，但做了改进：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# peeka/core/attach.py — _inject_via_gdb_legacy()
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bootstrap&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;_c = open(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;agent_script&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;).read(); exec(_c);&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;gdb_commands&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (int) PyGILState_Ensure()&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (int) PyRun_SimpleString(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bootstrap&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call (void) PyGILState_Release($1)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;通过 &lt;span class=&quot;codespan&quot;&gt;exec()&lt;/span&gt; 执行文件内容而非直接内联代码，减少了转义问题。但本质上仍然有 pyrasite 的时机安全隐患，只是作为最后的回退方案存在。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;4-第三代pep-768-与-sysremote_exec&quot;&gt;4. 第三代：PEP 768 与 sys.remote_exec&lt;/h2&gt;
+
+&lt;p&gt;Python 3.14 引入了 &lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768&lt;/a&gt;，从&lt;strong&gt;解释器层面&lt;/strong&gt;提供了原生的进程注入支持。这是一个根本性的范式转变。&lt;/p&gt;
+
+&lt;h3 id=&quot;核心思想&quot;&gt;核心思想&lt;/h3&gt;
+
+&lt;p&gt;前两代方案都是从&lt;strong&gt;外部&lt;/strong&gt;强行进入目标进程（通过 ptrace/GDB/LLDB），然后在一个&quot;可能安全&quot;的位置执行代码。PEP 768 的思路则是：&lt;strong&gt;告诉解释器你要执行什么，让解释器自己在安全的时候执行&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h3 id=&quot;运作机制&quot;&gt;运作机制&lt;/h3&gt;
+
+&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;外部进程                       目标 Python 解释器
+    │                              │
+    │  (1) 读 /proc/pid/maps       │
+    │      定位 PyRuntime 地址       │
+    │                              │
+    │  (2) 读 _Py_DebugOffsets      │
+    │      获取内部结构偏移量         │
+    │                              │
+    │  (3) 写入脚本路径到            │
+    │      tstate-&amp;gt;debugger_        │
+    │        script_path            │
+    │                              │
+    │  (4) 设置 pending call 标志   │
+    │      tstate-&amp;gt;debugger_        │
+    │        pending_call = 1       │
+    │                              │
+    │  (5) 设置 eval breaker        │
+    │      eval_breaker |=          │
+    │        PLEASE_STOP_BIT        │
+    │                              │
+    │  完成，无需等待                │
+    │                              │
+    │                              │  ... 正常执行字节码 ...
+    │                              │
+    │                              │  eval loop 检查 eval_breaker
+    │                              │  ↓
+    │                              │  发现 pending_call 标志
+    │                              │  ↓
+    │                              │  _PyRunRemoteDebugger()
+    │                              │  ↓
+    │                              │  读取 script_path
+    │                              │  ↓
+    │                              │  fopen + PyRun_AnyFile
+    │                              │  ↓
+    │                              │  执行脚本 ✅
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;CPython 内部的关键代码：&lt;/p&gt;
+
+&lt;div  class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Python/ceval_gil.c&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_PyRunRemoteDebugger&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PyThreadState&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tstate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remote_debug&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tstate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remote_debugger_support&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debugger_pending_call&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;tstate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remote_debugger_support&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debugger_pending_call&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;c1&quot;&gt;// 复制脚本路径（避免 race condition）&lt;/span&gt;
+        &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pathsz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;memcpy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+               &lt;span class=&quot;n&quot;&gt;tstate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remote_debugger_support&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debugger_script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+               &lt;span class=&quot;n&quot;&gt;pathsz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+        &lt;span class=&quot;c1&quot;&gt;// 审计事件（可被安全策略拦截）&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PySys_Audit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;cpython.remote_debugger_script&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;s&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+        &lt;span class=&quot;c1&quot;&gt;// 执行脚本&lt;/span&gt;
+        &lt;span class=&quot;kt&quot;&gt;FILE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;r&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;PyRun_AnyFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;fclose&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;每个-pythreadstate-中的数据结构&quot;&gt;每个 PyThreadState 中的数据结构&lt;/h3&gt;
+
+&lt;div  class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Include/cpython/pystate.h&lt;/span&gt;
+&lt;span class=&quot;cp&quot;&gt;#define _Py_MAX_SCRIPT_PATH_SIZE 512
+&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;typedef&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int32_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;debugger_pending_call&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;debugger_script_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_Py_MAX_SCRIPT_PATH_SIZE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_PyRemoteDebuggerSupport&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;每个线程状态增加约 516 字节，但运行时开销几乎为零——只是 eval loop 中一次分支预测极大概率命中的 &lt;span class=&quot;codespan&quot;&gt;if&lt;/span&gt; 检查。&lt;/p&gt;
+
+&lt;h3 id=&quot;使用方式&quot;&gt;使用方式&lt;/h3&gt;
+
+&lt;p&gt;peeka 的实现非常简洁：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# peeka/core/attach.py
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_attach_pep768&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;bool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;agent_code&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_read_agent_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;agent_script&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;_create_agent_script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;agent_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# 一行搞定
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;remote_exec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;agent_script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# 等待 agent 就绪
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;_wait_for_agent_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;READY_TIMEOUT_PEP768&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;不需要 GDB、不需要 ptrace、不需要 C 扩展、不需要 dlopen。只需要调用者和目标进程是同一用户（或拥有 &lt;span class=&quot;codespan&quot;&gt;CAP_SYS_PTRACE&lt;/span&gt;），并且目标进程没有禁用远程调试。&lt;/p&gt;
+
+&lt;h3 id=&quot;安全保障&quot;&gt;安全保障&lt;/h3&gt;
+
+&lt;p&gt;PEP 768 在安全性上的设计非常审慎：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;仅接受文件路径&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 写入的是一个&lt;strong&gt;文件路径&lt;/strong&gt;，不是代码内容。这意味着攻击者不仅需要跨进程写内存的权限，还需要在目标进程可读的文件系统路径上放置恶意脚本&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;审计钩子&lt;/strong&gt;：执行前触发 &lt;span class=&quot;codespan&quot;&gt;cpython.remote_debugger_script&lt;/span&gt; 审计事件，安全策略可以拦截&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;可禁用&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;PYTHON_DISABLE_REMOTE_DEBUG&lt;/span&gt; 环境变量或 &lt;span class=&quot;codespan&quot;&gt;-X disable-remote-debug&lt;/span&gt; 启动参数&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;编译时可移除&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;./configure --without-remote-debug&lt;/span&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;为什么-pep-768-是本质性的进步&quot;&gt;为什么 PEP 768 是本质性的进步？&lt;/h3&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;ptrace/GDB 注入&lt;/th&gt;
+      &lt;th&gt;PEP 768&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;执行时机&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;取决于暂停点/断点位置&lt;/td&gt;
+      &lt;td&gt;解释器自己选择安全检查点&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;GIL 处理&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;外部强制获取&lt;/td&gt;
+      &lt;td&gt;自然持有（在 eval loop 中）&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;运行时开销&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;无（仅 attach 时）&lt;/td&gt;
+      &lt;td&gt;接近零（一次分支检查）&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;所需权限&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;ptrace + GDB/LLDB&lt;/td&gt;
+      &lt;td&gt;同 UID 或 process_vm_writev&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;多线程安全&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;需要 scheduler-locking&lt;/td&gt;
+      &lt;td&gt;天然安全（per-thread 标志）&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;崩溃风险&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;存在（不安全时机）&lt;/td&gt;
+      &lt;td&gt;极低（安全检查点执行）&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;pep-768-实现中的已知问题与-cpython-修复&quot;&gt;PEP 768 实现中的已知问题与 CPython 修复&lt;/h3&gt;
+
+&lt;p&gt;PEP 768 在 Python 3.14.0a5 合入后（&lt;a href=&quot;https://github.com/python/cpython/pull/131937&quot;&gt;gh-131937&lt;/a&gt;），社区在实际使用中发现了一系列实现缺陷。以下按严重程度梳理关键问题及其修复方案。&lt;/p&gt;
+
+&lt;h4 id=&quot;命名空间污染gh-132859&quot;&gt;命名空间污染（gh-132859）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：注入脚本在 &lt;span class=&quot;codespan&quot;&gt;__main__&lt;/span&gt; 模块的命名空间中执行，会意外覆盖目标进程的变量：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# 目标进程
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# 注入脚本设置了 x = 42 -&amp;gt; 目标进程意外退出
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/132860&quot;&gt;PR #132860&lt;/a&gt;（3.14.0a5）——脚本现在在隔离的命名空间中执行。如需访问主模块，需显式 &lt;span class=&quot;codespan&quot;&gt;import __main__&lt;/span&gt;。&lt;/p&gt;
+
+&lt;h4 id=&quot;非-utf-8-路径编码失败gh-133886&quot;&gt;非 UTF-8 路径编码失败（gh-133886）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec()&lt;/span&gt; 硬编码使用 UTF-8 编码脚本路径，导致在非 UTF-8 locale 环境下无法处理非 ASCII 路径，&lt;span class=&quot;codespan&quot;&gt;os.access()&lt;/span&gt; 找不到文件。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/133887&quot;&gt;PR #133887&lt;/a&gt;（3.14.0b1）——改用文件系统编码（&lt;span class=&quot;codespan&quot;&gt;sys.getfilesystemencoding()&lt;/span&gt;）代替硬编码 UTF-8。&lt;/p&gt;
+
+&lt;h4 id=&quot;无效参数导致段错误gh-134064&quot;&gt;无效参数导致段错误（gh-134064）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec(0, None)&lt;/span&gt; 在 ASAN/debug 构建中触发段错误——缺少 NULL 检查就直接解引用 &lt;span class=&quot;codespan&quot;&gt;script_path&lt;/span&gt;。由 fusil fuzzer 发现。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/134067&quot;&gt;PR #134067&lt;/a&gt;（3.14.0b1）——添加参数校验。&lt;/p&gt;
+
+&lt;h4 id=&quot;elf-搜索中的异常状态污染gh-137293&quot;&gt;ELF 搜索中的异常状态污染（gh-137293）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：在 Linux 上搜索 &lt;span class=&quot;codespan&quot;&gt;/proc/pid/maps&lt;/span&gt; 定位 &lt;span class=&quot;codespan&quot;&gt;PyRuntime&lt;/span&gt; 时，&lt;span class=&quot;codespan&quot;&gt;search_linux_map_for_section()&lt;/span&gt; 对每个无法打开的文件（如已删除的 &lt;span class=&quot;codespan&quot;&gt;.so&lt;/span&gt;）都会设置异常。当最终在其他文件中找到 &lt;span class=&quot;codespan&quot;&gt;PyRuntime&lt;/span&gt; 时，函数返回成功但异常仍被设置：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# sys.remote_exec() 返回成功，但附带一个未清除的异常：
+# OSError: Cannot open ELF file &apos;/path/to/lib.so (deleted)&apos;
+# -&amp;gt; SystemError: returned a result with an exception set
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/137309&quot;&gt;PR #137309&lt;/a&gt;——在搜索循环中继续搜索前清除异常。&lt;/p&gt;
+
+&lt;h4 id=&quot;ctypes-导致的重复-libpython-映射gh-144563&quot;&gt;ctypes 导致的重复 libpython 映射（gh-144563）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：当目标进程导入了 &lt;span class=&quot;codespan&quot;&gt;_ctypes&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;polars&lt;/span&gt;（底层使用 ctypes）时，&lt;span class=&quot;codespan&quot;&gt;/proc/pid/maps&lt;/span&gt; 中会出现多个 &lt;span class=&quot;codespan&quot;&gt;libpython&lt;/span&gt; 映射。远程调试代码无法处理重复项，导致 &quot;Can&apos;t determine Python version&quot; 或 &quot;Failed to read debug offsets&quot; 错误。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/144595&quot;&gt;PR #144595&lt;/a&gt;（3.15.0a6）——优雅处理重复映射，使用第一个有效的 PyRuntime。&lt;/p&gt;
+
+&lt;h4 id=&quot;远程调试偏移表缺乏校验gh-148178&quot;&gt;远程调试偏移表缺乏校验（gh-148178）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;_remote_debugging&lt;/span&gt; 模块从目标进程内存读取 &lt;span class=&quot;codespan&quot;&gt;async_debug_offsets&lt;/span&gt; 后直接使用，未校验结构有效性。&lt;span class=&quot;codespan&quot;&gt;asyncio_task_object.size&lt;/span&gt; 字段被用作读取长度写入固定 4096 字节的栈缓冲区（&lt;span class=&quot;codespan&quot;&gt;SIZEOF_TASK_OBJ&lt;/span&gt;），&lt;strong&gt;恶意/被攻陷的目标进程可以构造更大的 size 导致栈缓冲区溢出&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/148187&quot;&gt;PR #148187&lt;/a&gt;——新增 &lt;span class=&quot;codespan&quot;&gt;validate_async_debug_offsets()&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;validate_debug_offsets()&lt;/span&gt; 对所有偏移表做边界校验（+511 行校验基础设施）。已回移至 3.14 分支（&lt;a href=&quot;https://github.com/python/cpython/pull/148577&quot;&gt;PR #148577&lt;/a&gt;）。&lt;/p&gt;
+
+&lt;h4 id=&quot;远程内存数据损坏导致崩溃gh-140739&quot;&gt;远程内存数据损坏导致崩溃（gh-140739）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：在 free-threading 构建中使用 &lt;span class=&quot;codespan&quot;&gt;--mode=gil&lt;/span&gt; 做性能采样时，远程调试 unwinder 读取到目标进程的损坏内存会导致 SIGSEGV——缺乏对远程读取数据的边界检查。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/143190&quot;&gt;PR #143190&lt;/a&gt;（3.15.0a4）——对所有远程读取的数据结构添加健壮性校验。&lt;/p&gt;
+
+&lt;h4 id=&quot;错误处理路径缺失gh-144316-gh-146308&quot;&gt;错误处理路径缺失（gh-144316, gh-146308）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;_remote_debugging&lt;/span&gt; 模块中多处错误处理缺陷：&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;RemoteUnwinder.get_stack_trace()&lt;/span&gt; 在 &lt;span class=&quot;codespan&quot;&gt;debug=False&lt;/span&gt; 时可能返回 NULL 但不设置异常&lt;/li&gt;
+  &lt;li&gt;varint 解码路径缺少错误检查&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyMem_RawMalloc()&lt;/span&gt; 返回 NULL 时缺少 &lt;span class=&quot;codespan&quot;&gt;PyErr_NoMemory()&lt;/span&gt; 调用&lt;/li&gt;
+  &lt;li&gt;跨平台错误传播不一致&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/144442&quot;&gt;PR #144442&lt;/a&gt; 和 &lt;a href=&quot;https://github.com/python/cpython/pull/146309&quot;&gt;PR #146309&lt;/a&gt;——全面审计并修复错误处理路径，&lt;span class=&quot;codespan&quot;&gt;set_exception_cause&lt;/span&gt; 宏改为无条件设置异常。&lt;/p&gt;
+
+&lt;h4 id=&quot;权限问题sudo-创建的临时文件不可读gh-143511&quot;&gt;权限问题：sudo 创建的临时文件不可读（gh-143511）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：使用 &lt;span class=&quot;codespan&quot;&gt;sudo&lt;/span&gt; 运行注入脚本时，&lt;span class=&quot;codespan&quot;&gt;NamedTemporaryFile&lt;/span&gt; 以 root 用户创建（权限 &lt;span class=&quot;codespan&quot;&gt;0600&lt;/span&gt;），非 root 的目标进程无法读取该脚本文件。这是 PEP 768 &quot;仅接受文件路径&quot;设计的副作用。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;处理&lt;/strong&gt;：文档化（&lt;a href=&quot;https://github.com/python/cpython/pull/143575&quot;&gt;PR #143575&lt;/a&gt;）——用户需确保脚本文件对目标进程可读，或以相同用户运行。&lt;/p&gt;
+
+&lt;h4 id=&quot;remote-pdb-无法中断死循环gh-132975&quot;&gt;Remote PDB 无法中断死循环（gh-132975）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：在远程 PDB 提示符下输入 &lt;span class=&quot;codespan&quot;&gt;while True: pass&lt;/span&gt; 后无法中断——能中断脚本本身的执行，但无法中断 PDB 命令求值中的死循环。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/133223&quot;&gt;PR #133223&lt;/a&gt;（3.14.0b1）——实现基于 socket 的中断机制：Unix 上发送 SIGINT 到远程进程，Windows 上通过 &lt;span class=&quot;codespan&quot;&gt;socketpair&lt;/span&gt; 传递信号。&lt;/p&gt;
+
+&lt;h4 id=&quot;审计事件缺失gh-135543&quot;&gt;审计事件缺失（gh-135543）&lt;/h4&gt;
+
+&lt;p&gt;&lt;strong&gt;问题&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec()&lt;/span&gt; 最初未触发审计事件，安全工具无法监控进程注入行为。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;修复&lt;/strong&gt;：&lt;a href=&quot;https://github.com/python/cpython/pull/135544&quot;&gt;PR #135544&lt;/a&gt;（3.14.0b1）——添加 &lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 审计事件，参数为 &lt;span class=&quot;codespan&quot;&gt;(pid, script)&lt;/span&gt;。&lt;/p&gt;
+
+&lt;h4 id=&quot;外部工具跟进&quot;&gt;外部工具跟进&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;debugpy（VS Code）&lt;/strong&gt;：&lt;a href=&quot;https://github.com/microsoft/debugpy/commit/c7e86a1954381ceadb2ea398fc60079deef91358&quot;&gt;已支持 sys.remote_exec()&lt;/a&gt;（2026.1），Python 3.14+ 优先使用原生 API，可通过 &lt;span class=&quot;codespan&quot;&gt;--disable-sys-remote-exec&lt;/span&gt; 回退&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;helicopter-parent&lt;/strong&gt;：&lt;a href=&quot;https://github.com/a-reich/helicopter-parent/&quot;&gt;社区工具&lt;/a&gt;，通过管理子进程绕过 &lt;span class=&quot;codespan&quot;&gt;ptrace_scope&lt;/span&gt; 限制&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;peeka/memray&lt;/strong&gt;：已集成 PEP 768 作为首选注入路径&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;5-三代方案对比&quot;&gt;5. 三代方案对比&lt;/h2&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;方案&lt;/th&gt;
+      &lt;th&gt;代表工具&lt;/th&gt;
+      &lt;th&gt;Python 版本&lt;/th&gt;
+      &lt;th&gt;安全性&lt;/th&gt;
+      &lt;th&gt;依赖&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GDB + PyRun_SimpleString&lt;/td&gt;
+      &lt;td&gt;pyrasite&lt;/td&gt;
+      &lt;td&gt;2.4 - 3.13&lt;/td&gt;
+      &lt;td&gt;⚠️ 可能崩溃/死锁&lt;/td&gt;
+      &lt;td&gt;GDB, ptrace&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GDB/LLDB + dlopen + pthread&lt;/td&gt;
+      &lt;td&gt;memray, peeka&lt;/td&gt;
+      &lt;td&gt;3.8 - 3.13&lt;/td&gt;
+      &lt;td&gt;✅ 较安全&lt;/td&gt;
+      &lt;td&gt;GDB/LLDB, ptrace, C 编译器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;sys.remote_exec (PEP 768)&lt;/td&gt;
+      &lt;td&gt;peeka, memray&lt;/td&gt;
+      &lt;td&gt;3.14+&lt;/td&gt;
+      &lt;td&gt;✅ 安全&lt;/td&gt;
+      &lt;td&gt;无外部依赖&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;memray-vs-peeka-的容错策略&quot;&gt;memray vs peeka 的容错策略&lt;/h3&gt;
+
+&lt;p&gt;两个项目虽然共享 dlopen + pthread 的核心方案，但在&lt;strong&gt;失败处理&lt;/strong&gt;上有本质区别：&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;memray：一次选择，不回退。&lt;/strong&gt; memray 在启动时通过 &lt;span class=&quot;codespan&quot;&gt;resolve_debugger()&lt;/span&gt; 按优先级（&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;gdb&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;lldb&lt;/span&gt;）选定&lt;strong&gt;一种&lt;/strong&gt;注入方法，此后不再切换。GDB 路径硬依赖 C 扩展（&lt;span class=&quot;codespan&quot;&gt;assert injecter.exists()&lt;/span&gt;），dlopen 失败直接报错，没有 legacy 回退。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;peeka：逐级降级，尽力而为。&lt;/strong&gt; peeka 的决策树包含多层 fallback：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# peeka 的 attach 决策树
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;hasattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;remote_exec&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;# Python 3.14+
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;remote_exec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;              &lt;span class=&quot;c1&quot;&gt;# 最优路径
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_has_injector&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;                &lt;span class=&quot;c1&quot;&gt;# C 扩展可用
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Linux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GDB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dlopen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pthread&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# 安全回退
+&lt;/span&gt;        &lt;span class=&quot;nf&quot;&gt;except &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;TimeoutError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;...):&lt;/span&gt;
+            &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GDB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyRun_SimpleString&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;# 降级到 legacy
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;macOS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LLDB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dlopen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pthread&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Linux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;GDB&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PyRun_SimpleString&lt;/span&gt;       &lt;span class=&quot;c1&quot;&gt;# 最后手段
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;报错&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这种设计源于 peeka 的定位——作为通用诊断工具，它需要在各种环境下都能工作，包括 GLIBC 版本不匹配（C 扩展无法加载）或 GIL 死锁（dlopen 路径超时）等边缘情况。代价是多了一层复杂度和潜在的时机安全风险（legacy 路径），但换来了更广的兼容性。&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;memray&lt;/th&gt;
+      &lt;th&gt;peeka&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;C 扩展缺失&lt;/td&gt;
+      &lt;td&gt;硬报错 (&lt;span class=&quot;codespan&quot;&gt;assert&lt;/span&gt;)&lt;/td&gt;
+      &lt;td&gt;回退到 legacy GDB&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;dlopen 运行时失败&lt;/td&gt;
+      &lt;td&gt;报错退出&lt;/td&gt;
+      &lt;td&gt;回退到 legacy GDB&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;dlopen 后 GIL 死锁&lt;/td&gt;
+      &lt;td&gt;超时报错&lt;/td&gt;
+      &lt;td&gt;超时后回退到 legacy GDB&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;设计哲学&lt;/td&gt;
+      &lt;td&gt;明确前置要求，快速失败&lt;/td&gt;
+      &lt;td&gt;尽力而为，逐级降级&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;6-实践中的坑&quot;&gt;6. 实践中的坑&lt;/h2&gt;
+
+&lt;p&gt;在实际开发 peeka 的过程中，我们踩过一些有趣的坑：&lt;/p&gt;
+
+&lt;h3 id=&quot;61-glibc-版本不匹配&quot;&gt;6.1 GLIBC 版本不匹配&lt;/h3&gt;
+
+&lt;p&gt;C 扩展 &lt;span class=&quot;codespan&quot;&gt;_inject.abi3.so&lt;/span&gt; 在高版本 Linux 上编译后，放到低版本容器（如 Python 3.8 的 Debian 旧镜像）中会因为 &lt;span class=&quot;codespan&quot;&gt;GLIBC_2.34 not found&lt;/span&gt; 而 dlopen 失败。&lt;/p&gt;
+
+&lt;p&gt;但 &lt;span class=&quot;codespan&quot;&gt;importlib.util.find_spec()&lt;/span&gt; 只检查文件是否存在，不检查能否加载：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# ❌ 错误：文件存在但无法加载
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_has_injector&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;importlib&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;util&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;find_spec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;peeka.core._inject&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# ✅ 正确：实际尝试 import
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_has_injector&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;peeka.core._inject&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;except &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ImportError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;OSError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;# OSError 捕获 dlopen 失败
+&lt;/span&gt;        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;62-gdb-dlopen-后的-gil-死锁&quot;&gt;6.2 GDB dlopen 后的 GIL 死锁&lt;/h3&gt;
+
+&lt;p&gt;在 Python 3.12 上，GDB dlopen 注入的 C 扩展创建的 pthread 调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 时，可能因为 GDB 操作后 GIL 状态不一致而永远无法获取 GIL。&lt;/p&gt;
+
+&lt;p&gt;解决方案是将 dlopen 路径视为&lt;strong&gt;乐观尝试&lt;/strong&gt;，失败后回退到 legacy GDB：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_has_injector&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;_inject_via_gdb_dlopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;except &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;TimeoutError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;RuntimeError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;OSError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;logger&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;warning&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;GDB dlopen failed, falling back to legacy GDB&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# 控制流落入 legacy 路径
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;63-ptrace-权限&quot;&gt;6.3 ptrace 权限&lt;/h3&gt;
+
+&lt;p&gt;不同 Linux 发行版的默认 &lt;span class=&quot;codespan&quot;&gt;ptrace_scope&lt;/span&gt; 不同：&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;ptrace_scope&lt;/th&gt;
+      &lt;th&gt;含义&lt;/th&gt;
+      &lt;th&gt;默认发行版&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;任意同 UID 进程可 attach&lt;/td&gt;
+      &lt;td&gt;Arch, RHEL&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;仅父进程可 attach&lt;/td&gt;
+      &lt;td&gt;Ubuntu, Debian&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2&lt;/td&gt;
+      &lt;td&gt;仅 &lt;span class=&quot;codespan&quot;&gt;CAP_SYS_PTRACE&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;—&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;3&lt;/td&gt;
+      &lt;td&gt;完全禁止&lt;/td&gt;
+      &lt;td&gt;—&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Docker 容器默认&lt;strong&gt;不授予&lt;/strong&gt; &lt;span class=&quot;codespan&quot;&gt;CAP_SYS_PTRACE&lt;/span&gt;，且 seccomp 配置也会阻止 ptrace 系统调用。需要：&lt;/p&gt;
+
+&lt;div  class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker run &lt;span class=&quot;nt&quot;&gt;--cap-add&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;SYS_PTRACE &lt;span class=&quot;nt&quot;&gt;--security-opt&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;seccomp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;unconfined your-image
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;64-sysmonitoring-tool_id-冲突&quot;&gt;6.4 sys.monitoring tool_id 冲突&lt;/h3&gt;
+
+&lt;p&gt;Python 3.12+ 的 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 只有 6 个 tool slot（0-5）。如果 coverage 工具或 debugger 已经占用了 slot 0，硬编码 &lt;span class=&quot;codespan&quot;&gt;use_tool_id(0, ...)&lt;/span&gt; 会抛 &lt;span class=&quot;codespan&quot;&gt;ValueError&lt;/span&gt;。应该遍历可用 slot：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;candidate_id&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;use_tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;candidate_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;peeka-trace&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;ValueError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;continue&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;7-总结&quot;&gt;7. 总结&lt;/h2&gt;
+
+&lt;p&gt;Python 进程注入经历了三代演进：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;直接调用 C API&lt;/strong&gt;（pyrasite）：简单粗暴，但有崩溃和死锁风险&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;dlopen + pthread&lt;/strong&gt;（memray/peeka）：通过安全断点和独立线程显著降低风险&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;解释器原生支持&lt;/strong&gt;（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;如果你的目标环境是 Python 3.14+，&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 是毫无争议的最佳选择。如果需要支持更老的版本，dlopen + pthread 方案提供了合理的安全性和兼容性平衡。&lt;/p&gt;
+
+&lt;p&gt;进程注入不是魔法，它是系统编程、编译器原理和 CPython 内部机制的交汇点。理解这些底层原理，能帮助你在遇到&quot;进程卡死&quot;或&quot;注入失败&quot;时，快速定位问题所在。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;&lt;em&gt;本文基于 &lt;a href=&quot;https://github.com/wwulfric/peeka&quot;&gt;peeka&lt;/a&gt; 的实际开发经验撰写。peeka 是一个受 &lt;a href=&quot;https://github.com/alibaba/arthas&quot;&gt;Alibaba Arthas&lt;/a&gt; 启发的 Python 运行时诊断工具，支持 Python 3.8-3.14+。&lt;/em&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sun, 19 Apr 2026 00:00:00 +0000</pubDate>
+        <link>https://wulfric.me/2026/04/python-process-injection/</link>
+        <guid isPermaLink="true">https://wulfric.me/2026/04/python-process-injection/</guid>
+        
+        <category>python</category>
+        
+        <category>安全</category>
+        
+        <category>cpython</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
     
       <item>
         <title>翻译：AGENTS.md 在我们的智能体评估中优于 Skills</title>
@@ -3181,57 +4008,6 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
         <pubDate>Thu, 27 Apr 2023 22:48:00 +0000</pubDate>
         <link>https://wulfric.me/2023/04/gpt3-ch/</link>
         <guid isPermaLink="true">https://wulfric.me/2023/04/gpt3-ch/</guid>
-        
-        <category>ai</category>
-        
-        <category>chatgpt</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>GPT2 论文翻译：Language Models are Unsupervised Multitask Learners</title>
-        <description>&lt;p&gt;语言模型是无监督多任务学习者。&lt;/p&gt;
-
-&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
-
-&lt;p&gt;自然语言处理任务，如问题回答、机器翻译、阅读理解和摘要，通常通过在特定任务的数据集上进行监督学习来解决。我们证明，当在一个名为WebText的包含数百万网页的新数据集上训练时，语言模型开始在没有任何明确监督的情况下学习这些任务。当基于文档和问题进行条件设置时，语言模型生成的答案在CoQA数据集上达到55 F1，在4个基线系统中，有3个实现了性能匹配或超越，而无需使用127,000+的训练样本。语言模型的容量对于零样本任务迁移的成功至关重要，增加容量可以在任务之间以对数线性方式提高性能。我们的最大模型，GPT-2，是一个拥有15亿参数的Transformer，在没有借助训练数据的零样本情况下，在8个测试的语言建模数据集中的7个上实现了顶尖水平的表现，但在适应WebText方面仍有不足。模型生成的样本展示了这些改进，包含连贯的文本段落。这些发现表明，我们有望构建能够通过自然场景中的示例来学习执行任务的语言处理系统。&lt;/p&gt;
-
-&lt;h2 id=&quot;1-导言&quot;&gt;1. 导言&lt;/h2&gt;
-
-&lt;p&gt;如今，机器学习系统在所训练任务上表现优异，这得益于大型数据集、高容量模型和监督学习的相互结合（Krizhevsky等人，2012）（Sutskever等人，2014）（Amodei等人，2016）。然而，当面临数据分布（Recht等人，2018）和任务规格的微小变化（Kirkpatrick等人，2017）时，这些系统表现出脆弱性和敏感性。当前的系统更像是狭义的专家，而非胜任多项任务的通才。我们希望发展更具通用性的系统，能够执行许多任务，最终无需为每个任务手动创建和标注训练数据集。&lt;/p&gt;
-
-&lt;p&gt;创建机器学习系统的主要方法是收集展示目标任务正确行为的训练示例数据集，训练一个系统以模仿这些行为，然后在独立且相同分布（IID）的保留样本上测试其性能。这种方法在培养狭义专家方面取得了良好成果。然而，字幕模型（Lake等人，2017）、阅读理解系统（Jia和Liang，2017）以及图像分类器（Alcorn等人，2018）在处理多样性、多种类的输入数据的不稳定行为，凸显了这种方法的局限性。&lt;/p&gt;
-
-&lt;p&gt;我们怀疑，现有系统泛化能力不足的主要原因在于，人们普遍在单一领域的数据集上进行单任务训练。要使用当前架构实现健壮的系统，很可能需要在各种领域和任务上进行训练和性能评估。最近，已经提出了一些基准测试，如GLUE（Wang等人，2018）和decaNLP（McCann等人，2018），以便开始研究这一问题。&lt;/p&gt;
-
-&lt;p&gt;多任务学习（Caruana，1997）是一个有前景的框架，可以用来提高整体性能。然而，在自然语言处理领域，多任务训练仍然处于初级阶段。最近的研究报告显示，性能改进有限（Yogatama等人，2019），迄今为止最具野心的两项研究分别在10个和17个「（数据集，目标）对」上进行了训练（McCann等人，2018）（Bowman等人，2018）。从元学习的角度看，每个「（数据集，目标）对」都是从数据集和目标的分布中抽样出来的单个训练样本。当前的机器学习系统需要数百到数千个样本才能形成具有良好泛化能力的函数。这表明，多任务训练可能需要与当前方法相同数量的有效训练对，以实现其潜在的优势。要继续扩大数据集的创建和目标设计的规模，可能需要使用当前技术付出巨大努力。这促使我们探索进行多任务学习的其他设置。&lt;/p&gt;
-
-&lt;p&gt;目前在语言任务上表现最佳的系统采用了预训练和有监督微调相结合的方法。这种方法有着悠久的历史，逐渐朝着更灵活的迁移形式发展。起初，研究者学习词向量并将其作为特定任务架构的输入（Mikolov等人，2013年）（Collobert等人，2011年），接着迁移到循环网络的上下文表示（Dai &amp;amp; Le，2015年）（Peters等人，2018年）。近期的研究表明，不再需要特定任务的架构，迁移多个自注意力模块就足够了（Radford等人，2018年）（Devlin等人，2018年）。&lt;/p&gt;
-
-&lt;p&gt;尽管如此，这些方法仍然需要有监督训练来完成任务。当只有极少量或没有监督数据时，另一方面的研究表明语言模型在执行特定任务方面具有潜力，例如常识推理（Schwartz等人，2017年）和情感分析（Radford等人，2017年）。&lt;/p&gt;
-
-&lt;p&gt;在本文中，我们将这两个研究方向联系起来，继续朝更通用的迁移方法发展。我们证明语言模型在零样本设置下可以执行下游任务，无需任何参数或架构的修改。我们通过强调语言模型在零样本环境下执行各种任务的能力，展示了这种方法的潜力。依据不同的任务，我们取得了具有前景、竞争力和最先进水平的成果。&lt;/p&gt;
-
-&lt;h2 id=&quot;6-讨论&quot;&gt;6. 讨论&lt;/h2&gt;
-
-&lt;p&gt;许多研究致力于学习（Hill等人，2016）、理解（Levy &amp;amp; Goldberg，2014）以及严格评估（Wieting &amp;amp; Kiela，2019）有监督和无监督预训练方法的表征。我们的研究结果表明，无监督任务学习是一个值得进一步探讨的有前景的研究方向。这些发现或许有助于解释预训练技术在下游NLP任务中为何取得广泛成功，因为我们证明，在某种程度上，这些预训练技术中的其中一种已经开始直接学习执行任务，而不需要监督适应或修改。&lt;/p&gt;
-
-&lt;p&gt;在阅读理解方面，GPT-2在零样本环境中的表现与有监督的基准相当。然而，在其他任务如摘要方面，尽管从质量上看GPT-2已经执行了这个任务，但从定量指标来看，其表现仍然处于初级阶段。虽然这一研究结果具有启示性，但从实际应用角度来看，GPT-2的零样本性能仍然远远无法满足实际需求。&lt;/p&gt;
-
-&lt;p&gt;我们已经研究了WebText语言模型在许多典型NLP任务上的零样本性能，然而仍有许多其他任务值得评估。无疑，有很多实际任务中，GPT-2的性能仍然不比随机选择优秀。甚至在我们评估过的常见任务中，如问答和翻译，只有当语言模型具备足够的容量时，它们才能开始超过简单的基线。&lt;/p&gt;
-
-&lt;p&gt;尽管零样本性能在许多任务上为GPT-2的潜在表现建立了基准，但在微调之后的上限并不明确。在一些任务中，GPT-2的完全生成式输出与当前在许多问答和阅读理解数据集上表现卓越的基于抽取式指针网络（Vinyals等人，2015）的输出有显著差异。考虑到GPT在微调方面的过往成功，我们计划探讨在decaNLP和GLUE等基准上的微调，特别是，目前尚不明确GPT-2额外的训练数据和容量是否足以克服BERT（Devlin等人，2018年）中提到的单向表示的低效问题。&lt;/p&gt;
-
-&lt;h2 id=&quot;总结&quot;&gt;总结&lt;/h2&gt;
-
-&lt;p&gt;当一个大型语言模型在一个足够庞大且多样的数据集上进行训练时，它能在众多领域和数据集中表现出色。GPT-2在8个经过测试的语言建模数据集中的7个上实现了零样本的顶尖性能。模型在零样本设置下能够完成的任务类型之多样，暗示着通过训练高容量模型来最大化足够多样化的文本语料库的似然性，开始学会执行大量令人惊叹的任务，而无需显式监督。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 06 Apr 2023 22:48:00 +0000</pubDate>
-        <link>https://wulfric.me/2023/04/gpt2-ch/</link>
-        <guid isPermaLink="true">https://wulfric.me/2023/04/gpt2-ch/</guid>
         
         <category>ai</category>
         

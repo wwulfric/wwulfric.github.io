@@ -245,6 +245,10 @@
 <lastmod>2026-02-09T06:43:00+00:00</lastmod>
 </url>
 <url>
+<loc>https://wulfric.me/2026/04/python-process-injection/</loc>
+<lastmod>2026-04-19T00:00:00+00:00</lastmod>
+</url>
+<url>
 <loc>https://wulfric.me/about/</loc>
 </url>
 <url>
@@ -801,5 +805,11 @@
 </url>
 <url>
 <loc>https://wulfric.me/tags/coding/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/%E5%AE%89%E5%85%A8/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/cpython/</loc>
 </url>
 </urlset>

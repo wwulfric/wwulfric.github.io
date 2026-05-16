@@ -76,7 +76,7 @@
 
 <p>怎么办？</p>
 
-<p>答案是<strong>进程注入</strong>（process injection）：在不重启目标进程的前提下，将诊断代码注入到一个正在运行的 Python 解释器中。这正是 <a href="https://github.com/wwulfric/peeka">peeka</a>、<a href="https://github.com/bloomberg/memray">memray</a>、<a href="https://github.com/lmacken/pyrasite">pyrasite</a> 等工具的核心能力。</p>
+<p>答案是<strong>进程注入</strong>（process attach）：在不重启目标进程的前提下，将诊断代码注入到一个正在运行的 Python 解释器中。这正是 <a href="https://github.com/wwulfric/peeka">peeka</a>、<a href="https://github.com/bloomberg/memray">memray</a>、<a href="https://github.com/lmacken/pyrasite">pyrasite</a> 等工具的核心能力。</p>
 
 <p>本文将从底层原理到工程实践，系统地拆解 Python 进程注入的三代技术方案。</p>
 
@@ -92,7 +92,7 @@
   <li><strong>执行时机</strong>：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……</li>
 </ul>
 
-<p>所以，进程注入需要回答三个问题：</p>
+<p>·所以，进程注入需要回答三个问题：</p>
 
 <ol>
   <li><strong>如何进入目标进程的地址空间？</strong>（跨进程控制）</li>
@@ -116,7 +116,8 @@
 
 <p>pyrasite 的注入逻辑只有几行：</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># pyrasite/injector.py（简化）
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 执行位置：pyrasite 控制端进程；Popen 会启动一个 GDB 子进程
+# pyrasite/injector.py（简化）
 </span><span class="n">gdb_cmds</span> <span class="o">=</span> <span class="p">[</span>
     <span class="sh">'</span><span class="s">call (int) PyGILState_Ensure()</span><span class="sh">'</span><span class="p">,</span>
     <span class="sh">'</span><span class="s">call (int) PyRun_SimpleString(</span><span class="sh">"</span><span class="s">exec(open(</span><span class="se">\\</span><span class="sh">'</span><span class="o">%</span><span class="n">s</span>\\<span class="sh">'</span><span class="s">).read())</span><span class="sh">"</span><span class="s">)</span><span class="sh">'</span> <span class="o">%</span> <span class="n">filename</span><span class="p">,</span>
@@ -133,10 +134,11 @@
 <p>即：</p>
 
 <ol>
-  <li>GDB 通过 <span class="codespan">ptrace(PTRACE_ATTACH)</span> 暂停目标进程</li>
-  <li>在<strong>暂停点</strong>直接调用 <span class="codespan">PyGILState_Ensure()</span> 获取 GIL</li>
-  <li>调用 <span class="codespan">PyRun_SimpleString()</span> 执行一段 Python 代码</li>
-  <li>调用 <span class="codespan">PyGILState_Release()</span> 释放 GIL</li>
+  <li>pyrasite 控制端进程通过 <span class="codespan">subprocess.Popen(...)</span> 启动一个 GDB 子进程</li>
+  <li>GDB 子进程通过 <span class="codespan">ptrace(PTRACE_ATTACH)</span> 暂停目标进程</li>
+  <li>GDB 子进程在<strong>暂停点</strong>让目标进程调用 <span class="codespan">PyGILState_Ensure()</span> 获取 GIL</li>
+  <li>GDB 子进程让目标进程调用 <span class="codespan">PyRun_SimpleString()</span> 执行一段 Python 代码</li>
+  <li>GDB 子进程让目标进程调用 <span class="codespan">PyGILState_Release()</span> 释放 GIL</li>
   <li>GDB detach，目标进程恢复执行</li>
 </ol>
 
@@ -221,32 +223,72 @@
 
 <h3 id="原理概览">原理概览</h3>
 
-<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>调试器(GDB/LLDB)                目标进程
-    │                              │
-    │── ptrace ATTACH ────────────&gt;│  暂停
-    │── 等待安全断点命中 ────────────&gt;│  malloc/PyMem_* 返回后
-    │                              │
-    │── dlopen("_inject.so") ─────&gt;│  加载 C 扩展到目标地址空间
-    │── call peeka_spawn_agent() ─&gt;│  创建新 pthread
-    │── ptrace DETACH ────────────&gt;│  恢复执行
-    │                              │
-    │                              │  [新 pthread]
-    │                              │  ├─ connect() 回连调试器
-    │                              │  ├─ recv() 接收 agent 脚本
-    │                              │  ├─ PyGILState_Ensure() ← 等待安全时机
-    │                              │  ├─ PyEval_EvalCode() 执行 agent
-    │                              │  └─ PyGILState_Release()
+<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>peeka/memray 控制端          GDB/LLDB 子进程              目标 Python 进程
+    │                            │                              │
+    │  3.1：bind/listen 本地端口  │                              │
+    │── 启动 GDB/LLDB ──────────&gt;│                              │  3.1：传入端口和注入库路径
+    │                            │── ptrace ATTACH ────────────&gt;│  暂停
+    │                            │── 等待安全断点命中 ───────────&gt;│  3.2：malloc/PyMem_* 等 C 函数入口
+    │                            │                              │
+    │                            │── dlopen("_inject.so") ─────&gt;│  3.3：加载 C 扩展到目标地址空间
+    │                            │── call peeka_spawn_agent() ─&gt;│  3.4：创建新 pthread
+    │                            │── ptrace DETACH ────────────&gt;│  恢复执行
+    │                            │                              │
+    │&lt;───────────────────────────┼──────────────────────────────│  3.5：[新 pthread] connect() 回连 + 接收脚本
+    │                            │                              │  ├─ PyGILState_Ensure()
+    │                            │                              │  ├─ PyEval_EvalCode()
+    │                            │                              │  └─ PyGILState_Release()
 </code></pre></div></div>
 
-<p>关键改进有三点：<strong>安全断点</strong>、<strong>dlopen 注入</strong>、<strong>独立线程</strong>。</p>
+<p>在这条路径里，确实会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 <span class="codespan">peeka_spawn_agent(port)</span>；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。</p>
 
-<h3 id="31-安全断点选择正确的时机">3.1 安全断点——选择正确的时机</h3>
+<p>后面按五个关键环节展开：<strong>控制端准备</strong>、<strong>安全断点</strong>、<strong>dlopen 注入</strong>、<strong>独立线程</strong>、<strong>反向连接传输</strong>。</p>
+
+<h3 id="31-控制端准备监听端口与启动调试器">3.1 控制端准备——监听端口与启动调试器</h3>
+
+<p>在 GDB/LLDB 进入目标进程之前，peeka/memray 控制端会先准备一个本地 TCP server。这个端口的作用很单一：等目标进程中新建的 agent 线程回连，然后把完整的 agent 脚本传过去。</p>
+
+<p>以 peeka 的 GDB 路径为例，控制端大致会做两件事：先 <span class="codespan">bind/listen</span> 一个本地端口，再启动 GDB 子进程并把端口号、注入库路径传给它。</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 执行位置：peeka/memray 控制端进程；省略错误处理和部分准备逻辑
+</span><span class="k">def</span> <span class="nf">_create_notify_server</span><span class="p">(</span><span class="n">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span> <span class="o">=</span> <span class="n">sock_mod</span><span class="p">.</span><span class="nf">socket</span><span class="p">(</span><span class="n">sock_mod</span><span class="p">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">sock_mod</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+    <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span><span class="p">.</span><span class="nf">setsockopt</span><span class="p">(</span><span class="n">sock_mod</span><span class="p">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">sock_mod</span><span class="p">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span><span class="p">.</span><span class="nf">bind</span><span class="p">((</span><span class="sh">"</span><span class="s">127.0.0.1</span><span class="sh">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span><span class="p">.</span><span class="nf">listen</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span><span class="p">.</span><span class="nf">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="n">notify_port</span> <span class="o">=</span> <span class="n">self</span><span class="p">.</span><span class="nf">_create_notify_server</span><span class="p">()</span>
+<span class="n">injector_path</span> <span class="o">=</span> <span class="nf">_find_injector_path</span><span class="p">()</span>
+<span class="n">gdb_script</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="sh">"</span><span class="s">_attach.gdb</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">gdb</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-p</span><span class="sh">"</span><span class="p">,</span> <span class="nf">str</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">pid</span><span class="p">),</span> <span class="sh">"</span><span class="s">-batch</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-q</span><span class="sh">"</span><span class="p">]</span>
+<span class="n">cmd</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="sh">"</span><span class="s">-eval-command</span><span class="sh">"</span><span class="p">,</span> <span class="sa">f</span><span class="sh">"</span><span class="s">set $peeka_port = </span><span class="si">{</span><span class="n">notify_port</span><span class="si">}</span><span class="sh">"</span><span class="p">])</span>
+<span class="n">cmd</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="sh">"</span><span class="s">-eval-command</span><span class="sh">"</span><span class="p">,</span> <span class="sa">f</span><span class="sh">'</span><span class="s">set $peeka_injector = </span><span class="sh">"</span><span class="si">{</span><span class="n">injector_path</span><span class="si">}</span><span class="sh">"'</span><span class="p">])</span>
+<span class="n">cmd</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="sh">"</span><span class="s">-eval-command</span><span class="sh">"</span><span class="p">,</span> <span class="sa">f</span><span class="sh">"</span><span class="s">set $peeka_rtld_now = </span><span class="si">{</span><span class="n">_RTLD_NOW</span><span class="si">}</span><span class="sh">"</span><span class="p">])</span>
+<span class="n">cmd</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="sh">"</span><span class="s">-x</span><span class="sh">"</span><span class="p">,</span> <span class="n">gdb_script</span><span class="p">])</span>
+
+<span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="p">...)</span>
+</code></pre></div></div>
+
+<p>这段代码运行在控制端进程里；它启动一个 GDB 子进程，并把三个变量传给 GDB：</p>
+
+<ul>
+  <li><span class="codespan">$peeka_port</span>：目标进程中新线程回连控制端时使用的 TCP 端口</li>
+  <li><span class="codespan">$peeka_injector</span>：要 <span class="codespan">dlopen</span> 的 <span class="codespan">_inject.so</span> 路径</li>
+  <li><span class="codespan">$peeka_rtld_now</span>：传给 <span class="codespan">dlopen</span> 的 <span class="codespan">RTLD_NOW</span></li>
+</ul>
+
+<h3 id="32-安全断点选择正确的时机">3.2 安全断点——选择正确的时机</h3>
 
 <p>pyrasite 在<strong>任意位置</strong>暂停后就执行 C API，而 memray/peeka 等到<strong>安全位置</strong>才注入。</p>
 
-<p>以 peeka 的 GDB 脚本为例：</p>
+<p>真正的断点设置和 <span class="codespan">dlopen</span> 调用写在 <span class="codespan">_attach.gdb</span> 里：</p>
 
-<pre><code class="language-gdb"># peeka/core/_attach.gdb
+<pre><code class="language-gdb"># 执行位置：GDB 进程；call 命令会让目标进程在自身上下文中执行对应 C 函数
+# peeka/core/_attach.gdb
+call (int)Py_AddPendingCall(&amp;PyCallable_Check, (void*)0)
+
 b malloc
 b calloc
 b realloc
@@ -268,23 +310,31 @@ end
 continue
 </code></pre>
 
-<p>解读：</p>
+<p>这段脚本做的事情可以拆成两部分看：</p>
 
-<ol>
-  <li>在 <span class="codespan">malloc</span>、<span class="codespan">PyMem_Malloc</span> 等函数的<strong>入口</strong>设置断点</li>
-  <li>调用 <span class="codespan">Py_AddPendingCall(&amp;PyCallable_Check, 0)</span> 安排一个 pending call（确保 CPython 的 eval loop 会调用 <span class="codespan">PyCallable_Check</span>，从而命中我们的断点）</li>
-  <li>恢复执行（<span class="codespan">continue</span>），等待目标进程<strong>自然地</strong>调用这些函数</li>
-  <li>断点命中时，我们知道当前位置是<strong>函数入口</strong>——没有持有 heap lock、没有处于 GC 中途</li>
-  <li>此时再执行 dlopen 和 spawn</li>
-</ol>
+<p>1）安排一次将来会发生的 CPython 回调。</p>
 
-<p>这比 pyrasite 安全得多：我们不是在任意位置注入，而是在一个已知的安全点。</p>
+<p><span class="codespan">Py_AddPendingCall(&amp;PyCallable_Check, 0)</span> 只是把 <span class="codespan">PyCallable_Check</span> 放进 pending-call 队列，并不会立刻调用它。这样做是为了处理一种常见情况：目标进程可能正在跑纯 Python 的 tight loop，短时间内不触发新的 <span class="codespan">malloc</span> 或 <span class="codespan">PyMem_Malloc</span>。pending call 会让 CPython eval loop 在下一个检查点调用 <span class="codespan">PyCallable_Check</span>；只要 <span class="codespan">b PyCallable_Check</span> 已经在最终 <span class="codespan">continue</span> 之前设好，就能命中这个断点。因此源码里把 <span class="codespan">Py_AddPendingCall</span> 放在 <span class="codespan">b malloc</span> 之前并不矛盾。</p>
 
-<blockquote>
-  <p><strong>Py_AddPendingCall 的作用</strong>：如果目标进程处于纯 Python 代码的 tight loop 中（不调用任何 C 函数），我们的 malloc/PyMem 断点可能永远不会命中。<span class="codespan">Py_AddPendingCall</span> 注册的回调会在 Python eval loop 的下一个"检查点"被调用，确保断点一定会触发。</p>
-</blockquote>
+<p>2）把注入动作挂到一组 C 函数入口断点上。</p>
 
-<h3 id="32-dlopen将-c-扩展加载到目标进程">3.2 dlopen——将 C 扩展加载到目标进程</h3>
+<p>2.1）先设置断点。脚本在 <span class="codespan">malloc</span>、<span class="codespan">PyMem_Malloc</span>、<span class="codespan">PyCallable_Check</span> 等函数上打断点。这里的"函数入口"指的是 GDB 断点列出的那些 C 函数入口，不是用户代码里 <span class="codespan">def foo(): ...</span> 的 Python 函数入口。例如：</p>
+
+<ul>
+  <li><span class="codespan">malloc</span>、<span class="codespan">calloc</span>、<span class="codespan">free</span> 是 libc allocator 的函数入口</li>
+  <li><span class="codespan">PyMem_Malloc</span>、<span class="codespan">PyMem_Free</span> 是 CPython 内存分配 API 的函数入口</li>
+  <li><span class="codespan">PyErr_CheckSignals</span>、<span class="codespan">PyCallable_Check</span> 是 CPython 运行时中的普通 C API 函数入口</li>
+</ul>
+
+<p><span class="codespan">PyMem_Malloc</span> 和 <span class="codespan">malloc</span> 也不是互斥关系。<span class="codespan">PyMem_Malloc</span> 是 CPython 的分配 API，底层可能走 pymalloc，也可能在需要新 arena、大块分配、<span class="codespan">PYTHONMALLOC=malloc</span> 或自定义 allocator 时进一步走系统 <span class="codespan">malloc</span>。同时设置 <span class="codespan">PyMem_*</span> 和 <span class="codespan">malloc/free</span> 断点，是为了覆盖 CPython 分配层和 libc 分配层这两个不同边界。</p>
+
+<p>2.2）再绑定命中后的动作。<span class="codespan">commands 1-10</span> 给这些断点绑定同一组命令：一旦任意断点命中，就调用 <span class="codespan">dlopen(...)</span> 加载注入库，再调用 <span class="codespan">peeka_spawn_agent(...)</span> 创建 agent 线程。</p>
+
+<p>命中后先 <span class="codespan">disable breakpoints</span> / <span class="codespan">delete breakpoints</span> 也很重要。<span class="codespan">dlopen</span> 本身可能触发动态链接、符号解析和内存分配，如果断点还留着，注入过程可能再次撞上 <span class="codespan">malloc/free</span> 断点，导致流程变得不可控。</p>
+
+<p>断点命中时，GDB 停在某个函数的入口处：以 <span class="codespan">malloc</span> 为例，此时命中的线程还没进入 allocator 内部临界区，也还没有修改堆结构。这比 pyrasite 在随机暂停点直接调用 Python C API 可控得多。严格说，这不是"证明整个进程绝对安全"，而是把注入时机从"任意机器指令位置"收敛到"已知 C 函数边界"。</p>
+
+<h3 id="33-dlopen将-c-扩展加载到目标进程">3.3 dlopen——将 C 扩展加载到目标进程</h3>
 
 <p><span class="codespan">dlopen</span> 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 <span class="codespan">dlopen("_inject.abi3.so", RTLD_NOW)</span>，我们将一个编译好的 C 扩展加载到目标进程的地址空间中。</p>
 
@@ -292,7 +342,8 @@ continue
 
 <p>peeka 在 macOS 上使用 LLDB 完成相同的工作：</p>
 
-<pre><code class="language-lldb"># peeka/core/_attach.lldb
+<pre><code class="language-lldb"># 执行位置：LLDB 进程；expr/p 命令会让目标进程在自身上下文中执行对应 C 函数
+# peeka/core/_attach.lldb
 expr auto $dlsym = (void* (*)(void*, const char*))&amp;::dlsym
 expr auto $dlopen = $dlsym($rtld_default, "dlopen")
 expr auto $dll = ((void*(*)(const char*, int))$dlopen)($libpath, $rtld_now)
@@ -300,11 +351,12 @@ expr auto $spawn = $dlsym($dll, "peeka_spawn_agent")
 p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 </code></pre>
 
-<h3 id="33-独立线程解耦注入与执行">3.3 独立线程——解耦注入与执行</h3>
+<h3 id="34-独立线程解耦注入与执行">3.4 独立线程——解耦注入与执行</h3>
 
 <p>dlopen 之后，GDB 调用 C 扩展的 <span class="codespan">peeka_spawn_agent()</span> 函数。这个函数做了什么？</p>
 
-<div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// peeka/core/_inject.c（核心逻辑）</span>
+<div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 执行位置：目标进程；该函数来自 dlopen 加载进目标进程的 _inject.so</span>
+<span class="c1">// peeka/core/_inject.c（核心逻辑）</span>
 <span class="n">__attribute__</span><span class="p">((</span><span class="n">visibility</span><span class="p">(</span><span class="s">"default"</span><span class="p">)))</span>
 <span class="kt">int</span> <span class="nf">peeka_spawn_agent</span><span class="p">(</span><span class="kt">int</span> <span class="n">port</span><span class="p">)</span>
 <span class="p">{</span>
@@ -315,52 +367,18 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <p>它<strong>不执行任何 Python 代码</strong>。它只是创建一个 pthread，然后立即返回。这样 GDB 可以快速 detach，目标进程恢复正常执行。</p>
 
-<p>真正的工作在新线程中完成：</p>
+<p><span class="codespan">thread_body</span> 是这个新线程的入口函数。<span class="codespan">pthread_create</span> 返回以后，目标进程里会多出一个线程，这个线程从 <span class="codespan">thread_body(port)</span> 开始执行：</p>
 
-<div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 新线程的执行流程</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">run_client</span><span class="p">(</span><span class="kt">uint16_t</span> <span class="n">port</span><span class="p">)</span>
+<div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 执行位置：目标进程；pthread_create 创建出的新线程</span>
+<span class="k">static</span> <span class="kt">void</span><span class="o">*</span> <span class="nf">thread_body</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="c1">// 1. 通过 TCP 回连调试器，接收 agent 脚本</span>
-    <span class="kt">int</span> <span class="n">sock</span> <span class="o">=</span> <span class="n">connect_client</span><span class="p">(</span><span class="n">port</span><span class="p">);</span>
-    <span class="n">recvall</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">script</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">script_len</span><span class="p">);</span>
-
-    <span class="c1">// 2. 安全地执行 Python 代码</span>
-    <span class="n">run_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">errmsg</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_script</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">script</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">errmsg</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="c1">// 检查 Python 是否已初始化</span>
-    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">Py_IsInitialized</span><span class="p">())</span> <span class="p">{</span>
-        <span class="o">*</span><span class="n">errmsg</span> <span class="o">=</span> <span class="n">copy_string</span><span class="p">(</span><span class="s">"Python is not initialized"</span><span class="p">);</span>
-        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 获取 GIL —— 这里会等待，直到安全</span>
-    <span class="n">PyGILState_STATE</span> <span class="n">gstate</span> <span class="o">=</span> <span class="n">PyGILState_Ensure</span><span class="p">();</span>
-
-    <span class="c1">// 编译并执行 agent 脚本</span>
-    <span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">run_script_impl</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">errmsg</span><span class="p">);</span>
-
-    <span class="n">PyGILState_Release</span><span class="p">(</span><span class="n">gstate</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_script_impl</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">script</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">errmsg</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="c1">// 构建干净的 globals 字典</span>
-    <span class="n">PyObject</span><span class="o">*</span> <span class="n">builtins</span> <span class="o">=</span> <span class="n">PyImport_ImportModule</span><span class="p">(</span><span class="s">"builtins"</span><span class="p">);</span>
-    <span class="n">PyObject</span><span class="o">*</span> <span class="n">globals</span> <span class="o">=</span> <span class="n">PyDict_New</span><span class="p">();</span>
-    <span class="n">PyDict_SetItemString</span><span class="p">(</span><span class="n">globals</span><span class="p">,</span> <span class="s">"__builtins__"</span><span class="p">,</span> <span class="n">builtins</span><span class="p">);</span>
-
-    <span class="c1">// 编译 + 执行</span>
-    <span class="n">PyObject</span><span class="o">*</span> <span class="n">code</span> <span class="o">=</span> <span class="n">Py_CompileString</span><span class="p">(</span><span class="n">script</span><span class="p">,</span>
-                                       <span class="s">"_peeka_attach_hook.py"</span><span class="p">,</span>
-                                       <span class="n">Py_file_input</span><span class="p">);</span>
-    <span class="n">PyObject</span><span class="o">*</span> <span class="n">mod</span> <span class="o">=</span> <span class="n">PyEval_EvalCode</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">globals</span><span class="p">,</span> <span class="n">globals</span><span class="p">);</span>
-    <span class="c1">// ...</span>
+    <span class="kt">uint16_t</span> <span class="n">port</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint16_t</span><span class="p">)(</span><span class="kt">uintptr_t</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+    <span class="n">run_client</span><span class="p">(</span><span class="n">port</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
+
+<p>到这里，3.4 关心的事情就结束了：GDB 调用 <span class="codespan">peeka_spawn_agent(port)</span>，目标进程创建 agent 线程，<span class="codespan">peeka_spawn_agent</span> 立即返回。agent 线程后面会进入 <span class="codespan">run_client(port)</span>，但它如何回连控制端、接收脚本、执行脚本，是 3.5 的内容。</p>
 
 <p><strong>为什么独立线程更安全？</strong></p>
 
@@ -369,40 +387,99 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <p>在 dlopen + pthread 方案中：</p>
 <ol>
   <li>GDB 执行 dlopen -&gt; spawn -&gt; <strong>立刻返回</strong> -&gt; GDB detach -&gt; 目标进程恢复</li>
-  <li>新线程调用 <span class="codespan">PyGILState_Ensure()</span> 时，目标进程已经在正常运行</li>
+  <li>新线程随后在 <span class="codespan">run_client -&gt; run_script</span> 中调用 <span class="codespan">PyGILState_Ensure()</span>，此时目标进程已经在正常运行</li>
   <li><span class="codespan">PyGILState_Ensure()</span> 会<strong>等待</strong> GIL 可用，而不是在暂停状态下强行获取</li>
 </ol>
 
 <p>这消除了 GIL 死锁的主要原因。</p>
 
-<h3 id="34-反向连接agent-代码的传输">3.4 反向连接——agent 代码的传输</h3>
+<h3 id="35-反向连接agent-代码的传输">3.5 反向连接——agent 代码的传输</h3>
 
-<p>一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用<strong>反向连接</strong>：</p>
+<p>一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用<strong>反向连接</strong>。</p>
 
-<div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[1] 调试器启动一个 TCP 服务，等待连接
-[2] GDB 将端口号传给 peeka_spawn_agent(port)
-[3] C 扩展中的新线程连接这个端口
-[4] 调试器将 agent.py 的完整内容通过 TCP 发送过去
-[5] C 扩展接收、编译、执行
+<p>这里要区分两个概念：<strong>控制端进程</strong>是用户运行的 peeka/memray 进程；<strong>GDB/LLDB 子进程</strong>是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 <span class="codespan">_inject.so</span> 加载进目标进程并调用 <span class="codespan">peeka_spawn_agent(port)</span>。</p>
+
+<p>先看完整流程：</p>
+
+<p>1）<strong>peeka/memray 控制端进程</strong>：启动一个本地 TCP server，拿到监听端口。
+2）<strong>GDB/LLDB 子进程</strong>：attach 目标进程，把这个端口号传给目标进程里的 <span class="codespan">peeka_spawn_agent(port)</span>。
+3）<strong>目标进程</strong>：<span class="codespan">_inject.so</span> 中的 <span class="codespan">peeka_spawn_agent(port)</span> 创建一个 agent 线程。
+4）<strong>目标进程的 agent 线程 -&gt; peeka/memray 控制端进程</strong>：agent 线程回连控制端的 TCP server，接收完整的 agent 脚本。
+5）<strong>目标进程的 agent 线程</strong>：在目标进程内编译并执行这段脚本。</p>
+
+<p>对应到源码结构，大致是下面这样。第一段是控制端逻辑，对应上面的 4）：它复用 3.1 中 <span class="codespan">_create_notify_server()</span> 创建好的 <span class="codespan">self._notify_server</span>，在 <span class="codespan">_serve_agent_code</span> 中等待目标进程回连并发送 agent 脚本。</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 执行位置：peeka/memray 控制端进程；复用 3.1 创建的 self._notify_server
+</span><span class="n">server_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Thread</span><span class="p">(</span>
+    <span class="n">target</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">_serve_agent_code</span><span class="p">,</span>
+    <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">agent_script_content</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span>
+    <span class="n">daemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">server_thread</span><span class="p">.</span><span class="nf">start</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">_serve_agent_code</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">agent_script_content</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">self</span><span class="p">.</span><span class="n">_notify_server</span>
+    <span class="n">server</span><span class="p">.</span><span class="nf">settimeout</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+
+    <span class="n">conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="nf">accept</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="n">agent_script_content</span><span class="p">.</span><span class="nf">encode</span><span class="p">(</span><span class="sh">"</span><span class="s">utf-8</span><span class="sh">"</span><span class="p">))</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">conn</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p>这样做的好处是：agent 代码可以任意长、包含任意字符，不受 GDB 命令行的转义限制。</p>
+<p>第二段是目标端逻辑，对应上面的 4）和 5）：3.4 中 <span class="codespan">pthread_create</span> 创建的新线程会从 <span class="codespan">thread_body</span> 进入 <span class="codespan">run_client(port)</span>，这里的 <span class="codespan">run_client</span> 就是同一个函数。它连接控制端，读完脚本后调用 <span class="codespan">run_script</span>，后者再获取 GIL、编译并执行 agent 代码。</p>
 
-<h3 id="35-legacy-回退没有-c-扩展时怎么办">3.5 Legacy 回退——没有 C 扩展时怎么办？</h3>
+<div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 执行位置：被 attach 的目标进程；_inject.so 创建出的 agent 线程</span>
+<span class="c1">// 伪代码：保留主路径，省略错误处理和资源清理</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">run_client</span><span class="p">(</span><span class="kt">uint16_t</span> <span class="n">port</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// 回连 3.1 中控制端提前监听的端口</span>
+    <span class="kt">int</span> <span class="n">sock</span> <span class="o">=</span> <span class="n">connect_client</span><span class="p">(</span><span class="n">port</span><span class="p">);</span>
 
-<p>如果 C 扩展不可用（比如没有编译、或者 GLIBC 版本不兼容），peeka 会回退到类似 pyrasite 的方式，但做了改进：</p>
+    <span class="c1">// 从控制端读取完整 agent 脚本</span>
+    <span class="n">recvall</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">script</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">script_len</span><span class="p">);</span>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># peeka/core/attach.py — _inject_via_gdb_legacy()
-</span><span class="n">bootstrap</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">'</span><span class="s">_c = open(</span><span class="sh">"</span><span class="si">{</span><span class="n">agent_script</span><span class="si">}</span><span class="sh">"</span><span class="s">).read(); exec(_c);</span><span class="sh">'</span>
+    <span class="n">run_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">errmsg</span><span class="p">);</span>
+<span class="p">}</span>
 
-<span class="n">gdb_commands</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="sh">'</span><span class="s">call (int) PyGILState_Ensure()</span><span class="sh">'</span><span class="p">,</span>
-    <span class="sa">f</span><span class="sh">'</span><span class="s">call (int) PyRun_SimpleString(</span><span class="sh">"</span><span class="si">{</span><span class="n">bootstrap</span><span class="si">}</span><span class="sh">"</span><span class="s">)</span><span class="sh">'</span><span class="p">,</span>
-    <span class="sh">'</span><span class="s">call (void) PyGILState_Release($1)</span><span class="sh">'</span><span class="p">,</span>
-<span class="p">]</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_script</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">script</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">errmsg</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// 新线程在目标进程正常运行时等待 GIL</span>
+    <span class="n">PyGILState_STATE</span> <span class="n">gstate</span> <span class="o">=</span> <span class="n">PyGILState_Ensure</span><span class="p">();</span>
+    <span class="n">run_script_impl</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">errmsg</span><span class="p">);</span>
+    <span class="n">PyGILState_Release</span><span class="p">(</span><span class="n">gstate</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_script_impl</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">script</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">errmsg</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">PyObject</span><span class="o">*</span> <span class="n">builtins</span> <span class="o">=</span> <span class="n">PyImport_ImportModule</span><span class="p">(</span><span class="s">"builtins"</span><span class="p">);</span>
+    <span class="n">PyObject</span><span class="o">*</span> <span class="n">globals</span> <span class="o">=</span> <span class="n">PyDict_New</span><span class="p">();</span>
+    <span class="n">PyDict_SetItemString</span><span class="p">(</span><span class="n">globals</span><span class="p">,</span> <span class="s">"__builtins__"</span><span class="p">,</span> <span class="n">builtins</span><span class="p">);</span>
+
+    <span class="c1">// 编译并在隔离 globals 中执行 agent 脚本</span>
+    <span class="n">PyObject</span><span class="o">*</span> <span class="n">code</span> <span class="o">=</span> <span class="n">Py_CompileString</span><span class="p">(</span><span class="n">script</span><span class="p">,</span>
+                                       <span class="s">"_peeka_attach_hook.py"</span><span class="p">,</span>
+                                       <span class="n">Py_file_input</span><span class="p">);</span>
+    <span class="n">PyObject</span><span class="o">*</span> <span class="n">mod</span> <span class="o">=</span> <span class="n">PyEval_EvalCode</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">globals</span><span class="p">,</span> <span class="n">globals</span><span class="p">);</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span>
 </code></pre></div></div>
 
-<p>通过 <span class="codespan">exec()</span> 执行文件内容而非直接内联代码，减少了转义问题。但本质上仍然有 pyrasite 的时机安全隐患，只是作为最后的回退方案存在。</p>
+<p>为什么要让目标进程里的新线程回连 peeka/memray，而不是直接把 agent 代码塞进 GDB 命令？主要是工程上的可靠性：agent 代码可以任意长、包含引号、换行、反斜杠、非 ASCII 字符等复杂内容，不需要经过 GDB 命令行转义；同时，GDB 只需要传一个整数端口号，注入阶段更短，出错面更小。</p>
+
+<h3 id="36-小结第二代方案的完整顺序">3.6 小结——第二代方案的完整顺序</h3>
+
+<p>把 3.1 到 3.5 串起来，第二代方案的完整顺序是：</p>
+
+<p>1）peeka/memray 控制端先 <span class="codespan">bind(("127.0.0.1", 0))</span> 并 <span class="codespan">listen(1)</span>，拿到一个本地端口，用来等待 agent 线程回连。
+2）控制端启动 GDB/LLDB 子进程，并把端口号、<span class="codespan">_inject.so</span> 路径、<span class="codespan">RTLD_NOW</span> 等参数传给它。
+3）GDB/LLDB 子进程 attach 目标进程，设置安全断点，等待目标进程自然运行到 <span class="codespan">malloc/PyMem_*</span> 等 C 函数入口。
+4）断点命中后，GDB/LLDB 在目标进程上下文里调用 <span class="codespan">dlopen("_inject.so", RTLD_NOW)</span>。
+5）GDB/LLDB 调用 <span class="codespan">peeka_spawn_agent(port)</span>，目标进程里的 <span class="codespan">_inject.so</span> 创建一个 pthread。
+6）GDB/LLDB detach，目标进程恢复正常运行。
+7）新建的 agent 线程连接控制端提前监听的端口，接收 agent 脚本。
+8）agent 线程调用 <span class="codespan">PyGILState_Ensure()</span> 等待 GIL，随后编译并执行脚本。</p>
 
 <hr />
 
@@ -424,15 +501,18 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
     │  (2) 读 _Py_DebugOffsets      │
     │      获取内部结构偏移量         │
     │                              │
-    │  (3) 写入脚本路径到            │
+    │  (3) 选择一个 PyThreadState   │
+    │      通常是 main thread       │
+    │                              │
+    │  (4) 写入脚本路径到            │
     │      tstate-&gt;debugger_        │
     │        script_path            │
     │                              │
-    │  (4) 设置 pending call 标志   │
+    │  (5) 设置 pending call 标志   │
     │      tstate-&gt;debugger_        │
     │        pending_call = 1       │
     │                              │
-    │  (5) 设置 eval breaker        │
+    │  (6) 设置 eval breaker        │
     │      eval_breaker |=          │
     │        PLEASE_STOP_BIT        │
     │                              │
@@ -452,6 +532,8 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
     │                              │  ↓
     │                              │  执行脚本 ✅
 </code></pre></div></div>
+
+<p>这里的关键是第三步：远程执行请求必须落到某个 <span class="codespan">PyThreadState</span> 上。<span class="codespan">sys.remote_exec(pid, script)</span> 这个公共 API 不暴露 thread id，CPython 通常调度到目标进程的 main thread，在它下一次回到 eval loop 安全检查点时执行脚本。底层远程调试协议更通用：外部工具可以先定位解释器，再选择一个具体的 <span class="codespan">PyThreadState</span>，常见做法是使用 <span class="codespan">threads_main</span>，也可以遍历 <span class="codespan">threads_head</span> 并按 <span class="codespan">native_thread_id</span> 找到特定线程。</p>
 
 <p>CPython 内部的关键代码：</p>
 
@@ -482,6 +564,8 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <h3 id="每个-pythreadstate-中的数据结构">每个 PyThreadState 中的数据结构</h3>
 
+<p>这也是为什么远程调试字段放在 <span class="codespan">PyThreadState</span> 里，而不是放在一个全局变量里：执行请求需要绑定到某个线程的 eval loop。被选中的线程状态里会保存脚本路径和 pending 标志；这个线程运行到检查点时，才会消费这次请求。</p>
+
 <div  class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Include/cpython/pystate.h</span>
 <span class="cp">#define _Py_MAX_SCRIPT_PATH_SIZE 512
 </span>
@@ -491,7 +575,7 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <span class="p">}</span> <span class="n">_PyRemoteDebuggerSupport</span><span class="p">;</span>
 </code></pre></div></div>
 
-<p>每个线程状态增加约 516 字节，但运行时开销几乎为零——只是 eval loop 中一次分支预测极大概率命中的 <span class="codespan">if</span> 检查。</p>
+<p>每个线程状态增加约 516 字节，但运行时开销几乎为零——只是 eval loop 中一次分支预测极大概率命中的 <span class="codespan">if</span> 检查。换来的好处是：每个线程都有自己的远程调试控制槽，外部工具可以把请求精确调度到某个线程状态，而解释器也能在正确的线程和解释器上下文中执行脚本。</p>
 
 <h3 id="使用方式">使用方式</h3>
 
@@ -573,9 +657,7 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <p>PEP 768 在 Python 3.14.0a5 合入后（<a href="https://github.com/python/cpython/pull/131937">gh-131937</a>），社区在实际使用中发现了一系列实现缺陷。以下按严重程度梳理关键问题及其修复方案。</p>
 
-<h4 id="命名空间污染gh-132859">命名空间污染（gh-132859）</h4>
-
-<p><strong>问题</strong>：注入脚本在 <span class="codespan">__main__</span> 模块的命名空间中执行，会意外覆盖目标进程的变量：</p>
+<p>其中最直观的是命名空间污染：早期实现会把注入脚本直接放在 <span class="codespan">__main__</span> 模块里执行，可能覆盖目标程序变量：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 目标进程
 </span><span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
@@ -585,78 +667,74 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <span class="c1"># 注入脚本设置了 x = 42 -&gt; 目标进程意外退出
 </span></code></pre></div></div>
 
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/132860">PR #132860</a>（3.14.0a5）——脚本现在在隔离的命名空间中执行。如需访问主模块，需显式 <span class="codespan">import __main__</span>。</p>
-
-<h4 id="非-utf-8-路径编码失败gh-133886">非 UTF-8 路径编码失败（gh-133886）</h4>
-
-<p><strong>问题</strong>：<span class="codespan">sys.remote_exec()</span> 硬编码使用 UTF-8 编码脚本路径，导致在非 UTF-8 locale 环境下无法处理非 ASCII 路径，<span class="codespan">os.access()</span> 找不到文件。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/133887">PR #133887</a>（3.14.0b1）——改用文件系统编码（<span class="codespan">sys.getfilesystemencoding()</span>）代替硬编码 UTF-8。</p>
-
-<h4 id="无效参数导致段错误gh-134064">无效参数导致段错误（gh-134064）</h4>
-
-<p><strong>问题</strong>：<span class="codespan">sys.remote_exec(0, None)</span> 在 ASAN/debug 构建中触发段错误——缺少 NULL 检查就直接解引用 <span class="codespan">script_path</span>。由 fusil fuzzer 发现。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/134067">PR #134067</a>（3.14.0b1）——添加参数校验。</p>
-
-<h4 id="elf-搜索中的异常状态污染gh-137293">ELF 搜索中的异常状态污染（gh-137293）</h4>
-
-<p><strong>问题</strong>：在 Linux 上搜索 <span class="codespan">/proc/pid/maps</span> 定位 <span class="codespan">PyRuntime</span> 时，<span class="codespan">search_linux_map_for_section()</span> 对每个无法打开的文件（如已删除的 <span class="codespan">.so</span>）都会设置异常。当最终在其他文件中找到 <span class="codespan">PyRuntime</span> 时，函数返回成功但异常仍被设置：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># sys.remote_exec() 返回成功，但附带一个未清除的异常：
-# OSError: Cannot open ELF file '/path/to/lib.so (deleted)'
-# -&gt; SystemError: returned a result with an exception set
-</span></code></pre></div></div>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/137309">PR #137309</a>——在搜索循环中继续搜索前清除异常。</p>
-
-<h4 id="ctypes-导致的重复-libpython-映射gh-144563">ctypes 导致的重复 libpython 映射（gh-144563）</h4>
-
-<p><strong>问题</strong>：当目标进程导入了 <span class="codespan">_ctypes</span> 或 <span class="codespan">polars</span>（底层使用 ctypes）时，<span class="codespan">/proc/pid/maps</span> 中会出现多个 <span class="codespan">libpython</span> 映射。远程调试代码无法处理重复项，导致 "Can't determine Python version" 或 "Failed to read debug offsets" 错误。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/144595">PR #144595</a>（3.15.0a6）——优雅处理重复映射，使用第一个有效的 PyRuntime。</p>
-
-<h4 id="远程调试偏移表缺乏校验gh-148178">远程调试偏移表缺乏校验（gh-148178）</h4>
-
-<p><strong>问题</strong>：<span class="codespan">_remote_debugging</span> 模块从目标进程内存读取 <span class="codespan">async_debug_offsets</span> 后直接使用，未校验结构有效性。<span class="codespan">asyncio_task_object.size</span> 字段被用作读取长度写入固定 4096 字节的栈缓冲区（<span class="codespan">SIZEOF_TASK_OBJ</span>），<strong>恶意/被攻陷的目标进程可以构造更大的 size 导致栈缓冲区溢出</strong>。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/148187">PR #148187</a>——新增 <span class="codespan">validate_async_debug_offsets()</span> 和 <span class="codespan">validate_debug_offsets()</span> 对所有偏移表做边界校验（+511 行校验基础设施）。已回移至 3.14 分支（<a href="https://github.com/python/cpython/pull/148577">PR #148577</a>）。</p>
-
-<h4 id="远程内存数据损坏导致崩溃gh-140739">远程内存数据损坏导致崩溃（gh-140739）</h4>
-
-<p><strong>问题</strong>：在 free-threading 构建中使用 <span class="codespan">--mode=gil</span> 做性能采样时，远程调试 unwinder 读取到目标进程的损坏内存会导致 SIGSEGV——缺乏对远程读取数据的边界检查。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/143190">PR #143190</a>（3.15.0a4）——对所有远程读取的数据结构添加健壮性校验。</p>
-
-<h4 id="错误处理路径缺失gh-144316-gh-146308">错误处理路径缺失（gh-144316, gh-146308）</h4>
-
-<p><strong>问题</strong>：<span class="codespan">_remote_debugging</span> 模块中多处错误处理缺陷：</p>
-<ul>
-  <li><span class="codespan">RemoteUnwinder.get_stack_trace()</span> 在 <span class="codespan">debug=False</span> 时可能返回 NULL 但不设置异常</li>
-  <li>varint 解码路径缺少错误检查</li>
-  <li><span class="codespan">PyMem_RawMalloc()</span> 返回 NULL 时缺少 <span class="codespan">PyErr_NoMemory()</span> 调用</li>
-  <li>跨平台错误传播不一致</li>
-</ul>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/144442">PR #144442</a> 和 <a href="https://github.com/python/cpython/pull/146309">PR #146309</a>——全面审计并修复错误处理路径，<span class="codespan">set_exception_cause</span> 宏改为无条件设置异常。</p>
-
-<h4 id="权限问题sudo-创建的临时文件不可读gh-143511">权限问题：sudo 创建的临时文件不可读（gh-143511）</h4>
-
-<p><strong>问题</strong>：使用 <span class="codespan">sudo</span> 运行注入脚本时，<span class="codespan">NamedTemporaryFile</span> 以 root 用户创建（权限 <span class="codespan">0600</span>），非 root 的目标进程无法读取该脚本文件。这是 PEP 768 "仅接受文件路径"设计的副作用。</p>
-
-<p><strong>处理</strong>：文档化（<a href="https://github.com/python/cpython/pull/143575">PR #143575</a>）——用户需确保脚本文件对目标进程可读，或以相同用户运行。</p>
-
-<h4 id="remote-pdb-无法中断死循环gh-132975">Remote PDB 无法中断死循环（gh-132975）</h4>
-
-<p><strong>问题</strong>：在远程 PDB 提示符下输入 <span class="codespan">while True: pass</span> 后无法中断——能中断脚本本身的执行，但无法中断 PDB 命令求值中的死循环。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/133223">PR #133223</a>（3.14.0b1）——实现基于 socket 的中断机制：Unix 上发送 SIGINT 到远程进程，Windows 上通过 <span class="codespan">socketpair</span> 传递信号。</p>
-
-<h4 id="审计事件缺失gh-135543">审计事件缺失（gh-135543）</h4>
-
-<p><strong>问题</strong>：<span class="codespan">sys.remote_exec()</span> 最初未触发审计事件，安全工具无法监控进程注入行为。</p>
-
-<p><strong>修复</strong>：<a href="https://github.com/python/cpython/pull/135544">PR #135544</a>（3.14.0b1）——添加 <span class="codespan">sys.remote_exec</span> 审计事件，参数为 <span class="codespan">(pid, script)</span>。</p>
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>问题</th>
+      <th>影响</th>
+      <th>修复 / 处理</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>命名空间污染（gh-132859）</td>
+      <td>注入脚本在 <span class="codespan">__main__</span> 中执行，可能覆盖目标程序变量。</td>
+      <td><a href="https://github.com/python/cpython/pull/132860">PR #132860</a>（3.14.0a5）：改为隔离命名空间执行；访问主模块需显式 <span class="codespan">import __main__</span>。</td>
+    </tr>
+    <tr>
+      <td>非 UTF-8 路径编码失败（gh-133886）</td>
+      <td><span class="codespan">sys.remote_exec()</span> 硬编码 UTF-8，非 UTF-8 locale 下非 ASCII 路径可能找不到文件。</td>
+      <td><a href="https://github.com/python/cpython/pull/133887">PR #133887</a>（3.14.0b1）：改用文件系统编码。</td>
+    </tr>
+    <tr>
+      <td>无效参数导致段错误（gh-134064）</td>
+      <td><span class="codespan">sys.remote_exec(0, None)</span> 在 ASAN/debug 构建中触发段错误。</td>
+      <td><a href="https://github.com/python/cpython/pull/134067">PR #134067</a>（3.14.0b1）：补充参数校验。</td>
+    </tr>
+    <tr>
+      <td>ELF 搜索中的异常状态污染（gh-137293）</td>
+      <td>搜索 <span class="codespan">/proc/pid/maps</span> 时，无法打开已删除 <span class="codespan">.so</span> 会留下异常；即使后续找到 <span class="codespan">PyRuntime</span>，仍可能触发 <span class="codespan">SystemError</span>。</td>
+      <td><a href="https://github.com/python/cpython/pull/137309">PR #137309</a>：搜索循环继续前清除异常。</td>
+    </tr>
+    <tr>
+      <td>ctypes 导致重复 <span class="codespan">libpython</span> 映射（gh-144563）</td>
+      <td>目标进程导入 <span class="codespan">_ctypes</span> 或 <span class="codespan">polars</span> 后，多个 <span class="codespan">libpython</span> 映射可能导致版本识别或 debug offsets 读取失败。</td>
+      <td><a href="https://github.com/python/cpython/pull/144595">PR #144595</a>（3.15.0a6）：处理重复映射，使用第一个有效 <span class="codespan">PyRuntime</span>。</td>
+    </tr>
+    <tr>
+      <td>远程调试偏移表缺乏校验（gh-148178）</td>
+      <td>恶意或被攻陷的目标进程可构造异常 offset/size，导致栈缓冲区溢出风险。</td>
+      <td><a href="https://github.com/python/cpython/pull/148187">PR #148187</a>：校验 debug offsets；已回移至 3.14（<a href="https://github.com/python/cpython/pull/148577">PR #148577</a>）。</td>
+    </tr>
+    <tr>
+      <td>远程内存数据损坏导致崩溃（gh-140739）</td>
+      <td>free-threading 构建中，unwinder 读取损坏远程内存可能 SIGSEGV。</td>
+      <td><a href="https://github.com/python/cpython/pull/143190">PR #143190</a>（3.15.0a4）：对远程读取结构增加健壮性校验。</td>
+    </tr>
+    <tr>
+      <td>错误处理路径缺失（gh-144316, gh-146308）</td>
+      <td>NULL 返回不设异常、varint 解码缺检查、OOM 未设 <span class="codespan">PyErr_NoMemory()</span>、跨平台错误传播不一致。</td>
+      <td><a href="https://github.com/python/cpython/pull/144442">PR #144442</a> 和 <a href="https://github.com/python/cpython/pull/146309">PR #146309</a>：审计并修复错误处理路径。</td>
+    </tr>
+    <tr>
+      <td>sudo 创建的临时文件不可读（gh-143511）</td>
+      <td>以 root 创建的 <span class="codespan">NamedTemporaryFile</span> 权限为 <span class="codespan">0600</span>，非 root 目标进程无法读取脚本。</td>
+      <td><a href="https://github.com/python/cpython/pull/143575">PR #143575</a>：文档化；用户需确保脚本文件对目标进程可读，或以相同用户运行。</td>
+    </tr>
+    <tr>
+      <td>Remote PDB 无法中断死循环（gh-132975）</td>
+      <td>PDB 命令求值中执行 <span class="codespan">while True: pass</span> 后无法中断。</td>
+      <td><a href="https://github.com/python/cpython/pull/133223">PR #133223</a>（3.14.0b1）：实现基于 socket 的中断机制。</td>
+    </tr>
+    <tr>
+      <td>审计事件缺失（gh-135543）</td>
+      <td>安全工具无法监控 <span class="codespan">sys.remote_exec()</span> 注入行为。</td>
+      <td><a href="https://github.com/python/cpython/pull/135544">PR #135544</a>（3.14.0b1）：添加 <span class="codespan">sys.remote_exec</span> 审计事件，参数为 <span class="codespan">(pid, script)</span>。</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 <h4 id="外部工具跟进">外部工具跟进</h4>
 
@@ -707,32 +785,27 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 </table>
 </div>
 
-<h3 id="memray-vs-peeka-的容错策略">memray vs peeka 的容错策略</h3>
+<h3 id="memray-vs-peeka-的注入路径选择">memray vs peeka 的注入路径选择</h3>
 
-<p>两个项目虽然共享 dlopen + pthread 的核心方案，但在<strong>失败处理</strong>上有本质区别：</p>
+<p>两个项目虽然共享 dlopen + pthread 的核心方案，但在定位上略有不同：</p>
 
-<p><strong>memray：一次选择，不回退。</strong> memray 在启动时通过 <span class="codespan">resolve_debugger()</span> 按优先级（<span class="codespan">sys.remote_exec</span> &gt; <span class="codespan">gdb</span> &gt; <span class="codespan">lldb</span>）选定<strong>一种</strong>注入方法，此后不再切换。GDB 路径硬依赖 C 扩展（<span class="codespan">assert injecter.exists()</span>），dlopen 失败直接报错，没有 legacy 回退。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。</p>
+<p><strong>memray：一次选择，快速失败。</strong> memray 在启动时通过 <span class="codespan">resolve_debugger()</span> 按优先级（<span class="codespan">sys.remote_exec</span> &gt; <span class="codespan">gdb</span> &gt; <span class="codespan">lldb</span>）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。</p>
 
-<p><strong>peeka：逐级降级，尽力而为。</strong> peeka 的决策树包含多层 fallback：</p>
+<p><strong>peeka：优先使用原生能力，旧版本使用 C 扩展注入。</strong> peeka 在 Python 3.14+ 上优先使用 <span class="codespan">sys.remote_exec()</span>；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># peeka 的 attach 决策树
 </span><span class="k">if</span> <span class="nf">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="sh">"</span><span class="s">remote_exec</span><span class="sh">"</span><span class="p">):</span>     <span class="c1"># Python 3.14+
 </span>    <span class="o">-&gt;</span> <span class="n">sys</span><span class="p">.</span><span class="nf">remote_exec</span><span class="p">()</span>              <span class="c1"># 最优路径
 </span><span class="k">elif</span> <span class="nf">_has_injector</span><span class="p">():</span>                <span class="c1"># C 扩展可用
 </span>    <span class="k">if</span> <span class="n">Linux</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="o">-&gt;</span> <span class="n">GDB</span> <span class="o">+</span> <span class="n">dlopen</span> <span class="o">+</span> <span class="n">pthread</span> <span class="c1"># 安全回退
-</span>        <span class="nf">except </span><span class="p">(</span><span class="nb">TimeoutError</span><span class="p">,</span> <span class="p">...):</span>
-            <span class="o">-&gt;</span> <span class="n">GDB</span> <span class="o">+</span> <span class="n">PyRun_SimpleString</span>  <span class="c1"># 降级到 legacy
-</span>    <span class="k">elif</span> <span class="n">macOS</span><span class="p">:</span>
+        <span class="o">-&gt;</span> <span class="n">GDB</span> <span class="o">+</span> <span class="n">dlopen</span> <span class="o">+</span> <span class="n">pthread</span>
+    <span class="k">elif</span> <span class="n">macOS</span><span class="p">:</span>
         <span class="o">-&gt;</span> <span class="n">LLDB</span> <span class="o">+</span> <span class="n">dlopen</span> <span class="o">+</span> <span class="n">pthread</span>
-<span class="k">elif</span> <span class="n">Linux</span><span class="p">:</span>
-    <span class="o">-&gt;</span> <span class="n">GDB</span> <span class="o">+</span> <span class="n">PyRun_SimpleString</span>       <span class="c1"># 最后手段
-</span><span class="k">else</span><span class="p">:</span>
+<span class="k">else</span><span class="p">:</span>
     <span class="o">-&gt;</span> <span class="n">报错</span>
 </code></pre></div></div>
 
-<p>这种设计源于 peeka 的定位——作为通用诊断工具，它需要在各种环境下都能工作，包括 GLIBC 版本不匹配（C 扩展无法加载）或 GIL 死锁（dlopen 路径超时）等边缘情况。代价是多了一层复杂度和潜在的时机安全风险（legacy 路径），但换来了更广的兼容性。</p>
+<p>这个取舍比旧版更保守：如果 C 扩展缺失、GLIBC 版本不匹配，或者 dlopen 路径运行失败，peeka 会暴露错误，而不是降级到随机暂停点执行 Python C API 的 legacy 方案。</p>
 
 <div class="table-container">
 <table>
@@ -746,23 +819,28 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
   <tbody>
     <tr>
       <td>C 扩展缺失</td>
-      <td>硬报错 (<span class="codespan">assert</span>)</td>
-      <td>回退到 legacy GDB</td>
+      <td>报错</td>
+      <td>报错</td>
     </tr>
     <tr>
       <td>dlopen 运行时失败</td>
       <td>报错退出</td>
-      <td>回退到 legacy GDB</td>
+      <td>报错退出</td>
     </tr>
     <tr>
-      <td>dlopen 后 GIL 死锁</td>
+      <td>dlopen 后 GIL 等待超时</td>
       <td>超时报错</td>
-      <td>超时后回退到 legacy GDB</td>
+      <td>超时报错</td>
+    </tr>
+    <tr>
+      <td>legacy GDB 路径</td>
+      <td>无</td>
+      <td>已移除</td>
     </tr>
     <tr>
       <td>设计哲学</td>
       <td>明确前置要求，快速失败</td>
-      <td>尽力而为，逐级降级</td>
+      <td>优先安全边界，失败显式暴露</td>
     </tr>
   </tbody>
 </table>
@@ -770,101 +848,7 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <hr />
 
-<h2 id="6-实践中的坑">6. 实践中的坑</h2>
-
-<p>在实际开发 peeka 的过程中，我们踩过一些有趣的坑：</p>
-
-<h3 id="61-glibc-版本不匹配">6.1 GLIBC 版本不匹配</h3>
-
-<p>C 扩展 <span class="codespan">_inject.abi3.so</span> 在高版本 Linux 上编译后，放到低版本容器（如 Python 3.8 的 Debian 旧镜像）中会因为 <span class="codespan">GLIBC_2.34 not found</span> 而 dlopen 失败。</p>
-
-<p>但 <span class="codespan">importlib.util.find_spec()</span> 只检查文件是否存在，不检查能否加载：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ❌ 错误：文件存在但无法加载
-</span><span class="k">def</span> <span class="nf">_has_injector</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">importlib</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="nf">find_spec</span><span class="p">(</span><span class="sh">"</span><span class="s">peeka.core._inject</span><span class="sh">"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
-
-<span class="c1"># ✅ 正确：实际尝试 import
-</span><span class="k">def</span> <span class="nf">_has_injector</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span> <span class="n">peeka.core._inject</span>
-        <span class="k">return</span> <span class="bp">True</span>
-    <span class="nf">except </span><span class="p">(</span><span class="nb">ImportError</span><span class="p">,</span> <span class="nb">OSError</span><span class="p">):</span>  <span class="c1"># OSError 捕获 dlopen 失败
-</span>        <span class="k">return</span> <span class="bp">False</span>
-</code></pre></div></div>
-
-<h3 id="62-gdb-dlopen-后的-gil-死锁">6.2 GDB dlopen 后的 GIL 死锁</h3>
-
-<p>在 Python 3.12 上，GDB dlopen 注入的 C 扩展创建的 pthread 调用 <span class="codespan">PyGILState_Ensure()</span> 时，可能因为 GDB 操作后 GIL 状态不一致而永远无法获取 GIL。</p>
-
-<p>解决方案是将 dlopen 路径视为<strong>乐观尝试</strong>，失败后回退到 legacy GDB：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="nf">_has_injector</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="nf">_inject_via_gdb_dlopen</span><span class="p">()</span>
-    <span class="nf">except </span><span class="p">(</span><span class="nb">TimeoutError</span><span class="p">,</span> <span class="nb">RuntimeError</span><span class="p">,</span> <span class="nb">OSError</span><span class="p">):</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">"</span><span class="s">GDB dlopen failed, falling back to legacy GDB</span><span class="sh">"</span><span class="p">)</span>
-<span class="c1"># 控制流落入 legacy 路径
-</span></code></pre></div></div>
-
-<h3 id="63-ptrace-权限">6.3 ptrace 权限</h3>
-
-<p>不同 Linux 发行版的默认 <span class="codespan">ptrace_scope</span> 不同：</p>
-
-<div class="table-container">
-<table>
-  <thead>
-    <tr>
-      <th>ptrace_scope</th>
-      <th>含义</th>
-      <th>默认发行版</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>0</td>
-      <td>任意同 UID 进程可 attach</td>
-      <td>Arch, RHEL</td>
-    </tr>
-    <tr>
-      <td>1</td>
-      <td>仅父进程可 attach</td>
-      <td>Ubuntu, Debian</td>
-    </tr>
-    <tr>
-      <td>2</td>
-      <td>仅 <span class="codespan">CAP_SYS_PTRACE</span></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>3</td>
-      <td>完全禁止</td>
-      <td>—</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-<p>Docker 容器默认<strong>不授予</strong> <span class="codespan">CAP_SYS_PTRACE</span>，且 seccomp 配置也会阻止 ptrace 系统调用。需要：</p>
-
-<div  class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run <span class="nt">--cap-add</span><span class="o">=</span>SYS_PTRACE <span class="nt">--security-opt</span> <span class="nv">seccomp</span><span class="o">=</span>unconfined your-image
-</code></pre></div></div>
-
-<h3 id="64-sysmonitoring-tool_id-冲突">6.4 sys.monitoring tool_id 冲突</h3>
-
-<p>Python 3.12+ 的 <span class="codespan">sys.monitoring</span> 只有 6 个 tool slot（0-5）。如果 coverage 工具或 debugger 已经占用了 slot 0，硬编码 <span class="codespan">use_tool_id(0, ...)</span> 会抛 <span class="codespan">ValueError</span>。应该遍历可用 slot：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">candidate_id</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="nf">use_tool_id</span><span class="p">(</span><span class="n">candidate_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">peeka-trace</span><span class="sh">"</span><span class="p">)</span>
-        <span class="k">break</span>
-    <span class="k">except</span> <span class="nb">ValueError</span><span class="p">:</span>
-        <span class="k">continue</span>
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="7-总结">7. 总结</h2>
+<h2 id="6-总结">6. 总结</h2>
 
 <p>Python 进程注入经历了三代演进：</p>
 

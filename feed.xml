@@ -6,8 +6,8 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 16 May 2026 12:24:34 +0000</pubDate>
-    <lastBuildDate>Sat, 16 May 2026 12:24:34 +0000</lastBuildDate>
+    <pubDate>Sat, 16 May 2026 14:28:49 +0000</pubDate>
+    <lastBuildDate>Sat, 16 May 2026 14:28:49 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2026. All rights reserved.</rights>
     
@@ -28,17 +28,17 @@
 &lt;p&gt;要理解进程注入，先要理解我们面临的约束：&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;地址空间隔离&lt;/strong&gt;：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;GIL（全局解释器锁）&lt;/strong&gt;：Python 的 C API 调用几乎都需要持有 GIL&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;执行时机&lt;/strong&gt;：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
+  &lt;li&gt;地址空间隔离：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存&lt;/li&gt;
+  &lt;li&gt;GIL（全局解释器锁）：Python 的 C API 调用几乎都需要持有 GIL&lt;/li&gt;
+  &lt;li&gt;执行时机：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;·所以，进程注入需要回答三个问题：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;如何进入目标进程的地址空间？&lt;/strong&gt;（跨进程控制）&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;如何安全地执行 Python 代码？&lt;/strong&gt;（GIL 获取）&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;何时执行才不会崩溃？&lt;/strong&gt;（时机选择）&lt;/li&gt;
+  &lt;li&gt;如何进入目标进程的地址空间？（跨进程控制）&lt;/li&gt;
+  &lt;li&gt;如何安全地执行 Python 代码？（GIL 获取）&lt;/li&gt;
+  &lt;li&gt;何时执行才不会崩溃？（时机选择）&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;p&gt;不同的工具对这三个问题给出了不同的答案。&lt;/p&gt;
@@ -77,7 +77,7 @@
 &lt;ol&gt;
   &lt;li&gt;pyrasite 控制端进程通过 &lt;span class=&quot;codespan&quot;&gt;subprocess.Popen(...)&lt;/span&gt; 启动一个 GDB 子进程&lt;/li&gt;
   &lt;li&gt;GDB 子进程通过 &lt;span class=&quot;codespan&quot;&gt;ptrace(PTRACE_ATTACH)&lt;/span&gt; 暂停目标进程&lt;/li&gt;
-  &lt;li&gt;GDB 子进程在&lt;strong&gt;暂停点&lt;/strong&gt;让目标进程调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 获取 GIL&lt;/li&gt;
+  &lt;li&gt;GDB 子进程在暂停点让目标进程调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 获取 GIL&lt;/li&gt;
   &lt;li&gt;GDB 子进程让目标进程调用 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString()&lt;/span&gt; 执行一段 Python 代码&lt;/li&gt;
   &lt;li&gt;GDB 子进程让目标进程调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Release()&lt;/span&gt; 释放 GIL&lt;/li&gt;
   &lt;li&gt;GDB detach，目标进程恢复执行&lt;/li&gt;
@@ -113,7 +113,7 @@
 
 &lt;h3 id=&quot;为什么这个方案危险&quot;&gt;为什么这个方案危险？&lt;/h3&gt;
 
-&lt;p&gt;问题出在&lt;strong&gt;时机&lt;/strong&gt;上。当 GDB attach 并暂停目标进程时，目标可能正处于任何状态：&lt;/p&gt;
+&lt;p&gt;问题出在时机上。当 GDB attach 并暂停目标进程时，目标可能正处于任何状态：&lt;/p&gt;
 
 &lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;目标进程的执行时间线：
 ... -&amp;gt; malloc() -&amp;gt; [GDB 在这里暂停] -&amp;gt; PyGILState_Ensure() -&amp;gt; 💥
@@ -160,7 +160,7 @@
 
 &lt;h2 id=&quot;3-第二代memraypeeka-的-dlopen--pthread-方案&quot;&gt;3. 第二代：memray/peeka 的 dlopen + pthread 方案&lt;/h2&gt;
 
-&lt;p&gt;&lt;a href=&quot;https://github.com/bloomberg/memray&quot;&gt;memray&lt;/a&gt;（Bloomberg 开源的内存分析器）和 &lt;a href=&quot;https://github.com/wwulfric/peeka&quot;&gt;peeka&lt;/a&gt; 在 Python 3.8-3.13 上采用了相似的改进方案。核心思路是：&lt;strong&gt;不在 ptrace 暂停点直接执行 Python 代码，而是注入一个 C 扩展，由 C 扩展在安全的时机执行代码&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/bloomberg/memray&quot;&gt;memray&lt;/a&gt;（Bloomberg 开源的内存分析器）和 &lt;a href=&quot;https://github.com/wwulfric/peeka&quot;&gt;peeka&lt;/a&gt; 在 Python 3.8-3.13 上采用了相似的改进方案。核心思路是：不在 ptrace 暂停点直接执行 Python 代码，而是&lt;strong&gt;注入一个 C 扩展&lt;/strong&gt;，由 C 扩展在安全的时机执行代码。&lt;/p&gt;
 
 &lt;h3 id=&quot;原理概览&quot;&gt;原理概览&lt;/h3&gt;
 
@@ -183,7 +183,7 @@
 
 &lt;p&gt;在这条路径里，确实会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。&lt;/p&gt;
 
-&lt;p&gt;后面按五个关键环节展开：&lt;strong&gt;控制端准备&lt;/strong&gt;、&lt;strong&gt;安全断点&lt;/strong&gt;、&lt;strong&gt;dlopen 注入&lt;/strong&gt;、&lt;strong&gt;独立线程&lt;/strong&gt;、&lt;strong&gt;反向连接传输&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;后面按五个关键环节展开：控制端准备、安全断点、dlopen 注入、独立线程、反向连接传输。&lt;/p&gt;
 
 &lt;h3 id=&quot;31-控制端准备监听端口与启动调试器&quot;&gt;3.1 控制端准备——监听端口与启动调试器&lt;/h3&gt;
 
@@ -222,7 +222,7 @@
 
 &lt;h3 id=&quot;32-安全断点选择正确的时机&quot;&gt;3.2 安全断点——选择正确的时机&lt;/h3&gt;
 
-&lt;p&gt;pyrasite 在&lt;strong&gt;任意位置&lt;/strong&gt;暂停后就执行 C API，而 memray/peeka 等到&lt;strong&gt;安全位置&lt;/strong&gt;才注入。&lt;/p&gt;
+&lt;p&gt;pyrasite 在任意位置暂停后就执行 C API，而 memray/peeka 等到安全位置才注入。&lt;/p&gt;
 
 &lt;p&gt;真正的断点设置和 &lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 调用写在 &lt;span class=&quot;codespan&quot;&gt;_attach.gdb&lt;/span&gt; 里：&lt;/p&gt;
 
@@ -279,7 +279,7 @@ continue
 
 &lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 &lt;span class=&quot;codespan&quot;&gt;dlopen(&quot;_inject.abi3.so&quot;, RTLD_NOW)&lt;/span&gt;，我们将一个编译好的 C 扩展加载到目标进程的地址空间中。&lt;/p&gt;
 
-&lt;p&gt;这比 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString&lt;/span&gt; 强大的关键在于：&lt;strong&gt;C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这比 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString&lt;/span&gt; 强大的关键在于：C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束。&lt;/p&gt;
 
 &lt;p&gt;peeka 在 macOS 上使用 LLDB 完成相同的工作：&lt;/p&gt;
 
@@ -321,32 +321,32 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;p&gt;到这里，3.4 关心的事情就结束了：GDB 调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;，目标进程创建 agent 线程，&lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent&lt;/span&gt; 立即返回。agent 线程后面会进入 &lt;span class=&quot;codespan&quot;&gt;run_client(port)&lt;/span&gt;，但它如何回连控制端、接收脚本、执行脚本，是 3.5 的内容。&lt;/p&gt;
 
-&lt;p&gt;&lt;strong&gt;为什么独立线程更安全？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;为什么独立线程更安全？&lt;/p&gt;
 
 &lt;p&gt;在 pyrasite 方案中，&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 在 GDB 暂停目标进程时被调用——如果暂停的线程恰好持有 GIL，这里会死锁。&lt;/p&gt;
 
 &lt;p&gt;在 dlopen + pthread 方案中：&lt;/p&gt;
 &lt;ol&gt;
-  &lt;li&gt;GDB 执行 dlopen -&amp;gt; spawn -&amp;gt; &lt;strong&gt;立刻返回&lt;/strong&gt; -&amp;gt; GDB detach -&amp;gt; 目标进程恢复&lt;/li&gt;
+  &lt;li&gt;GDB 执行 dlopen -&amp;gt; spawn -&amp;gt; 立刻返回 -&amp;gt; GDB detach -&amp;gt; 目标进程恢复&lt;/li&gt;
   &lt;li&gt;新线程随后在 &lt;span class=&quot;codespan&quot;&gt;run_client -&amp;gt; run_script&lt;/span&gt; 中调用 &lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt;，此时目标进程已经在正常运行&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 会&lt;strong&gt;等待&lt;/strong&gt; GIL 可用，而不是在暂停状态下强行获取&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 会等待 GIL 可用，而不是在暂停状态下强行获取&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;p&gt;这消除了 GIL 死锁的主要原因。&lt;/p&gt;
 
 &lt;h3 id=&quot;35-反向连接agent-代码的传输&quot;&gt;3.5 反向连接——agent 代码的传输&lt;/h3&gt;
 
-&lt;p&gt;一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用&lt;strong&gt;反向连接&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用反向连接。&lt;/p&gt;
 
-&lt;p&gt;这里要区分两个概念：&lt;strong&gt;控制端进程&lt;/strong&gt;是用户运行的 peeka/memray 进程；&lt;strong&gt;GDB/LLDB 子进程&lt;/strong&gt;是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 &lt;span class=&quot;codespan&quot;&gt;_inject.so&lt;/span&gt; 加载进目标进程并调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;。&lt;/p&gt;
+&lt;p&gt;这里要区分两个概念：控制端进程是用户运行的 peeka/memray 进程；GDB/LLDB 子进程是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 &lt;span class=&quot;codespan&quot;&gt;_inject.so&lt;/span&gt; 加载进目标进程并调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;。&lt;/p&gt;
 
 &lt;p&gt;先看完整流程：&lt;/p&gt;
 
-&lt;p&gt;1）&lt;strong&gt;peeka/memray 控制端进程&lt;/strong&gt;：启动一个本地 TCP server，拿到监听端口。
-2）&lt;strong&gt;GDB/LLDB 子进程&lt;/strong&gt;：attach 目标进程，把这个端口号传给目标进程里的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;。
-3）&lt;strong&gt;目标进程&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;_inject.so&lt;/span&gt; 中的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt; 创建一个 agent 线程。
-4）&lt;strong&gt;目标进程的 agent 线程 -&amp;gt; peeka/memray 控制端进程&lt;/strong&gt;：agent 线程回连控制端的 TCP server，接收完整的 agent 脚本。
-5）&lt;strong&gt;目标进程的 agent 线程&lt;/strong&gt;：在目标进程内编译并执行这段脚本。&lt;/p&gt;
+&lt;p&gt;1）peeka/memray 控制端进程：启动一个本地 TCP server，拿到监听端口。
+2）GDB/LLDB 子进程：attach 目标进程，把这个端口号传给目标进程里的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;。
+3）目标进程：&lt;span class=&quot;codespan&quot;&gt;_inject.so&lt;/span&gt; 中的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt; 创建一个 agent 线程。
+4）目标进程的 agent 线程 -&amp;gt; peeka/memray 控制端进程：agent 线程回连控制端的 TCP server，接收完整的 agent 脚本。
+5）目标进程的 agent 线程：在目标进程内编译并执行这段脚本。&lt;/p&gt;
 
 &lt;p&gt;对应到源码结构，大致是下面这样。第一段是控制端逻辑，对应上面的 4）：它复用 3.1 中 &lt;span class=&quot;codespan&quot;&gt;_create_notify_server()&lt;/span&gt; 创建好的 &lt;span class=&quot;codespan&quot;&gt;self._notify_server&lt;/span&gt;，在 &lt;span class=&quot;codespan&quot;&gt;_serve_agent_code&lt;/span&gt; 中等待目标进程回连并发送 agent 脚本。&lt;/p&gt;
 
@@ -426,11 +426,11 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;h2 id=&quot;4-第三代pep-768-与-sysremote_exec&quot;&gt;4. 第三代：PEP 768 与 sys.remote_exec&lt;/h2&gt;
 
-&lt;p&gt;Python 3.14 引入了 &lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768&lt;/a&gt;，从&lt;strong&gt;解释器层面&lt;/strong&gt;提供了原生的进程注入支持。这是一个根本性的范式转变。&lt;/p&gt;
+&lt;p&gt;Python 3.14 引入了 &lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768&lt;/a&gt;，从解释器层面提供了原生的进程注入支持。这是一个根本性的范式转变。&lt;/p&gt;
 
 &lt;h3 id=&quot;核心思想&quot;&gt;核心思想&lt;/h3&gt;
 
-&lt;p&gt;前两代方案都是从&lt;strong&gt;外部&lt;/strong&gt;强行进入目标进程（通过 ptrace/GDB/LLDB），然后在一个&quot;可能安全&quot;的位置执行代码。PEP 768 的思路则是：&lt;strong&gt;告诉解释器你要执行什么，让解释器自己在安全的时候执行&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;前两代方案都是从外部强行进入目标进程（通过 ptrace/GDB/LLDB），然后在一个&quot;可能安全&quot;的位置执行代码。PEP 768 的思路则是：告诉解释器你要执行什么，让&lt;strong&gt;解释器自己&lt;/strong&gt;在安全的时候执行。&lt;/p&gt;
 
 &lt;h3 id=&quot;运作机制&quot;&gt;运作机制&lt;/h3&gt;
 
@@ -542,10 +542,10 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 &lt;p&gt;PEP 768 在安全性上的设计非常审慎：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;仅接受文件路径&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 写入的是一个&lt;strong&gt;文件路径&lt;/strong&gt;，不是代码内容。这意味着攻击者不仅需要跨进程写内存的权限，还需要在目标进程可读的文件系统路径上放置恶意脚本&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;审计钩子&lt;/strong&gt;：执行前触发 &lt;span class=&quot;codespan&quot;&gt;cpython.remote_debugger_script&lt;/span&gt; 审计事件，安全策略可以拦截&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;可禁用&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;PYTHON_DISABLE_REMOTE_DEBUG&lt;/span&gt; 环境变量或 &lt;span class=&quot;codespan&quot;&gt;-X disable-remote-debug&lt;/span&gt; 启动参数&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;编译时可移除&lt;/strong&gt;：&lt;span class=&quot;codespan&quot;&gt;./configure --without-remote-debug&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;仅接受文件路径：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 写入的是一个&lt;strong&gt;文件路径&lt;/strong&gt;，不是代码内容。这意味着攻击者不仅需要跨进程写内存的权限，还需要在目标进程可读的文件系统路径上放置恶意脚本&lt;/li&gt;
+  &lt;li&gt;审计钩子：执行前触发 &lt;span class=&quot;codespan&quot;&gt;cpython.remote_debugger_script&lt;/span&gt; 审计事件，安全策略可以拦截&lt;/li&gt;
+  &lt;li&gt;可禁用：&lt;span class=&quot;codespan&quot;&gt;PYTHON_DISABLE_REMOTE_DEBUG&lt;/span&gt; 环境变量或 &lt;span class=&quot;codespan&quot;&gt;-X disable-remote-debug&lt;/span&gt; 启动参数&lt;/li&gt;
+  &lt;li&gt;编译时可移除：&lt;span class=&quot;codespan&quot;&gt;./configure --without-remote-debug&lt;/span&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;h3 id=&quot;为什么-pep-768-是本质性的进步&quot;&gt;为什么 PEP 768 是本质性的进步？&lt;/h3&gt;
@@ -561,32 +561,32 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
   &lt;/thead&gt;
   &lt;tbody&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;执行时机&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;执行时机&lt;/td&gt;
       &lt;td&gt;取决于暂停点/断点位置&lt;/td&gt;
       &lt;td&gt;解释器自己选择安全检查点&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;GIL 处理&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;GIL 处理&lt;/td&gt;
       &lt;td&gt;外部强制获取&lt;/td&gt;
       &lt;td&gt;自然持有（在 eval loop 中）&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;运行时开销&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;运行时开销&lt;/td&gt;
       &lt;td&gt;无（仅 attach 时）&lt;/td&gt;
       &lt;td&gt;接近零（一次分支检查）&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;所需权限&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;所需权限&lt;/td&gt;
       &lt;td&gt;ptrace + GDB/LLDB&lt;/td&gt;
       &lt;td&gt;同 UID 或 process_vm_writev&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;多线程安全&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;多线程安全&lt;/td&gt;
       &lt;td&gt;需要 scheduler-locking&lt;/td&gt;
       &lt;td&gt;天然安全（per-thread 标志）&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
-      &lt;td&gt;&lt;strong&gt;崩溃风险&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;崩溃风险&lt;/td&gt;
       &lt;td&gt;存在（不安全时机）&lt;/td&gt;
       &lt;td&gt;极低（安全检查点执行）&lt;/td&gt;
     &lt;/tr&gt;
@@ -680,9 +680,9 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 &lt;h4 id=&quot;外部工具跟进&quot;&gt;外部工具跟进&lt;/h4&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;debugpy（VS Code）&lt;/strong&gt;：&lt;a href=&quot;https://github.com/microsoft/debugpy/commit/c7e86a1954381ceadb2ea398fc60079deef91358&quot;&gt;已支持 sys.remote_exec()&lt;/a&gt;（2026.1），Python 3.14+ 优先使用原生 API，可通过 &lt;span class=&quot;codespan&quot;&gt;--disable-sys-remote-exec&lt;/span&gt; 回退&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;helicopter-parent&lt;/strong&gt;：&lt;a href=&quot;https://github.com/a-reich/helicopter-parent/&quot;&gt;社区工具&lt;/a&gt;，通过管理子进程绕过 &lt;span class=&quot;codespan&quot;&gt;ptrace_scope&lt;/span&gt; 限制&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;peeka/memray&lt;/strong&gt;：已集成 PEP 768 作为首选注入路径&lt;/li&gt;
+  &lt;li&gt;debugpy（VS Code）：&lt;a href=&quot;https://github.com/microsoft/debugpy/commit/c7e86a1954381ceadb2ea398fc60079deef91358&quot;&gt;已支持 sys.remote_exec()&lt;/a&gt;（2026.1），Python 3.14+ 优先使用原生 API，可通过 &lt;span class=&quot;codespan&quot;&gt;--disable-sys-remote-exec&lt;/span&gt; 回退&lt;/li&gt;
+  &lt;li&gt;helicopter-parent：&lt;a href=&quot;https://github.com/a-reich/helicopter-parent/&quot;&gt;社区工具&lt;/a&gt;，通过管理子进程绕过 &lt;span class=&quot;codespan&quot;&gt;ptrace_scope&lt;/span&gt; 限制&lt;/li&gt;
+  &lt;li&gt;peeka/memray：已集成 PEP 768 作为首选注入路径&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;hr /&gt;
@@ -730,9 +730,9 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;p&gt;两个项目虽然共享 dlopen + pthread 的核心方案，但在定位上略有不同：&lt;/p&gt;
 
-&lt;p&gt;&lt;strong&gt;memray：一次选择，快速失败。&lt;/strong&gt; memray 在启动时通过 &lt;span class=&quot;codespan&quot;&gt;resolve_debugger()&lt;/span&gt; 按优先级（&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;gdb&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;lldb&lt;/span&gt;）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。&lt;/p&gt;
+&lt;p&gt;memray：一次选择，快速失败。memray 在启动时通过 &lt;span class=&quot;codespan&quot;&gt;resolve_debugger()&lt;/span&gt; 按优先级（&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;gdb&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;lldb&lt;/span&gt;）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。&lt;/p&gt;
 
-&lt;p&gt;&lt;strong&gt;peeka：优先使用原生能力，旧版本使用 C 扩展注入。&lt;/strong&gt; peeka 在 Python 3.14+ 上优先使用 &lt;span class=&quot;codespan&quot;&gt;sys.remote_exec()&lt;/span&gt;；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。&lt;/p&gt;
+&lt;p&gt;peeka：优先使用原生能力，旧版本使用 C 扩展注入。peeka 在 Python 3.14+ 上优先使用 &lt;span class=&quot;codespan&quot;&gt;sys.remote_exec()&lt;/span&gt;；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# peeka 的 attach 决策树
 &lt;/span&gt;&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;hasattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;remote_exec&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;# Python 3.14+
@@ -794,9 +794,9 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 &lt;p&gt;Python 进程注入经历了三代演进：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;直接调用 C API&lt;/strong&gt;（pyrasite）：简单粗暴，但有崩溃和死锁风险&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;dlopen + pthread&lt;/strong&gt;（memray/peeka）：通过安全断点和独立线程显著降低风险&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;解释器原生支持&lt;/strong&gt;（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码&lt;/li&gt;
+  &lt;li&gt;直接调用 C API（pyrasite）：简单粗暴，但有崩溃和死锁风险&lt;/li&gt;
+  &lt;li&gt;dlopen + pthread（memray/peeka）：通过安全断点和独立线程显著降低风险&lt;/li&gt;
+  &lt;li&gt;解释器原生支持（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;p&gt;如果你的目标环境是 Python 3.14+，&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 是毫无争议的最佳选择。如果需要支持更老的版本，dlopen + pthread 方案提供了合理的安全性和兼容性平衡。&lt;/p&gt;

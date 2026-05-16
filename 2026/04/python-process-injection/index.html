@@ -87,17 +87,17 @@
 <p>要理解进程注入，先要理解我们面临的约束：</p>
 
 <ul>
-  <li><strong>地址空间隔离</strong>：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存</li>
-  <li><strong>GIL（全局解释器锁）</strong>：Python 的 C API 调用几乎都需要持有 GIL</li>
-  <li><strong>执行时机</strong>：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……</li>
+  <li>地址空间隔离：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存</li>
+  <li>GIL（全局解释器锁）：Python 的 C API 调用几乎都需要持有 GIL</li>
+  <li>执行时机：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……</li>
 </ul>
 
 <p>·所以，进程注入需要回答三个问题：</p>
 
 <ol>
-  <li><strong>如何进入目标进程的地址空间？</strong>（跨进程控制）</li>
-  <li><strong>如何安全地执行 Python 代码？</strong>（GIL 获取）</li>
-  <li><strong>何时执行才不会崩溃？</strong>（时机选择）</li>
+  <li>如何进入目标进程的地址空间？（跨进程控制）</li>
+  <li>如何安全地执行 Python 代码？（GIL 获取）</li>
+  <li>何时执行才不会崩溃？（时机选择）</li>
 </ol>
 
 <p>不同的工具对这三个问题给出了不同的答案。</p>
@@ -136,7 +136,7 @@
 <ol>
   <li>pyrasite 控制端进程通过 <span class="codespan">subprocess.Popen(...)</span> 启动一个 GDB 子进程</li>
   <li>GDB 子进程通过 <span class="codespan">ptrace(PTRACE_ATTACH)</span> 暂停目标进程</li>
-  <li>GDB 子进程在<strong>暂停点</strong>让目标进程调用 <span class="codespan">PyGILState_Ensure()</span> 获取 GIL</li>
+  <li>GDB 子进程在暂停点让目标进程调用 <span class="codespan">PyGILState_Ensure()</span> 获取 GIL</li>
   <li>GDB 子进程让目标进程调用 <span class="codespan">PyRun_SimpleString()</span> 执行一段 Python 代码</li>
   <li>GDB 子进程让目标进程调用 <span class="codespan">PyGILState_Release()</span> 释放 GIL</li>
   <li>GDB detach，目标进程恢复执行</li>
@@ -172,7 +172,7 @@
 
 <h3 id="为什么这个方案危险">为什么这个方案危险？</h3>
 
-<p>问题出在<strong>时机</strong>上。当 GDB attach 并暂停目标进程时，目标可能正处于任何状态：</p>
+<p>问题出在时机上。当 GDB attach 并暂停目标进程时，目标可能正处于任何状态：</p>
 
 <div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>目标进程的执行时间线：
 ... -&gt; malloc() -&gt; [GDB 在这里暂停] -&gt; PyGILState_Ensure() -&gt; 💥
@@ -219,7 +219,7 @@
 
 <h2 id="3-第二代memraypeeka-的-dlopen--pthread-方案">3. 第二代：memray/peeka 的 dlopen + pthread 方案</h2>
 
-<p><a href="https://github.com/bloomberg/memray">memray</a>（Bloomberg 开源的内存分析器）和 <a href="https://github.com/wwulfric/peeka">peeka</a> 在 Python 3.8-3.13 上采用了相似的改进方案。核心思路是：<strong>不在 ptrace 暂停点直接执行 Python 代码，而是注入一个 C 扩展，由 C 扩展在安全的时机执行代码</strong>。</p>
+<p><a href="https://github.com/bloomberg/memray">memray</a>（Bloomberg 开源的内存分析器）和 <a href="https://github.com/wwulfric/peeka">peeka</a> 在 Python 3.8-3.13 上采用了相似的改进方案。核心思路是：不在 ptrace 暂停点直接执行 Python 代码，而是<strong>注入一个 C 扩展</strong>，由 C 扩展在安全的时机执行代码。</p>
 
 <h3 id="原理概览">原理概览</h3>
 
@@ -242,7 +242,7 @@
 
 <p>在这条路径里，确实会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 <span class="codespan">peeka_spawn_agent(port)</span>；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。</p>
 
-<p>后面按五个关键环节展开：<strong>控制端准备</strong>、<strong>安全断点</strong>、<strong>dlopen 注入</strong>、<strong>独立线程</strong>、<strong>反向连接传输</strong>。</p>
+<p>后面按五个关键环节展开：控制端准备、安全断点、dlopen 注入、独立线程、反向连接传输。</p>
 
 <h3 id="31-控制端准备监听端口与启动调试器">3.1 控制端准备——监听端口与启动调试器</h3>
 
@@ -281,7 +281,7 @@
 
 <h3 id="32-安全断点选择正确的时机">3.2 安全断点——选择正确的时机</h3>
 
-<p>pyrasite 在<strong>任意位置</strong>暂停后就执行 C API，而 memray/peeka 等到<strong>安全位置</strong>才注入。</p>
+<p>pyrasite 在任意位置暂停后就执行 C API，而 memray/peeka 等到安全位置才注入。</p>
 
 <p>真正的断点设置和 <span class="codespan">dlopen</span> 调用写在 <span class="codespan">_attach.gdb</span> 里：</p>
 
@@ -338,7 +338,7 @@ continue
 
 <p><span class="codespan">dlopen</span> 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 <span class="codespan">dlopen("_inject.abi3.so", RTLD_NOW)</span>，我们将一个编译好的 C 扩展加载到目标进程的地址空间中。</p>
 
-<p>这比 <span class="codespan">PyRun_SimpleString</span> 强大的关键在于：<strong>C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束</strong>。</p>
+<p>这比 <span class="codespan">PyRun_SimpleString</span> 强大的关键在于：C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束。</p>
 
 <p>peeka 在 macOS 上使用 LLDB 完成相同的工作：</p>
 
@@ -380,32 +380,32 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <p>到这里，3.4 关心的事情就结束了：GDB 调用 <span class="codespan">peeka_spawn_agent(port)</span>，目标进程创建 agent 线程，<span class="codespan">peeka_spawn_agent</span> 立即返回。agent 线程后面会进入 <span class="codespan">run_client(port)</span>，但它如何回连控制端、接收脚本、执行脚本，是 3.5 的内容。</p>
 
-<p><strong>为什么独立线程更安全？</strong></p>
+<p>为什么独立线程更安全？</p>
 
 <p>在 pyrasite 方案中，<span class="codespan">PyGILState_Ensure()</span> 在 GDB 暂停目标进程时被调用——如果暂停的线程恰好持有 GIL，这里会死锁。</p>
 
 <p>在 dlopen + pthread 方案中：</p>
 <ol>
-  <li>GDB 执行 dlopen -&gt; spawn -&gt; <strong>立刻返回</strong> -&gt; GDB detach -&gt; 目标进程恢复</li>
+  <li>GDB 执行 dlopen -&gt; spawn -&gt; 立刻返回 -&gt; GDB detach -&gt; 目标进程恢复</li>
   <li>新线程随后在 <span class="codespan">run_client -&gt; run_script</span> 中调用 <span class="codespan">PyGILState_Ensure()</span>，此时目标进程已经在正常运行</li>
-  <li><span class="codespan">PyGILState_Ensure()</span> 会<strong>等待</strong> GIL 可用，而不是在暂停状态下强行获取</li>
+  <li><span class="codespan">PyGILState_Ensure()</span> 会等待 GIL 可用，而不是在暂停状态下强行获取</li>
 </ol>
 
 <p>这消除了 GIL 死锁的主要原因。</p>
 
 <h3 id="35-反向连接agent-代码的传输">3.5 反向连接——agent 代码的传输</h3>
 
-<p>一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用<strong>反向连接</strong>。</p>
+<p>一个有趣的设计细节是 agent 代码的传输。peeka 不是把代码内容写入 GDB 命令（字符串转义会很痛苦），而是采用反向连接。</p>
 
-<p>这里要区分两个概念：<strong>控制端进程</strong>是用户运行的 peeka/memray 进程；<strong>GDB/LLDB 子进程</strong>是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 <span class="codespan">_inject.so</span> 加载进目标进程并调用 <span class="codespan">peeka_spawn_agent(port)</span>。</p>
+<p>这里要区分两个概念：控制端进程是用户运行的 peeka/memray 进程；GDB/LLDB 子进程是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 <span class="codespan">_inject.so</span> 加载进目标进程并调用 <span class="codespan">peeka_spawn_agent(port)</span>。</p>
 
 <p>先看完整流程：</p>
 
-<p>1）<strong>peeka/memray 控制端进程</strong>：启动一个本地 TCP server，拿到监听端口。
-2）<strong>GDB/LLDB 子进程</strong>：attach 目标进程，把这个端口号传给目标进程里的 <span class="codespan">peeka_spawn_agent(port)</span>。
-3）<strong>目标进程</strong>：<span class="codespan">_inject.so</span> 中的 <span class="codespan">peeka_spawn_agent(port)</span> 创建一个 agent 线程。
-4）<strong>目标进程的 agent 线程 -&gt; peeka/memray 控制端进程</strong>：agent 线程回连控制端的 TCP server，接收完整的 agent 脚本。
-5）<strong>目标进程的 agent 线程</strong>：在目标进程内编译并执行这段脚本。</p>
+<p>1）peeka/memray 控制端进程：启动一个本地 TCP server，拿到监听端口。
+2）GDB/LLDB 子进程：attach 目标进程，把这个端口号传给目标进程里的 <span class="codespan">peeka_spawn_agent(port)</span>。
+3）目标进程：<span class="codespan">_inject.so</span> 中的 <span class="codespan">peeka_spawn_agent(port)</span> 创建一个 agent 线程。
+4）目标进程的 agent 线程 -&gt; peeka/memray 控制端进程：agent 线程回连控制端的 TCP server，接收完整的 agent 脚本。
+5）目标进程的 agent 线程：在目标进程内编译并执行这段脚本。</p>
 
 <p>对应到源码结构，大致是下面这样。第一段是控制端逻辑，对应上面的 4）：它复用 3.1 中 <span class="codespan">_create_notify_server()</span> 创建好的 <span class="codespan">self._notify_server</span>，在 <span class="codespan">_serve_agent_code</span> 中等待目标进程回连并发送 agent 脚本。</p>
 
@@ -485,11 +485,11 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <h2 id="4-第三代pep-768-与-sysremote_exec">4. 第三代：PEP 768 与 sys.remote_exec</h2>
 
-<p>Python 3.14 引入了 <a href="https://peps.python.org/pep-0768/">PEP 768</a>，从<strong>解释器层面</strong>提供了原生的进程注入支持。这是一个根本性的范式转变。</p>
+<p>Python 3.14 引入了 <a href="https://peps.python.org/pep-0768/">PEP 768</a>，从解释器层面提供了原生的进程注入支持。这是一个根本性的范式转变。</p>
 
 <h3 id="核心思想">核心思想</h3>
 
-<p>前两代方案都是从<strong>外部</strong>强行进入目标进程（通过 ptrace/GDB/LLDB），然后在一个"可能安全"的位置执行代码。PEP 768 的思路则是：<strong>告诉解释器你要执行什么，让解释器自己在安全的时候执行</strong>。</p>
+<p>前两代方案都是从外部强行进入目标进程（通过 ptrace/GDB/LLDB），然后在一个"可能安全"的位置执行代码。PEP 768 的思路则是：告诉解释器你要执行什么，让<strong>解释器自己</strong>在安全的时候执行。</p>
 
 <h3 id="运作机制">运作机制</h3>
 
@@ -601,10 +601,10 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <p>PEP 768 在安全性上的设计非常审慎：</p>
 
 <ol>
-  <li><strong>仅接受文件路径</strong>：<span class="codespan">sys.remote_exec</span> 写入的是一个<strong>文件路径</strong>，不是代码内容。这意味着攻击者不仅需要跨进程写内存的权限，还需要在目标进程可读的文件系统路径上放置恶意脚本</li>
-  <li><strong>审计钩子</strong>：执行前触发 <span class="codespan">cpython.remote_debugger_script</span> 审计事件，安全策略可以拦截</li>
-  <li><strong>可禁用</strong>：<span class="codespan">PYTHON_DISABLE_REMOTE_DEBUG</span> 环境变量或 <span class="codespan">-X disable-remote-debug</span> 启动参数</li>
-  <li><strong>编译时可移除</strong>：<span class="codespan">./configure --without-remote-debug</span></li>
+  <li>仅接受文件路径：<span class="codespan">sys.remote_exec</span> 写入的是一个<strong>文件路径</strong>，不是代码内容。这意味着攻击者不仅需要跨进程写内存的权限，还需要在目标进程可读的文件系统路径上放置恶意脚本</li>
+  <li>审计钩子：执行前触发 <span class="codespan">cpython.remote_debugger_script</span> 审计事件，安全策略可以拦截</li>
+  <li>可禁用：<span class="codespan">PYTHON_DISABLE_REMOTE_DEBUG</span> 环境变量或 <span class="codespan">-X disable-remote-debug</span> 启动参数</li>
+  <li>编译时可移除：<span class="codespan">./configure --without-remote-debug</span></li>
 </ol>
 
 <h3 id="为什么-pep-768-是本质性的进步">为什么 PEP 768 是本质性的进步？</h3>
@@ -620,32 +620,32 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
   </thead>
   <tbody>
     <tr>
-      <td><strong>执行时机</strong></td>
+      <td>执行时机</td>
       <td>取决于暂停点/断点位置</td>
       <td>解释器自己选择安全检查点</td>
     </tr>
     <tr>
-      <td><strong>GIL 处理</strong></td>
+      <td>GIL 处理</td>
       <td>外部强制获取</td>
       <td>自然持有（在 eval loop 中）</td>
     </tr>
     <tr>
-      <td><strong>运行时开销</strong></td>
+      <td>运行时开销</td>
       <td>无（仅 attach 时）</td>
       <td>接近零（一次分支检查）</td>
     </tr>
     <tr>
-      <td><strong>所需权限</strong></td>
+      <td>所需权限</td>
       <td>ptrace + GDB/LLDB</td>
       <td>同 UID 或 process_vm_writev</td>
     </tr>
     <tr>
-      <td><strong>多线程安全</strong></td>
+      <td>多线程安全</td>
       <td>需要 scheduler-locking</td>
       <td>天然安全（per-thread 标志）</td>
     </tr>
     <tr>
-      <td><strong>崩溃风险</strong></td>
+      <td>崩溃风险</td>
       <td>存在（不安全时机）</td>
       <td>极低（安全检查点执行）</td>
     </tr>
@@ -739,9 +739,9 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <h4 id="外部工具跟进">外部工具跟进</h4>
 
 <ul>
-  <li><strong>debugpy（VS Code）</strong>：<a href="https://github.com/microsoft/debugpy/commit/c7e86a1954381ceadb2ea398fc60079deef91358">已支持 sys.remote_exec()</a>（2026.1），Python 3.14+ 优先使用原生 API，可通过 <span class="codespan">--disable-sys-remote-exec</span> 回退</li>
-  <li><strong>helicopter-parent</strong>：<a href="https://github.com/a-reich/helicopter-parent/">社区工具</a>，通过管理子进程绕过 <span class="codespan">ptrace_scope</span> 限制</li>
-  <li><strong>peeka/memray</strong>：已集成 PEP 768 作为首选注入路径</li>
+  <li>debugpy（VS Code）：<a href="https://github.com/microsoft/debugpy/commit/c7e86a1954381ceadb2ea398fc60079deef91358">已支持 sys.remote_exec()</a>（2026.1），Python 3.14+ 优先使用原生 API，可通过 <span class="codespan">--disable-sys-remote-exec</span> 回退</li>
+  <li>helicopter-parent：<a href="https://github.com/a-reich/helicopter-parent/">社区工具</a>，通过管理子进程绕过 <span class="codespan">ptrace_scope</span> 限制</li>
+  <li>peeka/memray：已集成 PEP 768 作为首选注入路径</li>
 </ul>
 
 <hr />
@@ -789,9 +789,9 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 
 <p>两个项目虽然共享 dlopen + pthread 的核心方案，但在定位上略有不同：</p>
 
-<p><strong>memray：一次选择，快速失败。</strong> memray 在启动时通过 <span class="codespan">resolve_debugger()</span> 按优先级（<span class="codespan">sys.remote_exec</span> &gt; <span class="codespan">gdb</span> &gt; <span class="codespan">lldb</span>）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。</p>
+<p>memray：一次选择，快速失败。memray 在启动时通过 <span class="codespan">resolve_debugger()</span> 按优先级（<span class="codespan">sys.remote_exec</span> &gt; <span class="codespan">gdb</span> &gt; <span class="codespan">lldb</span>）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。</p>
 
-<p><strong>peeka：优先使用原生能力，旧版本使用 C 扩展注入。</strong> peeka 在 Python 3.14+ 上优先使用 <span class="codespan">sys.remote_exec()</span>；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。</p>
+<p>peeka：优先使用原生能力，旧版本使用 C 扩展注入。peeka 在 Python 3.14+ 上优先使用 <span class="codespan">sys.remote_exec()</span>；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># peeka 的 attach 决策树
 </span><span class="k">if</span> <span class="nf">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="sh">"</span><span class="s">remote_exec</span><span class="sh">"</span><span class="p">):</span>     <span class="c1"># Python 3.14+
@@ -853,9 +853,9 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <p>Python 进程注入经历了三代演进：</p>
 
 <ol>
-  <li><strong>直接调用 C API</strong>（pyrasite）：简单粗暴，但有崩溃和死锁风险</li>
-  <li><strong>dlopen + pthread</strong>（memray/peeka）：通过安全断点和独立线程显著降低风险</li>
-  <li><strong>解释器原生支持</strong>（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码</li>
+  <li>直接调用 C API（pyrasite）：简单粗暴，但有崩溃和死锁风险</li>
+  <li>dlopen + pthread（memray/peeka）：通过安全断点和独立线程显著降低风险</li>
+  <li>解释器原生支持（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码</li>
 </ol>
 
 <p>如果你的目标环境是 Python 3.14+，<span class="codespan">sys.remote_exec</span> 是毫无争议的最佳选择。如果需要支持更老的版本，dlopen + pthread 方案提供了合理的安全性和兼容性平衡。</p>

@@ -6,8 +6,8 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 16 May 2026 14:28:49 +0000</pubDate>
-    <lastBuildDate>Sat, 16 May 2026 14:28:49 +0000</lastBuildDate>
+    <pubDate>Tue, 19 May 2026 08:40:05 +0000</pubDate>
+    <lastBuildDate>Tue, 19 May 2026 08:40:05 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2026. All rights reserved.</rights>
     
@@ -33,7 +33,7 @@
   &lt;li&gt;执行时机：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;·所以，进程注入需要回答三个问题：&lt;/p&gt;
+&lt;p&gt;所以，进程注入需要回答三个问题：&lt;/p&gt;
 
 &lt;ol&gt;
   &lt;li&gt;如何进入目标进程的地址空间？（跨进程控制）&lt;/li&gt;
@@ -167,18 +167,18 @@
 &lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;peeka/memray 控制端          GDB/LLDB 子进程              目标 Python 进程
     │                            │                              │
     │  3.1：bind/listen 本地端口  │                              │
-    │── 启动 GDB/LLDB ──────────&amp;gt;│                              │  3.1：传入端口和注入库路径
-    │                            │── ptrace ATTACH ────────────&amp;gt;│  暂停
-    │                            │── 等待安全断点命中 ───────────&amp;gt;│  3.2：malloc/PyMem_* 等 C 函数入口
+    │-- 启动 GDB/LLDB ----------&amp;gt;│                              │  3.1：传入端口和注入库路径
+    │                            │-- ptrace ATTACH ------------&amp;gt;│  暂停
+    │                            │-- 等待安全断点命中 -----------&amp;gt;│  3.2：malloc/PyMem_* 等 C 函数入口
     │                            │                              │
-    │                            │── dlopen(&quot;_inject.so&quot;) ─────&amp;gt;│  3.3：加载 C 扩展到目标地址空间
-    │                            │── call peeka_spawn_agent() ─&amp;gt;│  3.4：创建新 pthread
-    │                            │── ptrace DETACH ────────────&amp;gt;│  恢复执行
+    │                            │-- dlopen(&quot;_inject.so&quot;) -----&amp;gt;│  3.3：加载 C 扩展到目标地址空间
+    │                            │-- call peeka_spawn_agent() -&amp;gt;│  3.4：创建新 pthread
+    │                            │-- ptrace DETACH ------------&amp;gt;│  恢复执行
     │                            │                              │
-    │&amp;lt;───────────────────────────┼──────────────────────────────│  3.5：[新 pthread] connect() 回连 + 接收脚本
-    │                            │                              │  ├─ PyGILState_Ensure()
-    │                            │                              │  ├─ PyEval_EvalCode()
-    │                            │                              │  └─ PyGILState_Release()
+    │&amp;lt;---------------------------┼------------------------------│  3.5：[新 pthread] connect() 回连 + 接收脚本
+    │                            │                              │  ├- PyGILState_Ensure()
+    │                            │                              │  ├- PyEval_EvalCode()
+    │                            │                              │  └- PyGILState_Release()
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;p&gt;在这条路径里，确实会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。&lt;/p&gt;

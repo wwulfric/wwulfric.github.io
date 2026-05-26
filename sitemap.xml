@@ -249,6 +249,10 @@
 <lastmod>2026-04-19T00:00:00+00:00</lastmod>
 </url>
 <url>
+<loc>https://wulfric.me/2026/05/python38-gevent-attach-failure/</loc>
+<lastmod>2026-05-08T00:00:00+00:00</lastmod>
+</url>
+<url>
 <loc>https://wulfric.me/about/</loc>
 </url>
 <url>
@@ -811,5 +815,11 @@
 </url>
 <url>
 <loc>https://wulfric.me/tags/cpython/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/gevent/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/debug/</loc>
 </url>
 </urlset>

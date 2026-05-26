@@ -6,10 +6,757 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Tue, 19 May 2026 08:40:05 +0000</pubDate>
-    <lastBuildDate>Tue, 19 May 2026 08:40:05 +0000</lastBuildDate>
+    <pubDate>Tue, 26 May 2026 16:23:02 +0000</pubDate>
+    <lastBuildDate>Tue, 26 May 2026 16:23:02 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2026. All rights reserved.</rights>
+    
+      <item>
+        <title>Python attach agent 遇到 gevent monkey patch：控制面超时与数据面降级</title>
+        <description>&lt;p&gt;上一篇《理解 Python 进程注入：从 ptrace 到 PEP 768》写了 Python 进程注入的几种方式：GDB 直接调用 Python C API、&lt;span class=&quot;codespan&quot;&gt;dlopen + pthread&lt;/span&gt;、以及 Python 3.14 之后的 PEP 768。&lt;/p&gt;
+
+&lt;p&gt;这些方案解决的是“如何把一段代码送进一个正在运行的 Python 进程”。但代码被送进去之后，还有另一个问题：&lt;strong&gt;这段代码会运行在目标进程自己的 Python runtime 里&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;如果目标进程是一个普通 Python 程序，这通常没什么特别。但如果它在启动早期执行过 gevent monkey patch，&lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time&lt;/span&gt; 这些标准库模块就可能已经被替换。一个 attach agent 如果把自己的控制通道建立在这些高层 API 上，就可能在启动阶段出现很难从外部理解的 timeout；即使 agent 启动成功，后续诊断命令的观测语义也可能被 gevent 的调度模型改变。&lt;/p&gt;
+
+&lt;p&gt;本文用一个最小模型解释这个问题，再对照 peeka 0.1.13 之后的实现看两层处理：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;控制面：agent 自己如何创建 socket、线程、锁、ready 信号；&lt;/li&gt;
+  &lt;li&gt;数据面：&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 这类命令如何在 gevent runtime 下保持可靠输出。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;前者决定 agent 能不能稳定活下来，后者决定诊断结果会不会被误读。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;最小-attach-模型&quot;&gt;最小 attach 模型&lt;/h2&gt;
+
+&lt;p&gt;先把进程注入抽象成一张图：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;诊断工具
+    |
+    | attach(pid)
+    v
+GDB / LLDB / dlopen / PEP 768
+    |
+    | execute agent script
+    v
+目标 Python 进程
+    |
+    | start agent
+    v
+/tmp/agent_&amp;lt;session&amp;gt;.sock  &amp;lt;----&amp;gt;  诊断工具 client
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;不管底层 attach 是怎么做的，最终都会来到同一个点：一段 Python agent 代码开始在目标解释器里运行。&lt;/p&gt;
+
+&lt;p&gt;这段 agent 通常会做几件事：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;创建一个 Unix socket，用来接收后续诊断命令；&lt;/li&gt;
+  &lt;li&gt;启动后台循环，持续 &lt;span class=&quot;codespan&quot;&gt;accept()&lt;/span&gt; client 连接；&lt;/li&gt;
+  &lt;li&gt;写一个 ready 文件，告诉外部工具“agent 已经准备好了”；&lt;/li&gt;
+  &lt;li&gt;后续命令都通过这个 socket 进来。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;ready 文件只是一个同步信号。例如：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/tmp/agent_&amp;lt;session&amp;gt;.ready
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;它的作用是避免外部工具过早连接 socket。外部工具通常会做类似这样的等待：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;deadline&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deadline&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;exists&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.05&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;raise&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;TimeoutError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;Agent initialization timeout (ready file)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;如果 ready 文件迟迟没有出现，外部只能报 timeout。但 timeout 本身不说明根因。它只说明 agent 没有走到“写 ready”这一步。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;一个看起来正常的-agent&quot;&gt;一个看起来正常的 agent&lt;/h2&gt;
+
+&lt;p&gt;先写一个最小 agent。它不做任何复杂诊断，只创建 socket、启动 accept loop、写 ready 文件。&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pathlib&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Path&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;MiniAgent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;__init__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/agent_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.sock&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/agent_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.ready&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;unlink&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;FileNotFoundError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;AF_UNIX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SOCK_STREAM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;listen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_accept_loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,),&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;daemon&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+        &lt;span class=&quot;nc&quot;&gt;Path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;touch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_accept_loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_handle_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,),&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;daemon&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_handle_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sendall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这段代码在一个干净的 Python 进程里没有问题：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;socket.socket()&lt;/span&gt; 创建 Unix socket；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;listen()&lt;/span&gt; 开始监听；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;threading.Thread()&lt;/span&gt; 启动后台 accept loop；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;threading.Event()&lt;/span&gt; 用来确认 accept loop 已经进入工作状态；&lt;/li&gt;
+  &lt;li&gt;ready 文件写出；&lt;/li&gt;
+  &lt;li&gt;外部 client 再连接 socket。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;如果你写的是一个普通服务端程序，这段代码非常自然。&lt;/p&gt;
+
+&lt;p&gt;但 attach agent 有一个特殊点：它不是运行在自己启动的干净进程里，而是运行在别人的进程里。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;被-gevent-改造过的目标进程&quot;&gt;被 gevent 改造过的目标进程&lt;/h2&gt;
+
+&lt;p&gt;很多 gevent 程序会在入口处执行 monkey patch：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;patch_all&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;my_web_app&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;app&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;app&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;serve_forever&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;monkey.patch_all()&lt;/span&gt; 会替换标准库中的一批阻塞 API，让它们进入 gevent 的协程调度语义。常见受影响对象包括：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;time.sleep&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;select&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt; 里的部分同步原语&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;业务代码仍然写：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;recv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4096&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;但底层行为已经不再是普通阻塞调用，而是可能让出到 gevent hub，由协程调度器安排。&lt;/p&gt;
+
+&lt;p&gt;这对业务程序是好事。问题在于，attach agent 注入进去以后，看到的也是这个已经被 patch 过的世界。&lt;/p&gt;
+
+&lt;p&gt;也就是说，agent 里的这几行：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(...)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(...)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;拿到的不一定是 CPython 启动时的原始对象，而可能是 gevent patch 之后的对象。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;失败是怎么发生的&quot;&gt;失败是怎么发生的&lt;/h2&gt;
+
+&lt;p&gt;前面的 agent 启动代码里，最危险的是这几行：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_accept_loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,),&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;daemon&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;第一眼看，风险似乎在最后一行 &lt;span class=&quot;codespan&quot;&gt;accept_ready.wait()&lt;/span&gt;。如果 gevent patch 了 &lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt;，这个 wait 就可能落入 gevent 的 event 实现。&lt;/p&gt;
+
+&lt;p&gt;但还有一个更隐蔽的位置：&lt;span class=&quot;codespan&quot;&gt;threading.Thread.start()&lt;/span&gt; 内部也会等待线程真正启动。&lt;/p&gt;
+
+&lt;p&gt;CPython 的 &lt;span class=&quot;codespan&quot;&gt;Thread.start()&lt;/span&gt; 大致会做这样的事：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;_start_new_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_bootstrap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_started&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这里的 &lt;span class=&quot;codespan&quot;&gt;_started&lt;/span&gt; 也是一个 event。正常情况下，这只是一个很短的同步等待。但如果 &lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt; 已经被 gevent monkey patch，这个 wait 也可能变成 gevent event wait。&lt;/p&gt;
+
+&lt;p&gt;于是调用链会变成这样：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;agent.start()
+  -&amp;gt; threading.Thread.start()
+     -&amp;gt; self._started.wait()
+        -&amp;gt; gevent.event.Event.wait()
+           -&amp;gt; gevent.exceptions.BlockingSwitchOutError
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;常见错误是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;gevent.exceptions.BlockingSwitchOutError:
+Impossible to call blocking function in the event loop callback
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这类错误的意思不是“不能创建线程”，也不是“GDB attach 失败”。它更接近于：&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;当前执行点不允许做这种会切换 gevent hub 的阻塞等待。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;对于 attach agent 来说，结果就是：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;agent 代码确实被执行了；&lt;/li&gt;
+  &lt;li&gt;socket 可能已经创建；&lt;/li&gt;
+  &lt;li&gt;log 可能已经写出；&lt;/li&gt;
+  &lt;li&gt;但 agent 在写 ready 文件之前异常退出；&lt;/li&gt;
+  &lt;li&gt;外部工具最后只能看到 ready file timeout。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;所以 &lt;span class=&quot;codespan&quot;&gt;Agent initialization timeout (ready file)&lt;/span&gt; 往往只是表象。真正的错误在目标进程内部的 agent log 里。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;一个最小复现模型&quot;&gt;一个最小复现模型&lt;/h2&gt;
+
+&lt;p&gt;真实 attach 需要 GDB、LLDB 或 PEP 768，不适合放在最小示例里。我们可以用伪代码模拟关键条件。&lt;/p&gt;
+
+&lt;p&gt;目标进程：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# target.py
+&lt;/span&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;patch_all&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;business_task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;spawn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;business_task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;外部 attach 工具最终会让目标进程执行一段 agent 代码。把这个动作抽象成：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# injected by debugger / remote exec / native injector
+&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;exec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;agent_script&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;MiniAgent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;如果 &lt;span class=&quot;codespan&quot;&gt;MiniAgent.start()&lt;/span&gt; 使用的是前面那版 &lt;span class=&quot;codespan&quot;&gt;threading.Thread + threading.Event&lt;/span&gt;，它就不再运行在“干净 Python”的假设下，而是运行在 gevent 改造过的 runtime 里。&lt;/p&gt;
+
+&lt;p&gt;真正的问题不是某一行 attach 命令，也不是 Python 3.8 本身，而是这条边界：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;诊断 agent 的控制面
+    建立在
+目标应用可能 monkey patch 的标准库 API
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这条边界一旦混在一起，agent 的行为就会受目标应用运行模型影响。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;先分清控制面和数据面&quot;&gt;先分清控制面和数据面&lt;/h2&gt;
+
+&lt;p&gt;gevent 影响 attach agent 时，至少有两个层面：&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;层面&lt;/th&gt;
+      &lt;th&gt;典型对象&lt;/th&gt;
+      &lt;th&gt;主要风险&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;控制面&lt;/td&gt;
+      &lt;td&gt;agent socket、accept loop、client handler、ready/notify 信号&lt;/td&gt;
+      &lt;td&gt;agent 起不来，或者命令通道不响应&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;数据面&lt;/td&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;stack&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;monitor&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;agent 能响应，但观测语义发生变化&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;控制面追求的是“agent 自己不要被目标 runtime 拖死”。数据面追求的是“命令输出不要假装自己比实际更完整”。这两层都要处理，不能只修 ready timeout。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;控制面修复隔离-runtime-原语&quot;&gt;控制面修复：隔离 runtime 原语&lt;/h2&gt;
+
+&lt;p&gt;解决方向不是“换一种 attach 方法”。不同 attach 方法只决定 agent 如何进入目标进程；只要最终要在目标解释器里执行 Python agent，就仍然会遇到目标 runtime 已经被改造的问题。&lt;/p&gt;
+
+&lt;p&gt;更核心的原则是：&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;attach agent 的控制面要尽量使用底层、可预测、少依赖的原语。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;对这个例子来说，至少要避开这些对象：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;被 patch 的 &lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;被 patch 的 &lt;span class=&quot;codespan&quot;&gt;threading.Thread&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;被 patch 的 &lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt;&lt;/li&gt;
+  &lt;li&gt;控制面里的高层计时函数，例如 &lt;span class=&quot;codespan&quot;&gt;time.time&lt;/span&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;gevent 提供了一个有用的能力：如果当前进程已经加载了 &lt;span class=&quot;codespan&quot;&gt;gevent.monkey&lt;/span&gt;，可以通过 &lt;span class=&quot;codespan&quot;&gt;get_original()&lt;/span&gt; 拿回 monkey patch 之前的原始对象。&lt;/p&gt;
+
+&lt;p&gt;agent 不需要主动 import gevent，也不应该把 gevent 变成依赖。peeka 0.1.13 之后把这层抽成 Runtime Primitive Layer，大致是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_socket&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_thread&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original_runtime_attr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;module_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;attr_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fallback&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;modules&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;gevent.monkey&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;get_original&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;get_original&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;callable&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get_original&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;module_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;attr_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;Exception&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fallback&lt;/span&gt;
+
+
+&lt;span class=&quot;n&quot;&gt;NativeSocket&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;start_new_thread&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original_runtime_attr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;_thread&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;start_new_thread&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start_new_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;allocate_lock&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original_runtime_attr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;_thread&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;allocate_lock&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;allocate_lock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;NativeEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original_runtime_attr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;native_time&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;get_original_runtime_attr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这里有几个细节：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;不主动 &lt;span class=&quot;codespan&quot;&gt;import gevent&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;不要求目标进程一定使用 gevent；&lt;/li&gt;
+  &lt;li&gt;gevent 存在时尽量拿原始对象；&lt;/li&gt;
+  &lt;li&gt;socket 直接使用 &lt;span class=&quot;codespan&quot;&gt;_socket.socket&lt;/span&gt;，避开 &lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt; 模块层的替换；&lt;/li&gt;
+  &lt;li&gt;拿不到时回到当前 runtime 里的对象；&lt;/li&gt;
+  &lt;li&gt;只影响 agent 自己的控制面，不修改业务代码。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;修复后的最小-agent&quot;&gt;修复后的最小 agent&lt;/h2&gt;
+
+&lt;p&gt;基于这些原语，可以把 agent 改成这样：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pathlib&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Path&lt;/span&gt;
+
+
+&lt;span class=&quot;c1&quot;&gt;# 沿用上文定义的 NativeSocket、start_new_thread、allocate_lock。
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;create_socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;type_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NativeSocket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;type_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start_new_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;native_accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;accept&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;accept&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;callable&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;fd&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;address&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;_accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NativeSocket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;proto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileno&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fd&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;address&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;MiniAgent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;__init__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/agent_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.sock&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/agent_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;session_id&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;.ready&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;closed&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lock&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;allocate_lock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;unlink&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;except&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;FileNotFoundError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;create_socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;AF_UNIX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SOCK_STREAM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;listen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+        &lt;span class=&quot;nf&quot;&gt;start_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_accept_loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+        &lt;span class=&quot;nc&quot;&gt;Path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;touch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_accept_loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;closed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;native_accept&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;nf&quot;&gt;start_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_handle_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,))&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_handle_client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sendall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;finally&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;变化很少，但性质不同：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;socket 使用原始 &lt;span class=&quot;codespan&quot;&gt;_socket.socket&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;accept 也收口到 native helper；&lt;/li&gt;
+  &lt;li&gt;线程使用 &lt;span class=&quot;codespan&quot;&gt;_thread.start_new_thread&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;不再创建 &lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;不再调用 &lt;span class=&quot;codespan&quot;&gt;threading.Thread.start()&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;不再做 &lt;span class=&quot;codespan&quot;&gt;Event.wait()&lt;/span&gt; 这样的 Python 层 barrier。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;这样就切断了原来的失败路径：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;threading.Thread.start()
+  -&amp;gt; self._started.wait()
+  -&amp;gt; gevent.event.Event.wait()
+  -&amp;gt; BlockingSwitchOutError
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这里用 &lt;span class=&quot;codespan&quot;&gt;_thread&lt;/span&gt; 是一个有意识的取舍。它比 &lt;span class=&quot;codespan&quot;&gt;threading.Thread&lt;/span&gt; 更低层，没有漂亮的对象封装，也没有 join、name、daemon 这些高级能力。但 agent 的控制面通常只需要启动一个长期运行的 accept loop 和若干短生命周期 client handler。为了避免踩到目标进程改写过的 &lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt;，这个取舍是合理的。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;ready-文件还需要等待-accept-loop-吗&quot;&gt;ready 文件还需要等待 accept loop 吗&lt;/h2&gt;
+
+&lt;p&gt;前面的脆弱 agent 使用了一个 &lt;span class=&quot;codespan&quot;&gt;accept_ready&lt;/span&gt; event：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;accept_ready&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;Path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ready_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;touch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;它的意图是：确认 accept loop 已经启动，再告诉外部工具可以连接。&lt;/p&gt;
+
+&lt;p&gt;但这个等待并不是必须的。对于 socket server 来说，更关键的是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;listen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;listen()&lt;/span&gt; 返回后，socket 已经开始监听，连接可以进入 backlog。即使 accept loop 还没执行到 &lt;span class=&quot;codespan&quot;&gt;accept()&lt;/span&gt;，client 的连接请求也不需要依赖一个 Python 层 event 才能安全到达。&lt;/p&gt;
+
+&lt;p&gt;所以更稳的顺序是：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;创建原始 Unix socket；&lt;/li&gt;
+  &lt;li&gt;bind；&lt;/li&gt;
+  &lt;li&gt;listen；&lt;/li&gt;
+  &lt;li&gt;启动原始线程跑 accept loop；&lt;/li&gt;
+  &lt;li&gt;写 ready 文件；&lt;/li&gt;
+  &lt;li&gt;外部 client 连接后再做一次 hello 探测。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;最后一步很重要。ready 文件只能说明 agent 走到了某个初始化阶段，不代表命令循环一定健康。外部工具在进入正式交互前，应该再连一次 socket，发一个最小 hello：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;verify_agent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;AF_UNIX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SOCK_STREAM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settimeout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;connect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;recv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1024&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;raise&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;RuntimeError&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;agent hello failed&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这比在 agent 内部依赖 &lt;span class=&quot;codespan&quot;&gt;threading.Event.wait()&lt;/span&gt; 更适合 attach 场景：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;ready 文件负责进程间粗同步；&lt;/li&gt;
+  &lt;li&gt;hello 负责协议级健康检查；&lt;/li&gt;
+  &lt;li&gt;agent 内部少依赖目标 runtime 的高层同步原语。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;这和-attach-方法有什么关系&quot;&gt;这和 attach 方法有什么关系&lt;/h2&gt;
+
+&lt;p&gt;上一篇文章里提到，Python 3.8 到 3.13 常见的较安全 attach 方案是 &lt;span class=&quot;codespan&quot;&gt;dlopen + pthread&lt;/span&gt;：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;GDB/LLDB attach
+  -&amp;gt; dlopen(native injector)
+  -&amp;gt; native injector 创建 pthread
+  -&amp;gt; pthread 获取 GIL
+  -&amp;gt; 执行 Python agent
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这个方案解决的是“不要在 ptrace 暂停点直接执行复杂 Python 代码”。它能降低死锁、崩溃、时机不安全的风险。&lt;/p&gt;
+
+&lt;p&gt;但它不自动解决本文的问题。&lt;/p&gt;
+
+&lt;p&gt;原因很简单：不管 agent 是通过 GDB legacy、&lt;span class=&quot;codespan&quot;&gt;dlopen + pthread&lt;/span&gt;，还是 PEP 768 进入目标进程，只要最后执行的是 Python agent，它看到的就是目标进程当前的 Python runtime。&lt;/p&gt;
+
+&lt;p&gt;如果目标进程已经做了：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;patch_all&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;那么 agent 的 Python 代码就必须假设：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt; 可能不是原始 socket；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt; 可能不是原始 event；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;threading.Thread.start()&lt;/span&gt; 内部可能走到 gevent wait；&lt;/li&gt;
+  &lt;li&gt;阻塞等待可能不允许出现在当前执行点。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;所以 attach 方法和 agent runtime 适配是两个层面：&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;层面&lt;/th&gt;
+      &lt;th&gt;解决的问题&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;attach 方法&lt;/td&gt;
+      &lt;td&gt;怎么进入目标进程，什么时候执行代码&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;agent 控制面&lt;/td&gt;
+      &lt;td&gt;进入之后用什么 runtime 原语保持 socket、线程、ready 信号稳定&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;agent 数据面&lt;/td&gt;
+      &lt;td&gt;诊断命令在目标 runtime 里还能提供什么语义&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;控制面修复以后，agent 不再轻易被 monkey patch 拖死。但这还不是终点，诊断命令本身也要看 gevent 状态。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;数据面按命令声明兼容性&quot;&gt;数据面：按命令声明兼容性&lt;/h2&gt;
+
+&lt;p&gt;数据面和控制面不同。控制面可以尽量退到底层原语；数据面要观察业务函数、调用栈、采样热点，天然会碰到目标进程的调度模型。&lt;/p&gt;
+
+&lt;p&gt;peeka 0.1.13 之后的源码没有把“gevent 下所有命令都完全等价”作为目标，而是做了三件事：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;零副作用探测 gevent 状态：只看 &lt;span class=&quot;codespan&quot;&gt;sys.modules&lt;/span&gt; 里已有的 &lt;span class=&quot;codespan&quot;&gt;gevent.monkey&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;gevent.hub&lt;/span&gt;，不主动 import gevent；&lt;/li&gt;
+  &lt;li&gt;建一个命令兼容矩阵：同一个命令在 &lt;span class=&quot;codespan&quot;&gt;none&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;imported&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;patched&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;active_hub&lt;/span&gt; 下选择不同 backend；&lt;/li&gt;
+  &lt;li&gt;对会选择 backend 或发生降级的命令，把结果放进 JSONL &lt;span class=&quot;codespan&quot;&gt;meta&lt;/span&gt;：&lt;span class=&quot;codespan&quot;&gt;gevent_state&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;backend&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;greenlet_blind&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;degraded_reason&lt;/span&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;源码中的兼容矩阵核心意思是：&lt;/p&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;命令&lt;/th&gt;
+      &lt;th&gt;gevent patched / active hub 下的策略&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;保持 wrapper 观测，记录入参、返回值、异常和耗时&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;monitor&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;保持 wrapper 统计，记录调用数、成功率和响应时间&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;stack&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;保持函数入口处的 stack 捕获&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;降级为 &lt;span class=&quot;codespan&quot;&gt;wrapper_only&lt;/span&gt;，只保留根调用耗时，不再展开递归调用树&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;使用 &lt;span class=&quot;codespan&quot;&gt;greenlet_aware_sampling&lt;/span&gt;，同时标记 &lt;span class=&quot;codespan&quot;&gt;greenlet_blind&lt;/span&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这里的重点不是“所有命令都安全无损”，而是每个命令都要明确自己在 gevent 下还能承诺什么。&lt;/p&gt;
+
+&lt;h3 id=&quot;trace-为什么要降级&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 为什么要降级&lt;/h3&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 的完整调用树依赖全局 tracing backend。Python 3.12+ 可以走 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;，更老版本通常走 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt;。这类机制会进入解释器的 frame 事件流。&lt;/p&gt;
+
+&lt;p&gt;在 gevent patched 或 active hub 状态下，源码选择避开递归 tracing，强制使用 &lt;span class=&quot;codespan&quot;&gt;wrapper_only&lt;/span&gt;：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;trace target()
+  -&amp;gt; wrapper 记录 target() 总耗时
+  -&amp;gt; 不再用 sys.settrace / sys.monitoring 展开子调用
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;因此 &lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 仍然能告诉你“这个入口调用花了多久、是否抛异常”，但不能再声称自己拿到了完整子调用树。输出里的 &lt;span class=&quot;codespan&quot;&gt;degraded_reason&lt;/span&gt; 会说明这个降级原因。&lt;/p&gt;
+
+&lt;h3 id=&quot;top-为什么还要标记-greenlet_blind&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 为什么还要标记 greenlet_blind&lt;/h3&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 的普通采样方式是 frame walk：周期性读取各 OS thread 的当前 frame，再按函数聚合热点。&lt;/p&gt;
+
+&lt;p&gt;gevent 的问题在于：很多 greenlet 共享一个 OS thread。&lt;span class=&quot;codespan&quot;&gt;sys._current_frames()&lt;/span&gt; 只能看到每个 OS thread 当前正在运行的 frame，看不到所有挂起的 greenlet 栈。于是普通 frame walk 在 gevent 下会天然漏掉一部分上下文。&lt;/p&gt;
+
+&lt;p&gt;当前源码做了一个折中：如果 &lt;span class=&quot;codespan&quot;&gt;greenlet&lt;/span&gt; 已经加载并提供 &lt;span class=&quot;codespan&quot;&gt;gettrace&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;settrace&lt;/span&gt;，&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 会安装一个链式 greenlet tracer，记录 switch / throw 事件，并在退出时恢复之前的 tracer。这样可以多保留一些 greenlet 调度信息，但仍然不能完整枚举所有挂起 greenlet 的栈，所以输出继续标记：&lt;/p&gt;
+
+&lt;div  class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;meta&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;gevent_state&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;patched&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;backend&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;greenlet_aware_sampling&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;greenlet_blind&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;degraded_reason&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;Frame sampling under gevent only sees the active greenlet per OS thread. Suspended greenlets are not represented.&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这比沉默地给出一份看似完整的热点列表更诚实。&lt;/p&gt;
+
+&lt;h3 id=&quot;patch-status-的作用&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;patch-status&lt;/span&gt; 的作用&lt;/h3&gt;
+
+&lt;p&gt;还有一个辅助命令值得单独看：&lt;span class=&quot;codespan&quot;&gt;patch-status&lt;/span&gt;。它不修复任何东西，只报告目标 runtime 当前是什么状态：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;gevent / eventlet 是否已经 import 或 active；&lt;/li&gt;
+  &lt;li&gt;当前 &lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt; 等对象是否仍等于 RPL 捕获的 native 对象；&lt;/li&gt;
+  &lt;li&gt;RPL 自检是否通过。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;这个命令的价值在于把“agent 看到的世界”显式暴露出来。遇到 gevent 目标进程时，先看 &lt;span class=&quot;codespan&quot;&gt;patch-status&lt;/span&gt;，再读 &lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 输出里的 &lt;span class=&quot;codespan&quot;&gt;meta&lt;/span&gt;，比只盯着 timeout 更快。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;总结&quot;&gt;总结&lt;/h2&gt;
+
+&lt;p&gt;表面错误可能只是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Agent initialization timeout (ready file)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;但在 gevent 目标进程里，真正的根因可能是：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;attach agent 使用 threading.Thread / threading.Event
+  -&amp;gt; 这些对象被 gevent monkey patch 影响
+  -&amp;gt; Thread.start() 或 Event.wait() 落入 gevent wait
+  -&amp;gt; 当前执行点不允许 blocking switch
+  -&amp;gt; agent 在写 ready 文件前退出
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;控制面修复方向不是把某个 timeout 调长，也不是单纯更换 attach 路径，而是把 agent 控制面和目标应用 runtime 解耦：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;不主动依赖被 monkey patch 的 &lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;如果 gevent 已经存在，使用 &lt;span class=&quot;codespan&quot;&gt;gevent.monkey.get_original()&lt;/span&gt; 取原始对象；&lt;/li&gt;
+  &lt;li&gt;用 &lt;span class=&quot;codespan&quot;&gt;_thread.start_new_thread&lt;/span&gt; 替代 &lt;span class=&quot;codespan&quot;&gt;threading.Thread&lt;/span&gt; 启动控制线程；&lt;/li&gt;
+  &lt;li&gt;去掉 &lt;span class=&quot;codespan&quot;&gt;threading.Event.wait()&lt;/span&gt; 这种 ready barrier；&lt;/li&gt;
+  &lt;li&gt;用 &lt;span class=&quot;codespan&quot;&gt;listen()&lt;/span&gt; 后的 socket backlog 加外部 hello 探测完成同步；&lt;/li&gt;
+  &lt;li&gt;把 ready timeout 当作表象，优先查看目标进程内部 agent log。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;但控制面稳定不代表数据面无损。gevent 下还要按命令处理观测语义：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;monitor&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;stack&lt;/span&gt; 在兼容矩阵里保持 safe，但它们不声称展开 gevent 的内部调度；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 在 patched / active hub 下应降级到 &lt;span class=&quot;codespan&quot;&gt;wrapper_only&lt;/span&gt;，避免递归 tracing API；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 可以接入 greenlet trace 事件，但仍要标记 &lt;span class=&quot;codespan&quot;&gt;greenlet_blind&lt;/span&gt;；&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 这类受影响输出要带 &lt;span class=&quot;codespan&quot;&gt;meta&lt;/span&gt;，让调用方知道当前 backend 和降级原因。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;attach 工具运行在别人的进程里。那个进程的标准库、线程模型、socket 行为、frame 调度模型都可能已经被业务框架改造过。控制面要尽量退到底层原语；数据面要诚实声明自己还能看见什么。&lt;/p&gt;
+</description>
+        <pubDate>Fri, 08 May 2026 00:00:00 +0000</pubDate>
+        <link>https://wulfric.me/2026/05/python38-gevent-attach-failure/</link>
+        <guid isPermaLink="true">https://wulfric.me/2026/05/python38-gevent-attach-failure/</guid>
+        
+        <category>python</category>
+        
+        <category>gevent</category>
+        
+        <category>debug</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
     
       <item>
         <title>理解 Python 进程注入：从 ptrace 到 PEP 768</title>
@@ -3947,51 +4694,6 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
         <pubDate>Fri, 28 Apr 2023 22:48:00 +0000</pubDate>
         <link>https://wulfric.me/2023/04/Transformer-ch/</link>
         <guid isPermaLink="true">https://wulfric.me/2023/04/Transformer-ch/</guid>
-        
-        <category>ai</category>
-        
-        <category>chatgpt</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>GPT3 论文翻译：Language Models are Few-Shot Learners</title>
-        <description>&lt;p&gt;语言模型是少样本学习者。&lt;/p&gt;
-
-&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
-
-&lt;p&gt;近期的研究表明，在大型文本语料库上进行预训练，然后针对特定任务进行微调，可以在许多NLP任务和基准测试中取得显著成果。尽管这种方法在架构上通常不针对特定任务，但它仍然需要由数千或数万个样本组成的任务特定微调数据集。相比之下，人类通常只需几个示例或简单的指令就能完成新的语言任务，然而当前的NLP系统在很大程度上仍难以实现这一目标。在这里，我们展示了通过扩大语言模型规模可以极大地提高任务通用的少样本性能，有时甚至能达到与先前最先进的微调方法相媲美的水平。具体来说，我们训练了GPT-3，一种具有1750亿参数的自回归语言模型，比以前任何非稀疏语言模型多10倍，并在少样本设置中测试其性能。对于所有任务，GPT-3均无需进行任何梯度更新或微调，任务和少样本演示仅通过与模型的文本交互进行指定。GPT-3在许多NLP数据集上表现优异，包括翻译、问答和填空任务，以及一些需要实时推理或领域自适应&lt;sup id=&quot;fnref:dat&quot;&gt;&lt;a href=&quot;#fn:dat&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;的任务，如还原打乱的单词、在句子中使用新词或进行3位数算术运算。同时，我们还发现了，GPT-3在一些数据集上的少样本学习仍然存在困难，同时在一些大型网络语料库数据集的训练中遇到了一些方法论问题。最后，我们发现GPT-3可以生成新闻文章样本，人类评估者很难将其与人类撰写的文章区分开来。我们讨论了这一发现以及GPT-3总体产生的更广泛的社会影响。&lt;/p&gt;
-
-&lt;h2 id=&quot;1-导言&quot;&gt;1. 导言&lt;/h2&gt;
-
-&lt;p&gt;近年来，NLP系统中出现了一个趋势，即使用越来越灵活、任务无关的方式应用预训练的「语言表示」来进行下游迁移。首先，利用词向量来学习单层表示[MCCD13, PSM14]并输入到任务特定的架构中，然后使用具有多层表示和上下文状态的RNN形成更强大的表示[DL15, MBXS17, PNZtY18]（尽管仍应用于任务特定的架构），最近则直接微调预训练的循环或Transformer语言模型[VSP+17]，完全消除了任务特定架构的需求[RNSS18, DCLT18, HR18]。&lt;/p&gt;
-
-&lt;p&gt;最后这种范式在许多具有挑战性的NLP任务上取得了实质性进展，如阅读理解、问答、文本蕴涵等，并在新的架构和算法的基础上不断发展[RSR+19, LOG+19, YDY+19, LCG+19]。然而，这种方法的一个主要局限性在于，尽管架构是任务通用的，但仍然需要任务特定的数据集和任务特定的微调：要在期望的任务上取得优异表现，通常需要在针对该任务的数千到数十万个示例的数据集上进行微调。消除这种局限性是可取的，原因有以下几点。&lt;/p&gt;
-
-&lt;p&gt;首先，从实践角度来看，每个新任务都需要大量已标注样本的数据集限制了语言模型的应用范围。有非常多的有用的语言任务，包括纠正语法、生成抽象概念示例、评论短篇小说等等。对于这些任务中的很多来说，收集大量监督训练数据集极具挑战，尤其是当这个过程需要为每个新任务重复进行的时候。&lt;/p&gt;
-
-&lt;p&gt;其次，随着模型表达能力愈发强大和训练数据分布愈发狭窄，挖掘训练数据中的非实质性关联的潜力也随之增加。这给预训练加微调范式带来了问题，在这个范式中，模型被设计成庞大的，以便在预训练阶段吸收信息，但随后会在非常狭窄的任务分布上进行微调。例如，有研究发现，大模型并不一定在分布之外具有更好的泛化能力。有证据表明，在这种范式下所实现的泛化性能可能较差，因为模型过于依赖训练分布，在其之外泛化能力不足。因此，在特定基准测试上微调模型的性能，即使名义上达到人类水平，也可能高估了其在实际任务中的表现。&lt;/p&gt;
-
-&lt;p&gt;第三，人类在学习大部分语言任务时，并不需要大量的有监督数据集。一条简短的自然语言指令（例如，“请告诉我这句话描述的是快乐还是悲伤”）或者仅有的几个示例（例如，“这里有两个勇敢行为的例子；请给出第三个勇敢的例子”）通常就足以让人类具备至少一定程度的能力来执行新任务。除了揭示我们目前的NLP技术在概念上的局限性之外，这种适应能力还具有实际优势——它使人类能够在许多任务和技能之间无缝地混合或切换，如在漫长的对话过程中进行加法运算。为了使NLP系统更具实用性，我们期望未来的NLP系统能够拥有与人类相同的灵活性和通用性。&lt;/p&gt;
-
-&lt;h2 id=&quot;8结论&quot;&gt;8结论&lt;/h2&gt;
-
-&lt;p&gt;我们展示了一个拥有1750亿参数的语言模型，在零样本、单样本和少样本设置下，该模型在许多NLP任务和基准测试中表现出强大的性能。在某些情况下，它几乎能匹敌顶尖的微调系统的性能，同时能够生成高质量的样本，以及在即时定义的任务中表现出优秀的定性性能。我们记录了在不使用微调的情况下，性能在规模方面的大致可预测趋势。我们还讨论了这类模型的社会影响。尽管存在许多局限性和弱点，但这些结果表明，非常大的语言模型可能是可适应、通用语言系统发展中的重要组成部分。&lt;/p&gt;
-
-&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
-  &lt;ol&gt;
-    &lt;li id=&quot;fn:dat&quot;&gt;
-      &lt;p&gt;在自然语言处理（NLP）中，领域自适应任务（domain adaptation task）主要指的是将在一个领域（源领域）训练的模型调整为适应另一个领域（目标领域）的任务。由于不同领域的数据分布可能存在差异，直接将源领域的模型应用于目标领域可能会导致性能下降。因此，领域自适应的目标是通过利用目标领域的数据，使模型更好地适应和处理目标领域的任务。领域自适应的挑战在于，在许多情况下，目标领域的标注数据是有限的或者根本不存在。为了解决这个问题，研究人员采用了多种方法，包括：特征选择或变换，无监督或半监督领域自适应，自监督学习 &lt;a href=&quot;#fnref:dat&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Thu, 27 Apr 2023 22:48:00 +0000</pubDate>
-        <link>https://wulfric.me/2023/04/gpt3-ch/</link>
-        <guid isPermaLink="true">https://wulfric.me/2023/04/gpt3-ch/</guid>
         
         <category>ai</category>
         

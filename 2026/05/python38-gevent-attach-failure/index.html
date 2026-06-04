@@ -18,8 +18,8 @@
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>Python attach agent 遇到 gevent monkey patch：控制面超时与数据面降级</title>
-  <meta name="description" content="上一篇《理解 Python 进程注入：从 ptrace 到 PEP 768》写了 Python 进程注入的几种方式：GDB 直接调用 Python C API、dlopen + pthread、以及 Python 3.14 之后的 PEP 768。
+  <title>gevent monkey patch 下的 attach agent：启动超时、控制面保活与观测边界</title>
+  <meta name="description" content="线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 cProfile 就重启。此时要看的不是“代码理论上会怎么执行”，而是这个 PID 此刻正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。
 ">
   <meta name="keywords" content="python,gevent,debug">
   <link rel="canonical" href="https://wulfric.me/2026/05/python38-gevent-attach-failure/">
@@ -58,7 +58,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">Python attach agent 遇到 gevent monkey patch：控制面超时与数据面降级</h1>
+    <h1 class="post-title">gevent monkey patch 下的 attach agent：启动超时、控制面保活与观测边界</h1>
   </header>
 
   
@@ -72,26 +72,51 @@
 
 
   <article class="post-content">
-    <p>上一篇《理解 Python 进程注入：从 ptrace 到 PEP 768》写了 Python 进程注入的几种方式：GDB 直接调用 Python C API、<span class="codespan">dlopen + pthread</span>、以及 Python 3.14 之后的 PEP 768。</p>
+    <p>线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 <span class="codespan">cProfile</span> 就重启。此时要看的不是“代码理论上会怎么执行”，而是这个 PID 此刻正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。</p>
 
-<p>这些方案解决的是“如何把一段代码送进一个正在运行的 Python 进程”。但代码被送进去之后，还有另一个问题：<strong>这段代码会运行在目标进程自己的 Python runtime 里</strong>。</p>
+<p>性能分析和运行时诊断工具做的就是这类事，只是进入目标进程的方式不同。<span class="codespan">cProfile</span> 跟着应用一起跑，通过解释器事件记录函数调用和耗时；<span class="codespan">py-spy</span> 或系统级 <span class="codespan">perf</span> 更像旁路观察者，控制端留在目标进程外面，通过操作系统能力读取线程栈或采样 PC；memray、运行时 trace 工具、attach agent 则会把一部分采集逻辑放进目标进程内部，安装 hook、wrapper 或后台 agent，观察更细的运行时状态。</p>
 
-<p>如果目标进程是一个普通 Python 程序，这通常没什么特别。但如果它在启动早期执行过 gevent monkey patch，<span class="codespan">socket</span>、<span class="codespan">threading</span>、<span class="codespan">time</span> 这些标准库模块就可能已经被替换。一个 attach agent 如果把自己的控制通道建立在这些高层 API 上，就可能在启动阶段出现很难从外部理解的 timeout；即使 agent 启动成功，后续诊断命令的观测语义也可能被 gevent 的调度模型改变。</p>
+<p>peeka 属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 <span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 等命令再通过这个通道执行。它更像运行时诊断工具，而不是离线性能分析器。</p>
 
-<p>本文用一个最小模型解释这个问题，再对照 peeka 0.1.13 之后的实现看两层处理：</p>
+<p>后面会反复用到两个词：控制面和数据面。</p>
 
-<ol>
-  <li>控制面：agent 自己如何创建 socket、线程、锁、ready 信号；</li>
-  <li>数据面：<span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 这类命令如何在 gevent runtime 下保持可靠输出。</li>
-</ol>
+<ul>
+  <li>控制面：工具为了启动、attach、通信、接收命令、返回结果而维护的基础设施。</li>
+  <li>数据面：工具真正用来观察程序的路径，比如函数 wrapper、调用栈采样、tracing backend、内存分配 hook。</li>
+</ul>
 
-<p>前者决定 agent 能不能稳定活下来，后者决定诊断结果会不会被误读。</p>
+<p>不同工具的控制面和数据面位置不一样。<span class="codespan">cProfile</span> 基本都在目标进程内部；<span class="codespan">py-spy</span> 的控制面在外部，数据采样也尽量从外部完成；memray 会把采集逻辑放进进程内部，再把数据写到外部可分析的文件；peeka 的控制面横跨内外两侧，外部 CLI 负责发命令，目标进程里的 agent 负责接命令和执行观测。</p>
+
+<p>这种差异平时不明显。一旦目标进程使用 gevent，问题就会浮出来。gevent 通过 monkey patch 把 <span class="codespan">socket</span>、<span class="codespan">threading</span>、<span class="codespan">time</span>、<span class="codespan">select</span> 等标准库对象替换成协作式版本。对业务代码来说，这是 gevent 的能力来源；对诊断工具来说，它可能同时影响控制面和数据面。</p>
+
+<p>控制面可能在启动 socket、线程或同步信号时卡住。数据面可能还能给出结果，但结果的含义会变化：函数 wrapper 仍然能观察入口调用，递归 trace 和线程 frame 采样却不一定还能代表完整执行过程。</p>
+
+<p>attach agent 在 gevent 目标进程里的启动超时，就是这种影响最先暴露出来的地方。</p>
+
+<p>很多 gevent 应用会在启动早期执行：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
+<span class="n">monkey</span><span class="p">.</span><span class="nf">patch_all</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>这行代码会把 <span class="codespan">socket</span>、<span class="codespan">threading</span>、<span class="codespan">time</span>、<span class="codespan">select</span> 等标准库对象替换成 gevent 版本。业务代码这么做是为了获得协作式 I/O；但 attach agent 如果也直接使用这些被替换后的对象，就可能在自己刚启动时卡住。</p>
+
+<p>外部看到的错误通常很普通：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent initialization timeout
+</code></pre></div></div>
+
+<p>具体工具可能会把这个超时写成等待某个文件、notify socket 或 IPC 消息超时。形式不重要，本质都是：外部控制端没有等到 agent 发出的“我已经启动完成”的就绪信号。</p>
+
+<p>这个启动超时容易被误读成“注入失败”或者“等待时间太短”。实际更常见的情况是：agent 已经进去了，但它死在发出就绪信号之前。</p>
+
+<p>换句话说，启动超时先暴露的是控制面问题；agent 能连上以后，还要继续解释数据面结果的观测边界。</p>
 
 <hr />
 
-<h2 id="最小-attach-模型">最小 attach 模型</h2>
+<h2 id="1-attach-agent-的启动链路就绪信号只代表控制面初始化">1. attach agent 的启动链路：就绪信号只代表控制面初始化</h2>
 
-<p>先把进程注入抽象成一张图：</p>
+<p>一个 attach agent 的最小流程可以画成这样：</p>
 
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>诊断工具
     |
@@ -108,77 +133,49 @@ GDB / LLDB / dlopen / PEP 768
 /tmp/agent_&lt;session&gt;.sock  &lt;----&gt;  诊断工具 client
 </code></pre></div></div>
 
-<p>不管底层 attach 是怎么做的，最终都会来到同一个点：一段 Python agent 代码开始在目标解释器里运行。</p>
+<p>agent 在目标进程里通常要做几件事：</p>
 
-<p>这段 agent 通常会做几件事：</p>
+<ol>
+  <li>创建本地 socket；</li>
+  <li>启动后台 accept loop；</li>
+  <li>发出就绪信号；</li>
+  <li>等外部 client 连上来，接收后续命令。</li>
+</ol>
 
-<ul>
-  <li>创建一个 Unix socket，用来接收后续诊断命令；</li>
-  <li>启动后台循环，持续 <span class="codespan">accept()</span> client 连接；</li>
-  <li>写一个 ready 文件，告诉外部工具“agent 已经准备好了”；</li>
-  <li>后续命令都通过这个 socket 进来。</li>
-</ul>
+<p>如果目标是普通 Python 进程，下面这段代码看起来很自然：</p>
 
-<p>ready 文件只是一个同步信号。例如：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/tmp/agent_&lt;session&gt;.ready
-</code></pre></div></div>
-
-<p>它的作用是避免外部工具过早连接 socket。外部工具通常会做类似这样的等待：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="nf">time</span><span class="p">()</span> <span class="o">+</span> <span class="mi">10</span>
-<span class="k">while</span> <span class="n">time</span><span class="p">.</span><span class="nf">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">deadline</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">ready_path</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
-        <span class="k">break</span>
-    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="nc">TimeoutError</span><span class="p">(</span><span class="sh">"</span><span class="s">Agent initialization timeout (ready file)</span><span class="sh">"</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>如果 ready 文件迟迟没有出现，外部只能报 timeout。但 timeout 本身不说明根因。它只说明 agent 没有走到“写 ready”这一步。</p>
-
-<hr />
-
-<h2 id="一个看起来正常的-agent">一个看起来正常的 agent</h2>
-
-<p>先写一个最小 agent。它不做任何复杂诊断，只创建 socket、启动 accept loop、写 ready 文件。</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">os</span>
-<span class="kn">import</span> <span class="n">socket</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">socket</span>
 <span class="kn">import</span> <span class="n">threading</span>
-<span class="kn">from</span> <span class="n">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+
+<span class="k">def</span> <span class="nf">notify_started</span><span class="p">():</span>
+    <span class="c1"># 真实工具在这里通知外部控制端：agent 已经完成基础初始化。
+</span>    <span class="k">pass</span>
 
 
 <span class="k">class</span> <span class="nc">MiniAgent</span><span class="p">:</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">):</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">session_id</span> <span class="o">=</span> <span class="n">session_id</span>
         <span class="n">self</span><span class="p">.</span><span class="n">sock_path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">/tmp/agent_</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s">.sock</span><span class="sh">"</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">ready_path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">/tmp/agent_</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s">.ready</span><span class="sh">"</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span> <span class="o">=</span> <span class="bp">None</span>
 
     <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="n">self</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="p">.</span><span class="nf">unlink</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">sock_path</span><span class="p">)</span>
-        <span class="k">except</span> <span class="nb">FileNotFoundError</span><span class="p">:</span>
-            <span class="k">pass</span>
-
         <span class="n">self</span><span class="p">.</span><span class="n">server</span> <span class="o">=</span> <span class="n">socket</span><span class="p">.</span><span class="nf">socket</span><span class="p">(</span><span class="n">socket</span><span class="p">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">socket</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">sock_path</span><span class="p">)</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">listen</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
 
-        <span class="n">accept_ready</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Event</span><span class="p">()</span>
+        <span class="n">accept_started</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Event</span><span class="p">()</span>
         <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Thread</span><span class="p">(</span>
             <span class="n">target</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">_accept_loop</span><span class="p">,</span>
-            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">accept_ready</span><span class="p">,),</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">accept_started</span><span class="p">,),</span>
             <span class="n">daemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">thread</span><span class="p">.</span><span class="nf">start</span><span class="p">()</span>
-        <span class="n">accept_ready</span><span class="p">.</span><span class="nf">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">accept_started</span><span class="p">.</span><span class="nf">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 
-        <span class="nc">Path</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">ready_path</span><span class="p">).</span><span class="nf">touch</span><span class="p">()</span>
+        <span class="nf">notify_started</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_accept_loop</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">accept_ready</span><span class="p">):</span>
-        <span class="n">accept_ready</span><span class="p">.</span><span class="nf">set</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">_accept_loop</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">accept_started</span><span class="p">):</span>
+        <span class="n">accept_started</span><span class="p">.</span><span class="nf">set</span><span class="p">()</span>
         <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
             <span class="n">conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">accept</span><span class="p">()</span>
             <span class="n">threading</span><span class="p">.</span><span class="nc">Thread</span><span class="p">(</span>
@@ -192,96 +189,36 @@ GDB / LLDB / dlopen / PEP 768
             <span class="n">conn</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="sa">b</span><span class="sh">"</span><span class="s">hello</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>这段代码在一个干净的 Python 进程里没有问题：</p>
+<p>这段代码的问题不是逻辑写错了，而是它默认了一个前提：<span class="codespan">socket</span> 和 <span class="codespan">threading</span> 还是 CPython 原来的标准库对象。</p>
 
-<ol>
-  <li><span class="codespan">socket.socket()</span> 创建 Unix socket；</li>
-  <li><span class="codespan">listen()</span> 开始监听；</li>
-  <li><span class="codespan">threading.Thread()</span> 启动后台 accept loop；</li>
-  <li><span class="codespan">threading.Event()</span> 用来确认 accept loop 已经进入工作状态；</li>
-  <li>ready 文件写出；</li>
-  <li>外部 client 再连接 socket。</li>
-</ol>
-
-<p>如果你写的是一个普通服务端程序，这段代码非常自然。</p>
-
-<p>但 attach agent 有一个特殊点：它不是运行在自己启动的干净进程里，而是运行在别人的进程里。</p>
+<p>在 gevent monkey patch 之后，这个前提不一定成立。</p>
 
 <hr />
 
-<h2 id="被-gevent-改造过的目标进程">被 gevent 改造过的目标进程</h2>
+<h2 id="2-gevent-monkey-patch-会让-agent-卡在就绪信号之前">2. gevent monkey patch 会让 agent 卡在就绪信号之前</h2>
 
-<p>很多 gevent 程序会在入口处执行 monkey patch：</p>
+<p>monkey patch 的核心影响是：后续代码再 <span class="codespan">import socket</span>、<span class="codespan">import threading</span> 时，拿到的可能已经不是原始实现。</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
-<span class="n">monkey</span><span class="p">.</span><span class="nf">patch_all</span><span class="p">()</span>
+<p>对业务代码来说，这是 gevent 的能力来源。对 attach agent 来说，这会影响自己的启动路径。</p>
 
-<span class="kn">from</span> <span class="n">my_web_app</span> <span class="kn">import</span> <span class="n">app</span>
+<p>最明显的风险是：</p>
 
-<span class="n">app</span><span class="p">.</span><span class="nf">serve_forever</span><span class="p">()</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">accept_started</span><span class="p">.</span><span class="nf">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p><span class="codespan">monkey.patch_all()</span> 会替换标准库中的一批阻塞 API，让它们进入 gevent 的协程调度语义。常见受影响对象包括：</p>
+<p>更隐蔽的风险在：</p>
 
-<ul>
-  <li><span class="codespan">socket.socket</span></li>
-  <li><span class="codespan">time.sleep</span></li>
-  <li><span class="codespan">select</span></li>
-  <li><span class="codespan">threading</span> 里的部分同步原语</li>
-</ul>
-
-<p>业务代码仍然写：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span> <span class="o">=</span> <span class="n">sock</span><span class="p">.</span><span class="nf">recv</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
-<span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">thread</span><span class="p">.</span><span class="nf">start</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p>但底层行为已经不再是普通阻塞调用，而是可能让出到 gevent hub，由协程调度器安排。</p>
-
-<p>这对业务程序是好事。问题在于，attach agent 注入进去以后，看到的也是这个已经被 patch 过的世界。</p>
-
-<p>也就是说，agent 里的这几行：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">socket</span>
-<span class="kn">import</span> <span class="n">threading</span>
-
-<span class="n">socket</span><span class="p">.</span><span class="nf">socket</span><span class="p">(...)</span>
-<span class="n">threading</span><span class="p">.</span><span class="nc">Event</span><span class="p">()</span>
-<span class="n">threading</span><span class="p">.</span><span class="nc">Thread</span><span class="p">(...)</span>
-</code></pre></div></div>
-
-<p>拿到的不一定是 CPython 启动时的原始对象，而可能是 gevent patch 之后的对象。</p>
-
-<hr />
-
-<h2 id="失败是怎么发生的">失败是怎么发生的</h2>
-
-<p>前面的 agent 启动代码里，最危险的是这几行：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">accept_ready</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Event</span><span class="p">()</span>
-<span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="p">.</span><span class="nc">Thread</span><span class="p">(</span>
-    <span class="n">target</span><span class="o">=</span><span class="n">self</span><span class="p">.</span><span class="n">_accept_loop</span><span class="p">,</span>
-    <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">accept_ready</span><span class="p">,),</span>
-    <span class="n">daemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">thread</span><span class="p">.</span><span class="nf">start</span><span class="p">()</span>
-<span class="n">accept_ready</span><span class="p">.</span><span class="nf">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>第一眼看，风险似乎在最后一行 <span class="codespan">accept_ready.wait()</span>。如果 gevent patch 了 <span class="codespan">threading.Event</span>，这个 wait 就可能落入 gevent 的 event 实现。</p>
-
-<p>但还有一个更隐蔽的位置：<span class="codespan">threading.Thread.start()</span> 内部也会等待线程真正启动。</p>
-
-<p>CPython 的 <span class="codespan">Thread.start()</span> 大致会做这样的事：</p>
+<p>CPython 的 <span class="codespan">Thread.start()</span> 不只是创建底层线程。它还会等待线程内部的 <span class="codespan">_started</span> 事件：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="n">self</span><span class="p">):</span>
     <span class="nf">_start_new_thread</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_bootstrap</span><span class="p">,</span> <span class="p">())</span>
     <span class="n">self</span><span class="p">.</span><span class="n">_started</span><span class="p">.</span><span class="nf">wait</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p>这里的 <span class="codespan">_started</span> 也是一个 event。正常情况下，这只是一个很短的同步等待。但如果 <span class="codespan">threading</span> 已经被 gevent monkey patch，这个 wait 也可能变成 gevent event wait。</p>
-
-<p>于是调用链会变成这样：</p>
+<p>如果 <span class="codespan">threading</span> 已经被 gevent 改造，这个 wait 可能落到 gevent 的 event 语义里。在某些注入时机下，调用链会变成：</p>
 
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>agent.start()
   -&gt; threading.Thread.start()
@@ -296,511 +233,293 @@ GDB / LLDB / dlopen / PEP 768
 Impossible to call blocking function in the event loop callback
 </code></pre></div></div>
 
-<p>这类错误的意思不是“不能创建线程”，也不是“GDB attach 失败”。它更接近于：</p>
+<p>这个异常和 GDB、LLDB、PEP 768 这些注入方式没有直接关系。它说明的是：agent 进入目标进程以后，执行到了 gevent 不允许阻塞切换的位置。</p>
 
-<blockquote>
-  <p>当前执行点不允许做这种会切换 gevent hub 的阻塞等待。</p>
-</blockquote>
+<p>外部最终只等到：</p>
 
-<p>对于 attach agent 来说，结果就是：</p>
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent initialization timeout
+</code></pre></div></div>
+
+<p>所以排查这类问题时，第一步不是先改等待时间，而是要问：agent 发出就绪信号之前，是否已经碰到了被 monkey patch 的控制面对象？</p>
+
+<hr />
+
+<h2 id="3-控制面保活用原生-socket-和线程入口建立命令通道">3. 控制面保活：用原生 socket 和线程入口建立命令通道</h2>
+
+<p>控制面的目标很朴素：agent 先要活下来。</p>
+
+<p>这里的“活下来”不是说诊断结果已经完全准确，而是指 agent 至少能完成以下事情：</p>
 
 <ol>
-  <li>agent 代码确实被执行了；</li>
-  <li>socket 可能已经创建；</li>
-  <li>log 可能已经写出；</li>
-  <li>但 agent 在写 ready 文件之前异常退出；</li>
-  <li>外部工具最后只能看到 ready file timeout。</li>
+  <li>在目标进程里启动；</li>
+  <li>建好命令 socket；</li>
+  <li>发出就绪信号；</li>
+  <li>接收外部 client 的第一条命令。</li>
 </ol>
 
-<p>所以 <span class="codespan">Agent initialization timeout (ready file)</span> 往往只是表象。真正的错误在目标进程内部的 agent log 里。</p>
-
-<hr />
-
-<h2 id="一个最小复现模型">一个最小复现模型</h2>
-
-<p>真实 attach 需要 GDB、LLDB 或 PEP 768，不适合放在最小示例里。我们可以用伪代码模拟关键条件。</p>
-
-<p>目标进程：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># target.py
-</span><span class="kn">from</span> <span class="n">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
-<span class="n">monkey</span><span class="p">.</span><span class="nf">patch_all</span><span class="p">()</span>
-
-<span class="kn">import</span> <span class="n">gevent</span>
-
-
-<span class="k">def</span> <span class="nf">business_task</span><span class="p">():</span>
-    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-        <span class="n">gevent</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-
-
-<span class="n">gevent</span><span class="p">.</span><span class="nf">spawn</span><span class="p">(</span><span class="n">business_task</span><span class="p">)</span>
-<span class="n">gevent</span><span class="p">.</span><span class="nf">wait</span><span class="p">()</span>
-</code></pre></div></div>
-
-<p>外部 attach 工具最终会让目标进程执行一段 agent 代码。把这个动作抽象成：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># injected by debugger / remote exec / native injector
-</span><span class="nf">exec</span><span class="p">(</span><span class="n">agent_script</span><span class="p">)</span>
-<span class="nc">MiniAgent</span><span class="p">(</span><span class="n">session_id</span><span class="p">).</span><span class="nf">start</span><span class="p">()</span>
-</code></pre></div></div>
-
-<p>如果 <span class="codespan">MiniAgent.start()</span> 使用的是前面那版 <span class="codespan">threading.Thread + threading.Event</span>，它就不再运行在“干净 Python”的假设下，而是运行在 gevent 改造过的 runtime 里。</p>
-
-<p>真正的问题不是某一行 attach 命令，也不是 Python 3.8 本身，而是这条边界：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>诊断 agent 的控制面
-    建立在
-目标应用可能 monkey patch 的标准库 API
-</code></pre></div></div>
-
-<p>这条边界一旦混在一起，agent 的行为就会受目标应用运行模型影响。</p>
-
-<hr />
-
-<h2 id="先分清控制面和数据面">先分清控制面和数据面</h2>
-
-<p>gevent 影响 attach agent 时，至少有两个层面：</p>
-
-<div class="table-container">
-<table>
-  <thead>
-    <tr>
-      <th>层面</th>
-      <th>典型对象</th>
-      <th>主要风险</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>控制面</td>
-      <td>agent socket、accept loop、client handler、ready/notify 信号</td>
-      <td>agent 起不来，或者命令通道不响应</td>
-    </tr>
-    <tr>
-      <td>数据面</td>
-      <td><span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span>、<span class="codespan">stack</span>、<span class="codespan">monitor</span></td>
-      <td>agent 能响应，但观测语义发生变化</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-<p>控制面追求的是“agent 自己不要被目标 runtime 拖死”。数据面追求的是“命令输出不要假装自己比实际更完整”。这两层都要处理，不能只修 ready timeout。</p>
-
-<hr />
-
-<h2 id="控制面修复隔离-runtime-原语">控制面修复：隔离 runtime 原语</h2>
-
-<p>解决方向不是“换一种 attach 方法”。不同 attach 方法只决定 agent 如何进入目标进程；只要最终要在目标解释器里执行 Python agent，就仍然会遇到目标 runtime 已经被改造的问题。</p>
-
-<p>更核心的原则是：</p>
+<p>因此控制面的原则是：</p>
 
 <blockquote>
-  <p>attach agent 的控制面要尽量使用底层、可预测、少依赖的原语。</p>
+  <p>agent 自己的命令通道，要尽量避开目标应用可能 monkey patch 的高层 API。</p>
 </blockquote>
 
-<p>对这个例子来说，至少要避开这些对象：</p>
-
-<ul>
-  <li>被 patch 的 <span class="codespan">socket.socket</span></li>
-  <li>被 patch 的 <span class="codespan">threading.Thread</span></li>
-  <li>被 patch 的 <span class="codespan">threading.Event</span></li>
-  <li>控制面里的高层计时函数，例如 <span class="codespan">time.time</span></li>
-</ul>
-
-<p>gevent 提供了一个有用的能力：如果当前进程已经加载了 <span class="codespan">gevent.monkey</span>，可以通过 <span class="codespan">get_original()</span> 拿回 monkey patch 之前的原始对象。</p>
-
-<p>agent 不需要主动 import gevent，也不应该把 gevent 变成依赖。peeka 0.1.13 之后把这层抽成 Runtime Primitive Layer，大致是：</p>
+<p>示例代码可以写得很简单。下面只保留关键含义，故意省略清理旧 socket、日志、超时、退出回收、多 Python 版本兼容等工程细节：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">_socket</span>
 <span class="kn">import</span> <span class="n">_thread</span>
-<span class="kn">import</span> <span class="n">socket</span>
 <span class="kn">import</span> <span class="n">sys</span>
-<span class="kn">import</span> <span class="n">threading</span>
-<span class="kn">import</span> <span class="n">time</span>
 
 
-<span class="k">def</span> <span class="nf">get_original_runtime_attr</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">,</span> <span class="n">fallback</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">notify_started</span><span class="p">():</span>
+    <span class="c1"># 真实工具在这里通知外部控制端：agent 已经完成基础初始化。
+</span>    <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">native_start_new_thread</span><span class="p">():</span>
     <span class="n">monkey</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">modules</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">"</span><span class="s">gevent.monkey</span><span class="sh">"</span><span class="p">)</span>
-    <span class="n">get_original</span> <span class="o">=</span> <span class="nf">getattr</span><span class="p">(</span><span class="n">monkey</span><span class="p">,</span> <span class="sh">"</span><span class="s">get_original</span><span class="sh">"</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nf">callable</span><span class="p">(</span><span class="n">get_original</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nf">get_original</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">)</span>
-        <span class="k">except</span> <span class="nb">Exception</span><span class="p">:</span>
-            <span class="k">pass</span>
-    <span class="k">return</span> <span class="n">fallback</span>
-
-
-<span class="n">NativeSocket</span> <span class="o">=</span> <span class="n">_socket</span><span class="p">.</span><span class="n">socket</span>
-<span class="n">start_new_thread</span> <span class="o">=</span> <span class="nf">get_original_runtime_attr</span><span class="p">(</span>
-    <span class="sh">"</span><span class="s">_thread</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">start_new_thread</span><span class="sh">"</span><span class="p">,</span>
-    <span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">allocate_lock</span> <span class="o">=</span> <span class="nf">get_original_runtime_attr</span><span class="p">(</span>
-    <span class="sh">"</span><span class="s">_thread</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">allocate_lock</span><span class="sh">"</span><span class="p">,</span>
-    <span class="n">_thread</span><span class="p">.</span><span class="n">allocate_lock</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">NativeEvent</span> <span class="o">=</span> <span class="nf">get_original_runtime_attr</span><span class="p">(</span>
-    <span class="sh">"</span><span class="s">threading</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">Event</span><span class="sh">"</span><span class="p">,</span>
-    <span class="n">threading</span><span class="p">.</span><span class="n">Event</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">native_time</span> <span class="o">=</span> <span class="nf">get_original_runtime_attr</span><span class="p">(</span>
-    <span class="sh">"</span><span class="s">time</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">time</span><span class="sh">"</span><span class="p">,</span>
-    <span class="n">time</span><span class="p">.</span><span class="n">time</span><span class="p">,</span>
-<span class="p">)</span>
-</code></pre></div></div>
-
-<p>这里有几个细节：</p>
-
-<ul>
-  <li>不主动 <span class="codespan">import gevent</span>；</li>
-  <li>不要求目标进程一定使用 gevent；</li>
-  <li>gevent 存在时尽量拿原始对象；</li>
-  <li>socket 直接使用 <span class="codespan">_socket.socket</span>，避开 <span class="codespan">socket</span> 模块层的替换；</li>
-  <li>拿不到时回到当前 runtime 里的对象；</li>
-  <li>只影响 agent 自己的控制面，不修改业务代码。</li>
-</ul>
-
-<hr />
-
-<h2 id="修复后的最小-agent">修复后的最小 agent</h2>
-
-<p>基于这些原语，可以把 agent 改成这样：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">os</span>
-<span class="kn">import</span> <span class="n">socket</span>
-<span class="kn">from</span> <span class="n">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-
-
-<span class="c1"># 沿用上文定义的 NativeSocket、start_new_thread、allocate_lock。
-</span><span class="k">def</span> <span class="nf">create_socket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">type_</span><span class="p">):</span>
-    <span class="k">return</span> <span class="nc">NativeSocket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="n">type_</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">start_thread</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">()):</span>
-    <span class="k">return</span> <span class="nf">start_new_thread</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">native_accept</span><span class="p">(</span><span class="n">server</span><span class="p">):</span>
-    <span class="n">accept</span> <span class="o">=</span> <span class="nf">getattr</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="sh">"</span><span class="s">accept</span><span class="sh">"</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nf">callable</span><span class="p">(</span><span class="n">accept</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nf">accept</span><span class="p">()</span>
-
-    <span class="n">fd</span><span class="p">,</span> <span class="n">address</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="nf">_accept</span><span class="p">()</span>
-    <span class="n">conn</span> <span class="o">=</span> <span class="nc">NativeSocket</span><span class="p">(</span><span class="n">server</span><span class="p">.</span><span class="n">family</span><span class="p">,</span> <span class="n">server</span><span class="p">.</span><span class="nb">type</span><span class="p">,</span> <span class="n">server</span><span class="p">.</span><span class="n">proto</span><span class="p">,</span> <span class="n">fileno</span><span class="o">=</span><span class="n">fd</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">conn</span><span class="p">,</span> <span class="n">address</span>
+    <span class="k">if</span> <span class="n">monkey</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">monkey</span><span class="p">.</span><span class="nf">get_original</span><span class="p">(</span><span class="sh">"</span><span class="s">_thread</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">start_new_thread</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_thread</span><span class="p">.</span><span class="n">start_new_thread</span>
 
 
 <span class="k">class</span> <span class="nc">MiniAgent</span><span class="p">:</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">):</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">session_id</span> <span class="o">=</span> <span class="n">session_id</span>
         <span class="n">self</span><span class="p">.</span><span class="n">sock_path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">/tmp/agent_</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s">.sock</span><span class="sh">"</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">ready_path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">/tmp/agent_</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s">.ready</span><span class="sh">"</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">closed</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="n">self</span><span class="p">.</span><span class="n">lock</span> <span class="o">=</span> <span class="nf">allocate_lock</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="n">self</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="p">.</span><span class="nf">unlink</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">sock_path</span><span class="p">)</span>
-        <span class="k">except</span> <span class="nb">FileNotFoundError</span><span class="p">:</span>
-            <span class="k">pass</span>
-
-        <span class="n">self</span><span class="p">.</span><span class="n">server</span> <span class="o">=</span> <span class="nf">create_socket</span><span class="p">(</span><span class="n">socket</span><span class="p">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">socket</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">server</span> <span class="o">=</span> <span class="n">_socket</span><span class="p">.</span><span class="nf">socket</span><span class="p">(</span><span class="n">_socket</span><span class="p">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">_socket</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">sock_path</span><span class="p">)</span>
         <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">listen</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
 
-        <span class="nf">start_thread</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_accept_loop</span><span class="p">)</span>
-
-        <span class="nc">Path</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">ready_path</span><span class="p">).</span><span class="nf">touch</span><span class="p">()</span>
+        <span class="n">start_thread</span> <span class="o">=</span> <span class="nf">native_start_new_thread</span><span class="p">()</span>
+        <span class="nf">start_thread</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_accept_loop</span><span class="p">,</span> <span class="p">())</span>
+        <span class="nf">notify_started</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_accept_loop</span><span class="p">(</span><span class="n">self</span><span class="p">):</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="n">self</span><span class="p">.</span><span class="n">closed</span><span class="p">:</span>
-            <span class="n">conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="nf">native_accept</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">)</span>
+        <span class="n">start_thread</span> <span class="o">=</span> <span class="nf">native_start_new_thread</span><span class="p">()</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">accept</span><span class="p">()</span>
             <span class="nf">start_thread</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">_handle_client</span><span class="p">,</span> <span class="p">(</span><span class="n">conn</span><span class="p">,))</span>
 
     <span class="k">def</span> <span class="nf">_handle_client</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">conn</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="sa">b</span><span class="sh">"</span><span class="s">hello</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
-        <span class="k">finally</span><span class="p">:</span>
-            <span class="n">conn</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="sa">b</span><span class="sh">"</span><span class="s">hello</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
+        <span class="n">conn</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p>变化很少，但性质不同：</p>
+<p>这个版本和前面的区别很少，但性质变了：</p>
 
 <ul>
-  <li>socket 使用原始 <span class="codespan">_socket.socket</span>；</li>
-  <li>accept 也收口到 native helper；</li>
-  <li>线程使用 <span class="codespan">_thread.start_new_thread</span>；</li>
-  <li>不再创建 <span class="codespan">threading.Event</span>；</li>
-  <li>不再调用 <span class="codespan">threading.Thread.start()</span>；</li>
-  <li>不再做 <span class="codespan">Event.wait()</span> 这样的 Python 层 barrier。</li>
+  <li>socket 不再从 <span class="codespan">socket.socket</span> 来，而是从底层 <span class="codespan">_socket.socket</span> 来；</li>
+  <li>线程不再通过 <span class="codespan">threading.Thread</span> 启动，而是取原始 <span class="codespan">_thread.start_new_thread</span>；</li>
+  <li>就绪信号之前不再依赖 <span class="codespan">threading.Event.wait()</span>；</li>
+  <li>agent 自己的命令通道尽量不进入 gevent 的协作式调度语义。</li>
 </ul>
 
-<p>这样就切断了原来的失败路径：</p>
+<p>这里的 <span class="codespan">gevent.monkey.get_original()</span> 是 gevent 提供的原始对象查询接口，不是 peeka 的工程封装。真实工具会比这段代码更谨慎，处理清理、日志、异常和版本差异；这些细节留在实现里，正文只需要抓住控制面取舍：</p>
 
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>threading.Thread.start()
-  -&gt; self._started.wait()
-  -&gt; gevent.event.Event.wait()
-  -&gt; BlockingSwitchOutError
-</code></pre></div></div>
-
-<p>这里用 <span class="codespan">_thread</span> 是一个有意识的取舍。它比 <span class="codespan">threading.Thread</span> 更低层，没有漂亮的对象封装，也没有 join、name、daemon 这些高级能力。但 agent 的控制面通常只需要启动一个长期运行的 accept loop 和若干短生命周期 client handler。为了避免踩到目标进程改写过的 <span class="codespan">threading</span>，这个取舍是合理的。</p>
+<blockquote>
+  <p>控制面越依赖目标进程的高层 runtime，越容易被业务框架的 monkey patch 影响。</p>
+</blockquote>
 
 <hr />
 
-<h2 id="ready-文件还需要等待-accept-loop-吗">ready 文件还需要等待 accept loop 吗</h2>
+<h2 id="4-就绪同步策略listen-之后发信号再用-hello-探测确认可用">4. 就绪同步策略：listen 之后发信号，再用 hello 探测确认可用</h2>
 
-<p>前面的脆弱 agent 使用了一个 <span class="codespan">accept_ready</span> event：</p>
+<p>上面的代码里有一个看起来不严谨的地方：启动 accept loop 后，没有等它显式报告“我已经跑起来了”。</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">thread</span><span class="p">.</span><span class="nf">start</span><span class="p">()</span>
-<span class="n">accept_ready</span><span class="p">.</span><span class="nf">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="nc">Path</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">ready_path</span><span class="p">).</span><span class="nf">touch</span><span class="p">()</span>
-</code></pre></div></div>
+<p>这是刻意的取舍。</p>
 
-<p>它的意图是：确认 accept loop 已经启动，再告诉外部工具可以连接。</p>
+<p>对 socket server 来说，更关键的边界是 <span class="codespan">listen()</span>。<span class="codespan">listen()</span> 返回后，socket 已经开始监听，连接可以进入 backlog。即使 accept loop 还没执行到 <span class="codespan">accept()</span>，外部 client 的连接也可以先排队。</p>
 
-<p>但这个等待并不是必须的。对于 socket server 来说，更关键的是：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">sock_path</span><span class="p">)</span>
-<span class="n">self</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="nf">listen</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p><span class="codespan">listen()</span> 返回后，socket 已经开始监听，连接可以进入 backlog。即使 accept loop 还没执行到 <span class="codespan">accept()</span>，client 的连接请求也不需要依赖一个 Python 层 event 才能安全到达。</p>
-
-<p>所以更稳的顺序是：</p>
+<p>因此控制面可以把顺序拆成：</p>
 
 <ol>
-  <li>创建原始 Unix socket；</li>
+  <li>创建原生 Unix socket；</li>
   <li>bind；</li>
   <li>listen；</li>
-  <li>启动原始线程跑 accept loop；</li>
-  <li>写 ready 文件；</li>
-  <li>外部 client 连接后再做一次 hello 探测。</li>
+  <li>启动原生线程跑 accept loop；</li>
+  <li>发出就绪信号；</li>
+  <li>外部 client 连接后，再做一次 hello 探测。</li>
 </ol>
 
-<p>最后一步很重要。ready 文件只能说明 agent 走到了某个初始化阶段，不代表命令循环一定健康。外部工具在进入正式交互前，应该再连一次 socket，发一个最小 hello：</p>
+<p>就绪信号表达的是“agent 已完成基本初始化”。它可以实现成写文件、回连 notify socket 或发送 IPC 消息；这些只是传递方式。命令循环是否真的可用，可以由后续 hello 探测确认。</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">verify_agent</span><span class="p">(</span><span class="n">sock_path</span><span class="p">):</span>
-    <span class="n">client</span> <span class="o">=</span> <span class="n">socket</span><span class="p">.</span><span class="nf">socket</span><span class="p">(</span><span class="n">socket</span><span class="p">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">socket</span><span class="p">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">settimeout</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">connect</span><span class="p">(</span><span class="n">sock_path</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="nf">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="sa">b</span><span class="sh">"</span><span class="s">hello</span><span class="se">\n</span><span class="sh">"</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="nc">RuntimeError</span><span class="p">(</span><span class="sh">"</span><span class="s">agent hello failed</span><span class="sh">"</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>这比在 agent 内部依赖 <span class="codespan">threading.Event.wait()</span> 更适合 attach 场景：</p>
-
-<ul>
-  <li>ready 文件负责进程间粗同步；</li>
-  <li>hello 负责协议级健康检查；</li>
-  <li>agent 内部少依赖目标 runtime 的高层同步原语。</li>
-</ul>
+<p>这样做的好处是：发出就绪信号之前不需要 Python 层 event，也就避开了 <span class="codespan">threading.Event.wait()</span> 被 gevent 改造后的风险。</p>
 
 <hr />
 
-<h2 id="这和-attach-方法有什么关系">这和 attach 方法有什么关系</h2>
+<h2 id="5-数据面观测边界不同命令在-gevent-下能看到的范围不同">5. 数据面观测边界：不同命令在 gevent 下能看到的范围不同</h2>
 
-<p>上一篇文章里提到，Python 3.8 到 3.13 常见的较安全 attach 方案是 <span class="codespan">dlopen + pthread</span>：</p>
+<p>控制面修完，只能说明 agent 能活下来，命令通道能响应。它不自动保证所有诊断命令在 gevent 下都和普通线程模型完全等价。</p>
 
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GDB/LLDB attach
-  -&gt; dlopen(native injector)
-  -&gt; native injector 创建 pthread
-  -&gt; pthread 获取 GIL
-  -&gt; 执行 Python agent
-</code></pre></div></div>
+<p>这就是数据面的问题。</p>
 
-<p>这个方案解决的是“不要在 ptrace 暂停点直接执行复杂 Python 代码”。它能降低死锁、崩溃、时机不安全的风险。</p>
-
-<p>但它不自动解决本文的问题。</p>
-
-<p>原因很简单：不管 agent 是通过 GDB legacy、<span class="codespan">dlopen + pthread</span>，还是 PEP 768 进入目标进程，只要最后执行的是 Python agent，它看到的就是目标进程当前的 Python runtime。</p>
-
-<p>如果目标进程已经做了：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
-<span class="n">monkey</span><span class="p">.</span><span class="nf">patch_all</span><span class="p">()</span>
-</code></pre></div></div>
-
-<p>那么 agent 的 Python 代码就必须假设：</p>
-
-<ul>
-  <li><span class="codespan">socket</span> 可能不是原始 socket；</li>
-  <li><span class="codespan">threading.Event</span> 可能不是原始 event；</li>
-  <li><span class="codespan">threading.Thread.start()</span> 内部可能走到 gevent wait；</li>
-  <li>阻塞等待可能不允许出现在当前执行点。</li>
-</ul>
-
-<p>所以 attach 方法和 agent runtime 适配是两个层面：</p>
-
-<div class="table-container">
-<table>
-  <thead>
-    <tr>
-      <th>层面</th>
-      <th>解决的问题</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>attach 方法</td>
-      <td>怎么进入目标进程，什么时候执行代码</td>
-    </tr>
-    <tr>
-      <td>agent 控制面</td>
-      <td>进入之后用什么 runtime 原语保持 socket、线程、ready 信号稳定</td>
-    </tr>
-    <tr>
-      <td>agent 数据面</td>
-      <td>诊断命令在目标 runtime 里还能提供什么语义</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-<p>控制面修复以后，agent 不再轻易被 monkey patch 拖死。但这还不是终点，诊断命令本身也要看 gevent 状态。</p>
-
-<hr />
-
-<h2 id="数据面按命令声明兼容性">数据面：按命令声明兼容性</h2>
-
-<p>数据面和控制面不同。控制面可以尽量退到底层原语；数据面要观察业务函数、调用栈、采样热点，天然会碰到目标进程的调度模型。</p>
-
-<p>peeka 0.1.13 之后的源码没有把“gevent 下所有命令都完全等价”作为目标，而是做了三件事：</p>
-
-<ol>
-  <li>零副作用探测 gevent 状态：只看 <span class="codespan">sys.modules</span> 里已有的 <span class="codespan">gevent.monkey</span>、<span class="codespan">gevent.hub</span>，不主动 import gevent；</li>
-  <li>建一个命令兼容矩阵：同一个命令在 <span class="codespan">none</span>、<span class="codespan">imported</span>、<span class="codespan">patched</span>、<span class="codespan">active_hub</span> 下选择不同 backend；</li>
-  <li>对会选择 backend 或发生降级的命令，把结果放进 JSONL <span class="codespan">meta</span>：<span class="codespan">gevent_state</span>、<span class="codespan">backend</span>、<span class="codespan">greenlet_blind</span>、<span class="codespan">degraded_reason</span>。</li>
-</ol>
-
-<p>源码中的兼容矩阵核心意思是：</p>
+<p><span class="codespan">watch</span>、<span class="codespan">monitor</span>、<span class="codespan">stack</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 看起来都在“观察目标进程”，但它们依赖的机制不同：</p>
 
 <div class="table-container">
 <table>
   <thead>
     <tr>
       <th>命令</th>
-      <th>gevent patched / active hub 下的策略</th>
+      <th>主要机制</th>
+      <th>gevent 下更应该说明什么</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><span class="codespan">watch</span></td>
-      <td>保持 wrapper 观测，记录入参、返回值、异常和耗时</td>
+      <td>wrapper 包住目标函数</td>
+      <td>观察函数入口、返回值、异常和耗时</td>
     </tr>
     <tr>
       <td><span class="codespan">monitor</span></td>
-      <td>保持 wrapper 统计，记录调用数、成功率和响应时间</td>
+      <td>wrapper 统计调用</td>
+      <td>统计函数调用次数、成功率和响应时间</td>
     </tr>
     <tr>
       <td><span class="codespan">stack</span></td>
-      <td>保持函数入口处的 stack 捕获</td>
+      <td>在函数入口捕获 stack</td>
+      <td>记录进入目标函数时的调用栈</td>
     </tr>
     <tr>
       <td><span class="codespan">trace</span></td>
-      <td>降级为 <span class="codespan">wrapper_only</span>，只保留根调用耗时，不再展开递归调用树</td>
+      <td>tracing backend 展开调用树</td>
+      <td>可能只能保留根调用，不能承诺完整子调用树</td>
     </tr>
     <tr>
       <td><span class="codespan">top</span></td>
-      <td>使用 <span class="codespan">greenlet_aware_sampling</span>，同时标记 <span class="codespan">greenlet_blind</span></td>
+      <td>周期性采样 frame</td>
+      <td>可能只能看到当前活跃 greenlet，不能代表所有挂起 greenlet</td>
     </tr>
   </tbody>
 </table>
 </div>
 
-<p>这里的重点不是“所有命令都安全无损”，而是每个命令都要明确自己在 gevent 下还能承诺什么。</p>
+<p>前几类 wrapper 观测仍然比较清楚：它们关注的是目标函数边界。只要 wrapper 真的包住了目标函数，就可以说清楚这次调用的参数、返回、异常和耗时。</p>
 
-<h3 id="trace-为什么要降级"><span class="codespan">trace</span> 为什么要降级</h3>
+<p><span class="codespan">trace</span> 和 <span class="codespan">top</span> 更复杂，因为它们试图观察更深的执行过程。</p>
 
-<p><span class="codespan">trace</span> 的完整调用树依赖全局 tracing backend。Python 3.12+ 可以走 <span class="codespan">sys.monitoring</span>，更老版本通常走 <span class="codespan">sys.settrace</span>。这类机制会进入解释器的 frame 事件流。</p>
+<p>这时工具不应该假装“一切正常”。更好的做法是：结果仍然可以给，但输出里要明确说明 backend、观测范围和降级原因。</p>
 
-<p>在 gevent patched 或 active hub 状态下，源码选择避开递归 tracing，强制使用 <span class="codespan">wrapper_only</span>：</p>
+<hr />
+
+<h2 id="6-trace-的降级策略只保留根调用不承诺完整调用树">6. trace 的降级策略：只保留根调用，不承诺完整调用树</h2>
+
+<p>完整 <span class="codespan">trace</span> 通常依赖解释器的 tracing 机制。Python 3.12+ 可以用 <span class="codespan">sys.monitoring</span>，更老版本通常用 <span class="codespan">sys.settrace</span>。这类机制会进入 frame 事件流，用来展开函数内部的子调用。</p>
+
+<p>在 gevent patched 或 active hub 状态下，递归 tracing 更容易碰到调度和 frame 栈边界。此时更稳的选择是降级成 <span class="codespan">wrapper_only</span>：</p>
 
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>trace target()
   -&gt; wrapper 记录 target() 总耗时
-  -&gt; 不再用 sys.settrace / sys.monitoring 展开子调用
+  -&gt; 不展开 sys.settrace / sys.monitoring 子调用树
 </code></pre></div></div>
 
-<p>因此 <span class="codespan">trace</span> 仍然能告诉你“这个入口调用花了多久、是否抛异常”，但不能再声称自己拿到了完整子调用树。输出里的 <span class="codespan">degraded_reason</span> 会说明这个降级原因。</p>
+<p>这样做之后，<span class="codespan">trace</span> 仍然能回答几个问题：</p>
 
-<h3 id="top-为什么还要标记-greenlet_blind"><span class="codespan">top</span> 为什么还要标记 greenlet_blind</h3>
+<ol>
+  <li>目标函数有没有被调用；</li>
+  <li>这次调用总共花了多久；</li>
+  <li>它有没有抛异常；</li>
+  <li>入参和返回值是什么。</li>
+</ol>
 
-<p><span class="codespan">top</span> 的普通采样方式是 frame walk：周期性读取各 OS thread 的当前 frame，再按函数聚合热点。</p>
+<p>但它不再承诺完整的内部调用树。</p>
 
-<p>gevent 的问题在于：很多 greenlet 共享一个 OS thread。<span class="codespan">sys._current_frames()</span> 只能看到每个 OS thread 当前正在运行的 frame，看不到所有挂起的 greenlet 栈。于是普通 frame walk 在 gevent 下会天然漏掉一部分上下文。</p>
+<p>输出可以把这个事实放到 <span class="codespan">meta</span> 里：</p>
 
-<p>当前源码做了一个折中：如果 <span class="codespan">greenlet</span> 已经加载并提供 <span class="codespan">gettrace</span> / <span class="codespan">settrace</span>，<span class="codespan">top</span> 会安装一个链式 greenlet tracer，记录 switch / throw 事件，并在退出时恢复之前的 tracer。这样可以多保留一些 greenlet 调度信息，但仍然不能完整枚举所有挂起 greenlet 的栈，所以输出继续标记：</p>
+<div  class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"gevent_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patched"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wrapper_only"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"degraded_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"recursive tracing is disabled under gevent"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>这个降级不是偷懒，而是诚实。一棵看似完整、实际不可靠的调用树，比一个明确降级的根调用结果更危险。</p>
+
+<hr />
+
+<h2 id="7-top-的采样边界frame-sampling-看不见所有挂起-greenlet">7. top 的采样边界：frame sampling 看不见所有挂起 greenlet</h2>
+
+<p><span class="codespan">top</span> 的普通做法是 frame sampling：定期读取各 OS thread 当前正在执行的 frame，再按函数聚合热点。</p>
+
+<p>这个模型在普通线程程序里比较直观。但 gevent 使用 greenlet 调度，多个 greenlet 共享同一个 OS thread。</p>
+
+<p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。也就是说，它天然更容易看到“现在正在跑的 greenlet”，而不是所有挂起的 greenlet。</p>
+
+<p>所以在 gevent 下，<span class="codespan">top</span> 的结果仍然有价值，但必须承认覆盖范围有限。它适合说明当前活跃执行路径的热点，不适合被解释成“所有 greenlet 的完整 CPU 画像”。</p>
+
+<p>如果工具接入了 greenlet 的 switch / throw trace 事件，可以多保留一些调度信息；但挂起 greenlet 的完整栈枚举仍然不能随口承诺。</p>
+
+<p>输出里可以这样表达：</p>
 
 <div  class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="nl">"gevent_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patched"</span><span class="p">,</span><span class="w">
     </span><span class="nl">"backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"greenlet_aware_sampling"</span><span class="p">,</span><span class="w">
     </span><span class="nl">"greenlet_blind"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-    </span><span class="nl">"degraded_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Frame sampling under gevent only sees the active greenlet per OS thread. Suspended greenlets are not represented."</span><span class="w">
+    </span><span class="nl">"degraded_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"frame sampling sees the active greenlet per OS thread, not every suspended greenlet"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p>这比沉默地给出一份看似完整的热点列表更诚实。</p>
-
-<h3 id="patch-status-的作用"><span class="codespan">patch-status</span> 的作用</h3>
-
-<p>还有一个辅助命令值得单独看：<span class="codespan">patch-status</span>。它不修复任何东西，只报告目标 runtime 当前是什么状态：</p>
-
-<ul>
-  <li>gevent / eventlet 是否已经 import 或 active；</li>
-  <li>当前 <span class="codespan">socket.socket</span>、<span class="codespan">threading.Event</span> 等对象是否仍等于 RPL 捕获的 native 对象；</li>
-  <li>RPL 自检是否通过。</li>
-</ul>
-
-<p>这个命令的价值在于把“agent 看到的世界”显式暴露出来。遇到 gevent 目标进程时，先看 <span class="codespan">patch-status</span>，再读 <span class="codespan">trace</span> / <span class="codespan">top</span> 输出里的 <span class="codespan">meta</span>，比只盯着 timeout 更快。</p>
+<p>这里的 <span class="codespan">greenlet_blind</span> 很重要。它提醒读者：热点列表可以参考，但不是完整世界。</p>
 
 <hr />
 
-<h2 id="总结">总结</h2>
+<h2 id="8-排查顺序先确认目标-runtime再解释启动超时和降级输出">8. 排查顺序：先确认目标 runtime，再解释启动超时和降级输出</h2>
 
-<p>表面错误可能只是：</p>
+<p>调这类问题时，最怕把目标进程当成普通 Python 进程。</p>
 
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent initialization timeout (ready file)
-</code></pre></div></div>
-
-<p>但在 gevent 目标进程里，真正的根因可能是：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>attach agent 使用 threading.Thread / threading.Event
-  -&gt; 这些对象被 gevent monkey patch 影响
-  -&gt; Thread.start() 或 Event.wait() 落入 gevent wait
-  -&gt; 当前执行点不允许 blocking switch
-  -&gt; agent 在写 ready 文件前退出
-</code></pre></div></div>
-
-<p>控制面修复方向不是把某个 timeout 调长，也不是单纯更换 attach 路径，而是把 agent 控制面和目标应用 runtime 解耦：</p>
+<p>更可靠的顺序是：</p>
 
 <ol>
-  <li>不主动依赖被 monkey patch 的 <span class="codespan">socket</span> 和 <span class="codespan">threading</span>；</li>
-  <li>如果 gevent 已经存在，使用 <span class="codespan">gevent.monkey.get_original()</span> 取原始对象；</li>
-  <li>用 <span class="codespan">_thread.start_new_thread</span> 替代 <span class="codespan">threading.Thread</span> 启动控制线程；</li>
-  <li>去掉 <span class="codespan">threading.Event.wait()</span> 这种 ready barrier；</li>
-  <li>用 <span class="codespan">listen()</span> 后的 socket backlog 加外部 hello 探测完成同步；</li>
-  <li>把 ready timeout 当作表象，优先查看目标进程内部 agent log。</li>
+  <li>先确认目标进程是否已经做过 gevent monkey patch；</li>
+  <li>再看 agent 控制面是否使用了原生 socket 和原生线程入口；</li>
+  <li>最后解释 <span class="codespan">trace</span>、<span class="codespan">top</span> 这类数据面输出的边界。</li>
 </ol>
 
-<p>但控制面稳定不代表数据面无损。gevent 下还要按命令处理观测语义：</p>
+<p>在 peeka 里，这类信息可以通过类似 <span class="codespan">patch-status</span> 的命令摆到台面上。它的价值不是“修复一切”，而是让读者和工具使用者知道当前 runtime 长什么样：</p>
+
+<ul>
+  <li>gevent 是否已经 import；</li>
+  <li>gevent hub 是否 active；</li>
+  <li><span class="codespan">socket.socket</span>、<span class="codespan">threading.Event</span> 这类对象是否已经不是原始对象；</li>
+  <li>当前命令输出是否带有降级说明。</li>
+</ul>
+
+<p>有了这些信息，<span class="codespan">Agent initialization timeout</span> 就不再只是一个模糊的启动超时。你可以判断它到底是注入路径失败，还是 agent 进入目标进程后，在控制面初始化阶段踩到了被改造过的 runtime。</p>
+
+<hr />
+
+<h2 id="9-总结控制面先保活数据面再标注观测范围">9. 总结：控制面先保活，数据面再标注观测范围</h2>
+
+<p>attach agent 运行在别人的进程里。那个进程的标准库、线程模型、socket 行为和 frame 调度模型，都可能已经被业务框架改造过。</p>
+
+<p>因此这类问题要分两层处理。</p>
+
+<p>控制面先保证 agent 能活下来：</p>
 
 <ol>
-  <li><span class="codespan">watch</span>、<span class="codespan">monitor</span>、<span class="codespan">stack</span> 在兼容矩阵里保持 safe，但它们不声称展开 gevent 的内部调度；</li>
-  <li><span class="codespan">trace</span> 在 patched / active hub 下应降级到 <span class="codespan">wrapper_only</span>，避免递归 tracing API；</li>
-  <li><span class="codespan">top</span> 可以接入 greenlet trace 事件，但仍要标记 <span class="codespan">greenlet_blind</span>；</li>
-  <li><span class="codespan">trace</span> / <span class="codespan">top</span> 这类受影响输出要带 <span class="codespan">meta</span>，让调用方知道当前 backend 和降级原因。</li>
+  <li>避开被 monkey patch 的 <span class="codespan">socket</span> 和 <span class="codespan">threading</span>；</li>
+  <li>用 <span class="codespan">_socket.socket</span> 这类底层接口建立命令 socket；</li>
+  <li>用原始 <span class="codespan">_thread.start_new_thread</span> 这类底层入口启动控制线程；</li>
+  <li>发出就绪信号之前不要依赖 <span class="codespan">threading.Event.wait()</span>；</li>
+  <li>用 <span class="codespan">listen()</span> 后的 backlog 加外部 hello 探测完成同步。</li>
 </ol>
 
-<p>attach 工具运行在别人的进程里。那个进程的标准库、线程模型、socket 行为、frame 调度模型都可能已经被业务框架改造过。控制面要尽量退到底层原语；数据面要诚实声明自己还能看见什么。</p>
+<p>数据面再诚实说明诊断结果的覆盖范围：</p>
+
+<ol>
+  <li><span class="codespan">watch</span>、<span class="codespan">monitor</span>、<span class="codespan">stack</span> 可以保持函数边界观测；</li>
+  <li><span class="codespan">trace</span> 在 gevent 下可以降级到 <span class="codespan">wrapper_only</span>；</li>
+  <li><span class="codespan">top</span> 可以采样当前活跃执行路径，但要承认 greenlet 盲区；</li>
+  <li>受影响输出要带 <span class="codespan">meta</span>，让调用方知道 backend 和降级原因。</li>
+</ol>
+
+<p><span class="codespan">Agent initialization timeout</span> 是表象。真正的问题是 agent 跨进了一个已经被改造过的 runtime。控制面要尽量退到底层原语，数据面要清楚声明自己还能看见什么。</p>
 
   </article>
 

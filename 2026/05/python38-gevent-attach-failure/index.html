@@ -18,8 +18,8 @@
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>gevent monkey patch 下的 attach agent：启动超时、控制面保活与观测边界</title>
-  <meta name="description" content="线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 cProfile 就重启。此时要看的不是“代码理论上会怎么执行”，而是这个 PID 此刻正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。
+  <title>gevent monkey patch 如何影响 attach agent：从启动超时到观测边界</title>
+  <meta name="description" content="线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 cProfile 就重启。此时关心的是这个 PID 正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。
 ">
   <meta name="keywords" content="python,gevent,debug">
   <link rel="canonical" href="https://wulfric.me/2026/05/python38-gevent-attach-failure/">
@@ -58,7 +58,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">gevent monkey patch 下的 attach agent：启动超时、控制面保活与观测边界</h1>
+    <h1 class="post-title">gevent monkey patch 如何影响 attach agent：从启动超时到观测边界</h1>
   </header>
 
   
@@ -72,20 +72,20 @@
 
 
   <article class="post-content">
-    <p>线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 <span class="codespan">cProfile</span> 就重启。此时要看的不是“代码理论上会怎么执行”，而是这个 PID 此刻正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。</p>
+    <p>线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 <span class="codespan">cProfile</span> 就重启。此时关心的是这个 PID 正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。</p>
 
 <p>性能分析和运行时诊断工具做的就是这类事，只是进入目标进程的方式不同。<span class="codespan">cProfile</span> 跟着应用一起跑，通过解释器事件记录函数调用和耗时；<span class="codespan">py-spy</span> 或系统级 <span class="codespan">perf</span> 更像旁路观察者，控制端留在目标进程外面，通过操作系统能力读取线程栈或采样 PC；memray、运行时 trace 工具、attach agent 则会把一部分采集逻辑放进目标进程内部，安装 hook、wrapper 或后台 agent，观察更细的运行时状态。</p>
 
-<p>peeka 属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 <span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 等命令再通过这个通道执行。它更像运行时诊断工具，而不是离线性能分析器。</p>
+<p>peeka 属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 <span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 等命令再通过这个通道执行。它更接近运行时诊断工具，而不是离线性能分析器。</p>
 
-<p>后面会反复用到两个词：控制面和数据面。</p>
+<p>先把问题分成控制面和数据面两层。</p>
 
 <ul>
   <li>控制面：工具为了启动、attach、通信、接收命令、返回结果而维护的基础设施。</li>
-  <li>数据面：工具真正用来观察程序的路径，比如函数 wrapper、调用栈采样、tracing backend、内存分配 hook。</li>
+  <li>数据面：工具负责观察程序的路径，比如函数 wrapper、调用栈采样、tracing backend、内存分配 hook。</li>
 </ul>
 
-<p>不同工具的控制面和数据面位置不一样。<span class="codespan">cProfile</span> 基本都在目标进程内部；<span class="codespan">py-spy</span> 的控制面在外部，数据采样也尽量从外部完成；memray 会把采集逻辑放进进程内部，再把数据写到外部可分析的文件；peeka 的控制面横跨内外两侧，外部 CLI 负责发命令，目标进程里的 agent 负责接命令和执行观测。</p>
+<p>不同工具的控制面和数据面位置不一样。<span class="codespan">cProfile</span> 基本都在目标进程内部；<span class="codespan">py-spy</span> 的控制面在外部，数据采样也尽量从外部完成；memray 会把采集逻辑放进目标进程内部，再把数据写到外部可分析的文件；peeka 的控制面横跨内外两侧，外部 CLI 负责发命令，目标进程里的 agent 负责接命令和执行观测。</p>
 
 <p>这种差异平时不明显。一旦目标进程使用 gevent，问题就会浮出来。gevent 通过 monkey patch 把 <span class="codespan">socket</span>、<span class="codespan">threading</span>、<span class="codespan">time</span>、<span class="codespan">select</span> 等标准库对象替换成协作式版本。对业务代码来说，这是 gevent 的能力来源；对诊断工具来说，它可能同时影响控制面和数据面。</p>
 
@@ -106,15 +106,17 @@
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent initialization timeout
 </code></pre></div></div>
 
-<p>具体工具可能会把这个超时写成等待某个文件、notify socket 或 IPC 消息超时。形式不重要，本质都是：外部控制端没有等到 agent 发出的“我已经启动完成”的就绪信号。</p>
+<p>具体工具可能会把这个超时写成等待某个文件、notify socket 或 IPC 消息超时。传递方式不同，但外部控制端等的都是同一件事：agent 发出“我已经启动完成”的就绪信号。</p>
 
 <p>这个启动超时容易被误读成“注入失败”或者“等待时间太短”。实际更常见的情况是：agent 已经进去了，但它死在发出就绪信号之前。</p>
 
-<p>换句话说，启动超时先暴露的是控制面问题；agent 能连上以后，还要继续解释数据面结果的观测边界。</p>
+<p>启动超时先暴露控制面问题；agent 能连上以后，还要继续解释数据面结果的观测边界。</p>
 
 <hr />
 
-<h2 id="1-attach-agent-的启动链路就绪信号只代表控制面初始化">1. attach agent 的启动链路：就绪信号只代表控制面初始化</h2>
+<h2 id="问题背景gevent-会同时影响控制面和数据面">问题背景：gevent 会同时影响控制面和数据面</h2>
+
+<h3 id="attach-agent-的启动链路就绪信号只代表控制面初始化">attach agent 的启动链路：就绪信号只代表控制面初始化</h3>
 
 <p>一个 attach agent 的最小流程可以画成这样：</p>
 
@@ -149,7 +151,7 @@ GDB / LLDB / dlopen / PEP 768
 
 
 <span class="k">def</span> <span class="nf">notify_started</span><span class="p">():</span>
-    <span class="c1"># 真实工具在这里通知外部控制端：agent 已经完成基础初始化。
+    <span class="c1"># 通知外部控制端：agent 已经完成基础初始化。
 </span>    <span class="k">pass</span>
 
 
@@ -189,15 +191,13 @@ GDB / LLDB / dlopen / PEP 768
             <span class="n">conn</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="sa">b</span><span class="sh">"</span><span class="s">hello</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>这段代码的问题不是逻辑写错了，而是它默认了一个前提：<span class="codespan">socket</span> 和 <span class="codespan">threading</span> 还是 CPython 原来的标准库对象。</p>
-
-<p>在 gevent monkey patch 之后，这个前提不一定成立。</p>
+<p>这段写法放在普通 Python 进程里通常能工作；但 attach agent 落进的是目标进程自己的 runtime。目标进程如果已经做过 gevent monkey patch，这里的 <span class="codespan">socket</span> 和 <span class="codespan">threading</span> 就可能不是原始实现了。</p>
 
 <hr />
 
-<h2 id="2-gevent-monkey-patch-会让-agent-卡在就绪信号之前">2. gevent monkey patch 会让 agent 卡在就绪信号之前</h2>
+<h3 id="gevent-monkey-patch-会让-agent-卡在就绪信号之前">gevent monkey patch 会让 agent 卡在就绪信号之前</h3>
 
-<p>monkey patch 的核心影响是：后续代码再 <span class="codespan">import socket</span>、<span class="codespan">import threading</span> 时，拿到的可能已经不是原始实现。</p>
+<p>monkey patch 会改变后续 import 的结果：再 <span class="codespan">import socket</span>、<span class="codespan">import threading</span> 时，拿到的可能已经不是原始实现。</p>
 
 <p>对业务代码来说，这是 gevent 的能力来源。对 attach agent 来说，这会影响自己的启动路径。</p>
 
@@ -233,22 +233,24 @@ GDB / LLDB / dlopen / PEP 768
 Impossible to call blocking function in the event loop callback
 </code></pre></div></div>
 
-<p>这个异常和 GDB、LLDB、PEP 768 这些注入方式没有直接关系。它说明的是：agent 进入目标进程以后，执行到了 gevent 不允许阻塞切换的位置。</p>
+<p>这个异常和 GDB、LLDB、PEP 768 这些注入方式没有直接关系。agent 已经进入目标进程，只是在执行过程中撞到了 gevent 对阻塞切换的限制。</p>
 
 <p>外部最终只等到：</p>
 
 <div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent initialization timeout
 </code></pre></div></div>
 
-<p>所以排查这类问题时，第一步不是先改等待时间，而是要问：agent 发出就绪信号之前，是否已经碰到了被 monkey patch 的控制面对象？</p>
+<p>排查时先别急着改等待时间。更值得确认的是：agent 发出就绪信号之前，是否已经碰到了被 monkey patch 的控制面对象。</p>
 
 <hr />
 
-<h2 id="3-控制面保活用原生-socket-和线程入口建立命令通道">3. 控制面保活：用原生 socket 和线程入口建立命令通道</h2>
+<h2 id="控制面启动和通信要避开-monkey-patch">控制面：启动和通信要避开 monkey patch</h2>
 
-<p>控制面的目标很朴素：agent 先要活下来。</p>
+<h3 id="用原生-socket-和线程入口建立命令通道">用原生 socket 和线程入口建立命令通道</h3>
 
-<p>这里的“活下来”不是说诊断结果已经完全准确，而是指 agent 至少能完成以下事情：</p>
+<p>控制面的第一目标是让 agent 先跑起来。</p>
+
+<p>“跑起来”还不涉及诊断结果是否准确，只要求 agent 至少完成几件事：</p>
 
 <ol>
   <li>在目标进程里启动；</li>
@@ -257,13 +259,7 @@ Impossible to call blocking function in the event loop callback
   <li>接收外部 client 的第一条命令。</li>
 </ol>
 
-<p>因此控制面的原则是：</p>
-
-<blockquote>
-  <p>agent 自己的命令通道，要尽量避开目标应用可能 monkey patch 的高层 API。</p>
-</blockquote>
-
-<p>示例代码可以写得很简单。下面只保留关键含义，故意省略清理旧 socket、日志、超时、退出回收、多 Python 版本兼容等工程细节：</p>
+<p>agent 自己的命令通道要尽量避开目标应用可能 monkey patch 的高层 API。启动路径可以退到这几类原语上：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">_socket</span>
 <span class="kn">import</span> <span class="n">_thread</span>
@@ -271,7 +267,7 @@ Impossible to call blocking function in the event loop callback
 
 
 <span class="k">def</span> <span class="nf">notify_started</span><span class="p">():</span>
-    <span class="c1"># 真实工具在这里通知外部控制端：agent 已经完成基础初始化。
+    <span class="c1"># 通知外部控制端：agent 已经完成基础初始化。
 </span>    <span class="k">pass</span>
 
 
@@ -307,16 +303,16 @@ Impossible to call blocking function in the event loop callback
         <span class="n">conn</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
 </code></pre></div></div>
 
-<p>这个版本和前面的区别很少，但性质变了：</p>
+<p>改动看起来不大，但依赖的对象已经换了：</p>
 
 <ul>
-  <li>socket 不再从 <span class="codespan">socket.socket</span> 来，而是从底层 <span class="codespan">_socket.socket</span> 来；</li>
-  <li>线程不再通过 <span class="codespan">threading.Thread</span> 启动，而是取原始 <span class="codespan">_thread.start_new_thread</span>；</li>
-  <li>就绪信号之前不再依赖 <span class="codespan">threading.Event.wait()</span>；</li>
-  <li>agent 自己的命令通道尽量不进入 gevent 的协作式调度语义。</li>
+  <li>socket 改用底层 <span class="codespan">_socket.socket</span>，不再通过 <span class="codespan">socket.socket</span> 建命令通道；</li>
+  <li>线程改用原始 <span class="codespan">_thread.start_new_thread</span>，不再通过 <span class="codespan">threading.Thread</span> 启动控制线程；</li>
+  <li>就绪同步交给 <span class="codespan">listen()</span> 后的 socket backlog 和外部 hello 探测，不再用 <span class="codespan">threading.Event.wait()</span> 作为发出就绪信号前的 barrier；</li>
+  <li>agent 自己的命令通道整体退到 <span class="codespan">_socket</span> / <span class="codespan">_thread</span> 这组底层原语上，不再把控制线程和控制 socket 建在 <span class="codespan">socket</span> / <span class="codespan">threading</span> 这层可能被替换的 API 上。</li>
 </ul>
 
-<p>这里的 <span class="codespan">gevent.monkey.get_original()</span> 是 gevent 提供的原始对象查询接口，不是 peeka 的工程封装。真实工具会比这段代码更谨慎，处理清理、日志、异常和版本差异；这些细节留在实现里，正文只需要抓住控制面取舍：</p>
+<p>如果目标进程已经加载了 <span class="codespan">gevent.monkey</span>，<span class="codespan">get_original()</span> 可以拿到 monkey patch 之前的对象。<span class="codespan">native_start_new_thread()</span> 借这个接口，在 gevent 已经 patch 过 <span class="codespan">_thread</span> 时仍然取回原始线程入口。</p>
 
 <blockquote>
   <p>控制面越依赖目标进程的高层 runtime，越容易被业务框架的 monkey patch 影响。</p>
@@ -324,15 +320,13 @@ Impossible to call blocking function in the event loop callback
 
 <hr />
 
-<h2 id="4-就绪同步策略listen-之后发信号再用-hello-探测确认可用">4. 就绪同步策略：listen 之后发信号，再用 hello 探测确认可用</h2>
+<h3 id="listen-之后发信号再用-hello-探测确认可用">listen 之后发信号，再用 hello 探测确认可用</h3>
 
-<p>上面的代码里有一个看起来不严谨的地方：启动 accept loop 后，没有等它显式报告“我已经跑起来了”。</p>
-
-<p>这是刻意的取舍。</p>
+<p>上面的代码里少了一步：启动 accept loop 后，没有等它显式报告“我已经跑起来了”。这一步可以不等。</p>
 
 <p>对 socket server 来说，更关键的边界是 <span class="codespan">listen()</span>。<span class="codespan">listen()</span> 返回后，socket 已经开始监听，连接可以进入 backlog。即使 accept loop 还没执行到 <span class="codespan">accept()</span>，外部 client 的连接也可以先排队。</p>
 
-<p>因此控制面可以把顺序拆成：</p>
+<p>控制面可以按这个顺序走：</p>
 
 <ol>
   <li>创建原生 Unix socket；</li>
@@ -343,17 +337,19 @@ Impossible to call blocking function in the event loop callback
   <li>外部 client 连接后，再做一次 hello 探测。</li>
 </ol>
 
-<p>就绪信号表达的是“agent 已完成基本初始化”。它可以实现成写文件、回连 notify socket 或发送 IPC 消息；这些只是传递方式。命令循环是否真的可用，可以由后续 hello 探测确认。</p>
+<p>就绪信号只表示“agent 已完成基本初始化”。写文件、回连 notify socket、发送 IPC 消息都只是传递方式；命令循环是否真的可用，交给后续 hello 探测确认。</p>
 
-<p>这样做的好处是：发出就绪信号之前不需要 Python 层 event，也就避开了 <span class="codespan">threading.Event.wait()</span> 被 gevent 改造后的风险。</p>
+<p>这样一来，就绪同步由内核 socket backlog 和外部 hello 探测承接，发出就绪信号之前不需要 Python 层 event。</p>
 
 <hr />
 
-<h2 id="5-数据面观测边界不同命令在-gevent-下能看到的范围不同">5. 数据面观测边界：不同命令在 gevent 下能看到的范围不同</h2>
+<h2 id="数据面命令能执行不代表观测语义完全相同">数据面：命令能执行，不代表观测语义完全相同</h2>
+
+<h3 id="不同命令在-gevent-下能看到的范围不同">不同命令在 gevent 下能看到的范围不同</h3>
 
 <p>控制面修完，只能说明 agent 能活下来，命令通道能响应。它不自动保证所有诊断命令在 gevent 下都和普通线程模型完全等价。</p>
 
-<p>这就是数据面的问题。</p>
+<p>数据面要处理的就是这些语义差异。</p>
 
 <p><span class="codespan">watch</span>、<span class="codespan">monitor</span>、<span class="codespan">stack</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 看起来都在“观察目标进程”，但它们依赖的机制不同：</p>
 
@@ -363,7 +359,7 @@ Impossible to call blocking function in the event loop callback
     <tr>
       <th>命令</th>
       <th>主要机制</th>
-      <th>gevent 下更应该说明什么</th>
+      <th>gevent 下需要标明的边界</th>
     </tr>
   </thead>
   <tbody>
@@ -400,11 +396,11 @@ Impossible to call blocking function in the event loop callback
 
 <p><span class="codespan">trace</span> 和 <span class="codespan">top</span> 更复杂，因为它们试图观察更深的执行过程。</p>
 
-<p>这时工具不应该假装“一切正常”。更好的做法是：结果仍然可以给，但输出里要明确说明 backend、观测范围和降级原因。</p>
+<p>这时输出仍然可以给，但要把 backend、观测范围和降级原因一起带出来，避免调用方把降级结果当成完整结果。</p>
 
 <hr />
 
-<h2 id="6-trace-的降级策略只保留根调用不承诺完整调用树">6. trace 的降级策略：只保留根调用，不承诺完整调用树</h2>
+<h3 id="trace-只保留根调用不承诺完整调用树">trace 只保留根调用，不承诺完整调用树</h3>
 
 <p>完整 <span class="codespan">trace</span> 通常依赖解释器的 tracing 机制。Python 3.12+ 可以用 <span class="codespan">sys.monitoring</span>，更老版本通常用 <span class="codespan">sys.settrace</span>。这类机制会进入 frame 事件流，用来展开函数内部的子调用。</p>
 
@@ -426,7 +422,7 @@ Impossible to call blocking function in the event loop callback
 
 <p>但它不再承诺完整的内部调用树。</p>
 
-<p>输出可以把这个事实放到 <span class="codespan">meta</span> 里：</p>
+<p>输出里的 <span class="codespan">meta</span> 可以直接标出这次降级：</p>
 
 <div  class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
@@ -437,23 +433,23 @@ Impossible to call blocking function in the event loop callback
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p>这个降级不是偷懒，而是诚实。一棵看似完整、实际不可靠的调用树，比一个明确降级的根调用结果更危险。</p>
+<p>宁愿给一个明确降级的根调用结果，也不要给一棵看似完整、实际不可靠的调用树。</p>
 
 <hr />
 
-<h2 id="7-top-的采样边界frame-sampling-看不见所有挂起-greenlet">7. top 的采样边界：frame sampling 看不见所有挂起 greenlet</h2>
+<h3 id="top-的-frame-sampling-看不见所有挂起-greenlet">top 的 frame sampling 看不见所有挂起 greenlet</h3>
 
 <p><span class="codespan">top</span> 的普通做法是 frame sampling：定期读取各 OS thread 当前正在执行的 frame，再按函数聚合热点。</p>
 
-<p>这个模型在普通线程程序里比较直观。但 gevent 使用 greenlet 调度，多个 greenlet 共享同一个 OS thread。</p>
+<p>这套采样模型在普通线程程序里比较直观。但 gevent 使用 greenlet 调度，多个 greenlet 共享同一个 OS thread。</p>
 
-<p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。也就是说，它天然更容易看到“现在正在跑的 greenlet”，而不是所有挂起的 greenlet。</p>
+<p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。它天然更容易看到“现在正在跑的 greenlet”，看不到所有挂起的 greenlet。</p>
 
-<p>所以在 gevent 下，<span class="codespan">top</span> 的结果仍然有价值，但必须承认覆盖范围有限。它适合说明当前活跃执行路径的热点，不适合被解释成“所有 greenlet 的完整 CPU 画像”。</p>
+<p>所以在 gevent 下，<span class="codespan">top</span> 的结果仍然有用，但覆盖范围有限。它适合说明当前活跃执行路径的热点，不适合被解释成“所有 greenlet 的完整 CPU 画像”。</p>
 
 <p>如果工具接入了 greenlet 的 switch / throw trace 事件，可以多保留一些调度信息；但挂起 greenlet 的完整栈枚举仍然不能随口承诺。</p>
 
-<p>输出里可以这样表达：</p>
+<p>输出里的 <span class="codespan">meta</span> 也要标出采样盲区：</p>
 
 <div  class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nl">"meta"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
@@ -465,13 +461,15 @@ Impossible to call blocking function in the event loop callback
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p>这里的 <span class="codespan">greenlet_blind</span> 很重要。它提醒读者：热点列表可以参考，但不是完整世界。</p>
+<p><span class="codespan">greenlet_blind</span> 标出来以后，这份热点列表的边界也就清楚了：它可以参考，但不是完整世界。</p>
 
 <hr />
 
-<h2 id="8-排查顺序先确认目标-runtime再解释启动超时和降级输出">8. 排查顺序：先确认目标 runtime，再解释启动超时和降级输出</h2>
+<h2 id="排查与结论先确认-runtime再解释输出边界">排查与结论：先确认 runtime，再解释输出边界</h2>
 
-<p>调这类问题时，最怕把目标进程当成普通 Python 进程。</p>
+<h3 id="先确认目标-runtime再解释启动超时和降级输出">先确认目标 runtime，再解释启动超时和降级输出</h3>
+
+<p>调这类问题时，别先把目标进程当成普通 Python 进程。</p>
 
 <p>更可靠的顺序是：</p>
 
@@ -481,7 +479,7 @@ Impossible to call blocking function in the event loop callback
   <li>最后解释 <span class="codespan">trace</span>、<span class="codespan">top</span> 这类数据面输出的边界。</li>
 </ol>
 
-<p>在 peeka 里，这类信息可以通过类似 <span class="codespan">patch-status</span> 的命令摆到台面上。它的价值不是“修复一切”，而是让读者和工具使用者知道当前 runtime 长什么样：</p>
+<p>在 peeka 里，这类信息可以通过类似 <span class="codespan">patch-status</span> 的命令摆到台面上。它不直接修复问题，只负责把当前 runtime 长什么样说清楚：</p>
 
 <ul>
   <li>gevent 是否已经 import；</li>
@@ -490,27 +488,26 @@ Impossible to call blocking function in the event loop callback
   <li>当前命令输出是否带有降级说明。</li>
 </ul>
 
-<p>有了这些信息，<span class="codespan">Agent initialization timeout</span> 就不再只是一个模糊的启动超时。你可以判断它到底是注入路径失败，还是 agent 进入目标进程后，在控制面初始化阶段踩到了被改造过的 runtime。</p>
+<p>有了这些信息，<span class="codespan">Agent initialization timeout</span> 就不再只是一个模糊的启动超时。它到底是注入路径失败，还是 agent 进入目标进程后踩到了被改造过的 runtime，可以继续往下分。</p>
 
 <hr />
 
-<h2 id="9-总结控制面先保活数据面再标注观测范围">9. 总结：控制面先保活，数据面再标注观测范围</h2>
+<h3 id="控制面先保活数据面再标注观测范围">控制面先保活，数据面再标注观测范围</h3>
 
 <p>attach agent 运行在别人的进程里。那个进程的标准库、线程模型、socket 行为和 frame 调度模型，都可能已经被业务框架改造过。</p>
 
-<p>因此这类问题要分两层处理。</p>
+<p>处理时也要分成两层。</p>
 
 <p>控制面先保证 agent 能活下来：</p>
 
 <ol>
-  <li>避开被 monkey patch 的 <span class="codespan">socket</span> 和 <span class="codespan">threading</span>；</li>
-  <li>用 <span class="codespan">_socket.socket</span> 这类底层接口建立命令 socket；</li>
-  <li>用原始 <span class="codespan">_thread.start_new_thread</span> 这类底层入口启动控制线程；</li>
-  <li>发出就绪信号之前不要依赖 <span class="codespan">threading.Event.wait()</span>；</li>
-  <li>用 <span class="codespan">listen()</span> 后的 backlog 加外部 hello 探测完成同步。</li>
+  <li>用 <span class="codespan">_socket.socket</span> 这类底层接口建立命令 socket，不再通过 <span class="codespan">socket.socket</span>；</li>
+  <li>用原始 <span class="codespan">_thread.start_new_thread</span> 这类底层入口启动控制线程，不再通过 <span class="codespan">threading.Thread</span>；</li>
+  <li>用 <span class="codespan">listen()</span> 后的 backlog 承接早到的 client 连接，把同步点从 Python 层 event 挪到 socket backlog；</li>
+  <li>发出就绪信号后，再用外部 hello 探测确认命令循环可用，避免在发出就绪信号前进入 <span class="codespan">threading.Event.wait()</span>。</li>
 </ol>
 
-<p>数据面再诚实说明诊断结果的覆盖范围：</p>
+<p>数据面再说明诊断结果的覆盖范围：</p>
 
 <ol>
   <li><span class="codespan">watch</span>、<span class="codespan">monitor</span>、<span class="codespan">stack</span> 可以保持函数边界观测；</li>
@@ -519,7 +516,7 @@ Impossible to call blocking function in the event loop callback
   <li>受影响输出要带 <span class="codespan">meta</span>，让调用方知道 backend 和降级原因。</li>
 </ol>
 
-<p><span class="codespan">Agent initialization timeout</span> 是表象。真正的问题是 agent 跨进了一个已经被改造过的 runtime。控制面要尽量退到底层原语，数据面要清楚声明自己还能看见什么。</p>
+<p><span class="codespan">Agent initialization timeout</span> 只是外部看到的结果。agent 跨进了一个已经被改造过的 runtime，控制面要尽量退到底层原语，数据面要清楚声明自己还能看见什么。</p>
 
   </article>
 

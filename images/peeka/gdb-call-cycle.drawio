@@ -1,0 +1,90 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="gdb-call" name="gdb-call-cycle">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="top-title" value="单次 GDB call 命令在目标进程内的 6 步" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="500" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="cycle-bg" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1120" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="① 保存原始寄存器&#10;(RIP, RAX, RDI, ...)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="70" y="110" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="② 写入函数参数&#10;到寄存器/栈" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="260" y="110" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="③ 设 RIP 为目标函数&#10;入口地址" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="450" y="110" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="④ 在返回地址处&#10;预设断点" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="640" y="110" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="⑤ ptrace CONT&#10;目标进程执行函数" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="830" y="110" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="⑥ 命中断点&#10;恢复原始寄存器" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="450" y="210" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="s1" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="s2" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e34" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="s3" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e45" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="s4" target="s5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e56" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="s5" target="s6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="915" y="195" />
+              <mxPoint x="535" y="195" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="role-gdb-lbl" value="GDB 主导 (设置寄存器)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="70" y="175" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="role-tgt-lbl" value="目标进程执行" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="830" y="175" width="170" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="bot-title" value="pyrasite 三条 GDB 命令 = 三次独立循环" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="500" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" value="call PyGILState_Ensure()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="380" width="340" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c1-sub" value="6 步循环 ①②③④⑤⑥" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;fontStyle=2;strokeWidth=1.5;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="60" y="425" width="340" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" value="call PyRun_SimpleString(...)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="430" y="380" width="340" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c2-sub" value="6 步循环 ①②③④⑤⑥" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;fontStyle=2;strokeWidth=1.5;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="430" y="425" width="340" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" value="call PyGILState_Release($1)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="800" y="380" width="340" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c3-sub" value="6 步循环 ①②③④⑤⑥" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;fontStyle=2;strokeWidth=1.5;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="800" y="425" width="340" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ec12" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F2937;strokeWidth=1.5;" edge="1" parent="1" source="c1" target="c2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec23" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F2937;strokeWidth=1.5;" edge="1" parent="1" source="c2" target="c3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bot-note" value="每次 call 都是一次完整的「保存 -&gt; 设置 -&gt; 执行 -&gt; 恢复」循环；&#10;三次 call 之间目标进程仍处于 ptrace 暂停状态" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=2;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="1120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

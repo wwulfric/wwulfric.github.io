@@ -1,0 +1,127 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="dlopen-pthread" name="dlopen-pthread-timeline">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="880" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ln-ctrl" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="280" height="800" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-gdb" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="350" y="40" width="280" height="800" as="geometry" />
+        </mxCell>
+        <mxCell id="ln-target" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="660" y="40" width="500" height="800" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-ctrl" value="控制端进程 (peeka/memray)" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-gdb" value="GDB/LLDB 子进程 (短生命周期)" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B45309;" vertex="1" parent="1">
+          <mxGeometry x="350" y="50" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-target" value="目标 Python 进程" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="660" y="50" width="500" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-tmain" value="主线程" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="675" y="85" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-tagent" value="agent 线程 (新建)" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="920" y="85" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="① bind/listen 127.0.0.1:port" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="120" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="② Popen(gdb -p PID)&#10;传 port / injector 路径" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="③ ptrace ATTACH&#10;b malloc / PyMem_* / ..." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="190" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="暂停，等到达 malloc / PyMem_* 边界" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="670" y="190" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="④ call dlopen(_inject.so, RTLD_NOW)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="280" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="加载 _inject.so 进入地址空间" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="670" y="280" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="⑤ call peeka_spawn_agent(port)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="350" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;" edge="1" parent="1" source="n7" target="n8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="pthread_create" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="670" y="350" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="agent 线程启动" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="920" y="350" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e8spawn" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="n8" target="n9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="⑥ ptrace DETACH，子进程退出" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="430" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;" edge="1" parent="1" source="n10" target="n11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="主线程恢复执行" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="670" y="430" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="gdb-end" value="GDB 子进程在此终止" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="370" y="475" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="gdb-bar" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=2;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="500" as="sourcePoint" />
+            <mxPoint x="610" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="⑦ connect 回连控制端" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="920" y="550" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="accept() / sendall(agent_script)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="550" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e12-conn" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n12" target="n13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12-lbl" value="TCP 反向连接" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="450" y="525" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" value="⑧ PyGILState_Ensure()&#10;PyEval_EvalCode(agent_script)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="920" y="630" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="n12" target="n14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="agent 在目标进程内执行" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontStyle=1;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="920" y="730" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="n14" target="n15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="time-axis" style="endArrow=classic;html=1;strokeColor=#6B7280;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="120" as="sourcePoint" />
+            <mxPoint x="20" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="time-lbl" value="时间" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="0" y="450" width="40" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

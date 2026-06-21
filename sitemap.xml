@@ -257,6 +257,10 @@
 <lastmod>2026-05-27T00:00:00+00:00</lastmod>
 </url>
 <url>
+<loc>https://wulfric.me/2026/06/gevent-technical-route/</loc>
+<lastmod>2026-06-07T00:00:00+00:00</lastmod>
+</url>
+<url>
 <loc>https://wulfric.me/about/</loc>
 </url>
 <url>
@@ -828,5 +832,11 @@
 </url>
 <url>
 <loc>https://wulfric.me/tags/asyncio/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/greenlet/</loc>
+</url>
+<url>
+<loc>https://wulfric.me/tags/coroutine/</loc>
 </url>
 </urlset>

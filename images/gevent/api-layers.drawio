@@ -1,0 +1,78 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="api-layers" name="api-layers">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="L-title" value="原方案：走高层 API（被 monkey patch 替换）" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="R-title" value="新方案：退到底层原语（绕开 monkey patch）" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="560" y="20" width="500" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="L-app" value="业务 / agent 代码&#10;socket.socket(...) · threading.Thread(...)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="L-high" value="Python 标准库（高层）&#10;socket.py · threading.py" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="L-low" value="Python C 扩展（底层原语）&#10;_socket · _thread" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="L-arrow-1" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="L-app" target="L-high">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="L-arrow-2" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="L-high" target="L-low">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="L-patch-note" value="被替换成 gevent.socket / gevent.threading：&#10;调用会落到 gevent 协作式实现" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B45309;" vertex="1" parent="1">
+          <mxGeometry x="50" y="252" width="500" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="R-app" value="agent 代码（控制面）&#10;_socket.socket(...) · _thread.start_new_thread(...)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="560" y="60" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="R-high" value="Python 标准库（高层）&#10;socket.py · threading.py（已被 patch，但 agent 不走这里）" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#6B7280;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="560" y="180" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="R-low" value="Python C 扩展（底层原语）&#10;_socket · _thread" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="560" y="300" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="R-arrow-bypass" style="endArrow=classic;html=1;strokeColor=#1F6FEB;strokeWidth=2;curved=1;exitX=0.85;exitY=1;entryX=0.85;entryY=0;" edge="1" parent="1" source="R-app" target="R-low">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080" y="180" />
+              <mxPoint x="1080" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="R-bypass-lbl" value="直通底层，&#10;不经过 patch 层" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="200" width="100" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="R-getorig" value="必要时用 monkey.get_original(...) 取回原生入口" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="570" y="370" width="500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="kernel" value="Linux 内核（socket、threads、syscalls）" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="1020" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L-to-kernel" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="L-low" target="kernel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="R-to-kernel" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="R-low" target="kernel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="patch-line" style="endArrow=none;html=1;strokeColor=#B91C1C;strokeWidth=2;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="40" y="165" as="sourcePoint" />
+            <mxPoint x="1060" y="165" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="patch-line-lbl" value="↓ monkey patch 的作用范围在这一层（覆盖 socket / threading / time / select 等）" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B91C1C;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="50" y="145" width="600" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="summary" value="关键观察：monkey patch 只能替换 Python 层的高层 API（socket.py / threading.py），无法触及由 C 实现的底层原语（_socket / _thread）。把 agent 控制面退到底层原语，就避开了 patch 的作用范围。" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontColor=#1F2937;align=left;verticalAlign=top;spacingLeft=14;spacingTop=10;spacingRight=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="1020" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

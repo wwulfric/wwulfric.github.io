@@ -1,0 +1,98 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="pending-call" name="pending-call-fallback">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="hd-l" value="场景 A：普通业务代码" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="540" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="hd-r" value="场景 B：纯 Python tight loop" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B45309;" vertex="1" parent="1">
+          <mxGeometry x="620" y="20" width="540" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="codeA" value="for item in items:&#10;    result.append(item.process())&#10;    cache[key] = item" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="540" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="codeB" value="while x == 1:&#10;    pass" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="620" y="60" width="540" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-lbl" value="C 函数调用频次" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="155" width="540" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-bg" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h1" value="malloc" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="185" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h2" value="PyMem_*" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="140" y="185" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h3" value="malloc" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="230" y="185" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h4" value="free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="310" y="185" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h5" value="PyMem_*" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="380" y="185" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trA-h6" value="malloc" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="470" y="185" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="trB-lbl" value="C 函数调用频次" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="620" y="155" width="540" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="trB-bg" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="180" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="trB-empty" value="(没有新的 malloc / PyMem_*)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B45309;" vertex="1" parent="1">
+          <mxGeometry x="620" y="180" width="540" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="resA-lbl" value="被动断点结果" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="540" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="resA" value="立刻命中：&#10;dlopen + spawn agent 顺利启动" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="265" width="540" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="resB-lbl" value="被动断点结果" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="620" y="240" width="540" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="resB" value="一直等不到命中：&#10;dlopen / spawn agent 迟迟不发生" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="265" width="540" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-title" value="兜底：Py_AddPendingCall(&amp;PyCallable_Check, 0)" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Courier New;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="1120" height="28" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fix-1" value="GDB 主动把 PyCallable_Check&#10;塞进 pending-call 队列" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="395" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-e1" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="fix-1" target="fix-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-2" value="eval loop 下一个检查点&#10;触发 pending call" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="395" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-e2" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="fix-2" target="fix-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-3" value="目标进程进入 PyCallable_Check" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="395" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-e3" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;" edge="1" parent="1" source="fix-3" target="fix-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fix-4" value="b PyCallable_Check 命中&#10;dlopen + spawn agent" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;fontStyle=1;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="930" y="395" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="3 层 C 函数断点覆盖正常工作负载；pending call 兜底 tight loop。两条路径都指向同一组 commands (dlopen + spawn agent)" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=2;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="1120" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

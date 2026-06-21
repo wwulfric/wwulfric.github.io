@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="bp-layers" name="breakpoint-layers">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-l" value="目标进程内的分配栈" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="title-r" value="peeka 的断点覆盖" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="700" y="20" width="380" height="28" as="geometry" />
+        </mxCell>
+
+        <mxCell id="L1" value="用户 Python 代码&#10;x = [1, 2, 3]   /   obj.method()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="600" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="L2" value="CPython 运行时&#10;PyObject_Call / PyImport_ImportModule / PyErr_CheckSignals / ..." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="600" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="L3" value="CPython 内存 API&#10;PyMem_Malloc  /  PyMem_Calloc  /  PyMem_Realloc  /  PyMem_Free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="210" width="600" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="L4" value="pymalloc / arena 管理&#10;(小块分配在这里走完；大块、新 arena 才落到下一层)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="600" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="L5" value="libc allocator&#10;malloc  /  calloc  /  realloc  /  free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="600" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="L6" value="内核：sbrk / mmap" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="bp-runtime" value="b PyErr_CheckSignals&#10;b PyCallable_Check" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="700" y="140" width="380" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="e-runtime" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bp-runtime" target="L2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bp-pymem" value="b PyMem_Malloc / Calloc / Realloc / Free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="700" y="210" width="380" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="e-pymem" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bp-pymem" target="L3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bp-libc" value="b malloc / calloc / realloc / free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="700" y="350" width="380" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="e-libc" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bp-libc" target="L5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="蓝色层 = 设了断点的 C 函数入口；任意一层命中都会触发同一组 commands (dlopen + spawn agent)" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=2;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="1040" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

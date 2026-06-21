@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="recv-path" name="recv-path">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1180" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="一次 conn.recv() 在 gevent 下的路径" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-g" value="greenlet A" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="1100" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-h" value="Hub greenlet / event loop" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="1100" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="conn.recv(4096)&#10;调用" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="fd 没有数据&#10;注册 reader watcher" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="290" y="120" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="挂起 greenlet A&#10;switch 到 Hub" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="120" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s7" value="conn.recv() 返回&#10;data: bytes" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="950" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="跑 event loop&#10;等其它 fd / 调度别的就绪 greenlet" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="300" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="epoll 通知 fd 可读" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="750" y="300" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="watcher 回调&#10;switch 回 greenlet A" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="300" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s1" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s2" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1;strokeColor=#B91C1C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s3" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3-lbl" value="switch" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="625" y="220" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s4" target="s5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s5" target="s6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="endArrow=classic;html=1;strokeColor=#B91C1C;strokeWidth=1.5;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="s6" target="s7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6-lbl" value="switch" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="1005" y="220" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="time-arrow" style="endArrow=classic;html=1;strokeColor=#6B7280;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="450" as="sourcePoint" />
+            <mxPoint x="1120" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="time-lbl" value="时间" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="1125" y="442" width="40" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="bottom-note" value="业务代码只看到 conn.recv() 执行了一段时间，然后返回 bytes；中间的注册 watcher、挂起、Hub 跑 event loop、watcher 回调切回，都在 gevent 内部完成。" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=2;align=left;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="480" width="1100" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

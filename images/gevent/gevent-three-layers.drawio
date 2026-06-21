@@ -1,0 +1,82 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="gevent-three-layers" name="gevent-three-layers">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="gevent 的三层结构：业务 greenlet / Hub greenlet / event loop" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1000" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="thread-box" value="OS thread" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="1000" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="biz-title" value="业务 greenlet：跑用户代码" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="80" y="110" width="320" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" value="greenlet A&#10;handle_request()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="140" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="greenlet B&#10;handle_request()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="200" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" value="greenlet C&#10;background_job()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="260" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g-dots" value="……" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="120" y="320" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="g-note" value="一个 OS 线程里同时存在大量业务 greenlet&#10;每个 greenlet 有自己的调用栈" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="240" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-title" value="Hub greenlet：调度中心" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="420" y="110" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hub" value="Hub greenlet&#10;Hub.run()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="180" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-note" value="业务 greenlet 撞到等待时切回 Hub&#10;事件就绪后 Hub 再把控制权切给对应 greenlet" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="400" y="290" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ev-title" value="event loop：libev / libuv" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="730" y="110" width="270" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ev" value="event loop" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="730" y="140" width="270" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="w1" value="fd watcher (epoll)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Courier New;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="170" width="230" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="w2" value="timer watcher" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Courier New;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="216" width="230" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="w3" value="signal / idle watcher" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Courier New;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="262" width="230" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ev-note" value="底层 epoll / kqueue 等内核多路复用" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="710" y="350" width="310" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="biz-to-hub" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="g1" target="hub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="biz-to-hub-lbl" value="协作点 switch" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="290" y="148" width="120" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-to-biz" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="hub" target="g2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-to-biz-lbl" value="事件就绪后切回" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="290" y="232" width="120" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-to-ev" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="hub" target="ev">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hub-to-ev-lbl" value="跑 event loop&#10;等内核事件" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="668" y="200" width="100" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="footnote" value="同一时刻只有一个 greenlet 在跑。greenlet 之间靠协作点切换，不受操作系统抢占。" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="1000" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

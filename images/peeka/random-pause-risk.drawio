@@ -1,0 +1,100 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="random-pause" name="random-pause-risk">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-tl" value="目标进程执行时间线" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="tl-bg" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tl-safe-lbl" value="正常执行 (绝大多数时间)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="145" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="dw1" value="malloc" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="170" y="90" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dw2" value="GC 扫描" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="420" y="90" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dw3" value="持有 GIL" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="660" y="90" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dw4" value="free" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="820" y="90" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dw5" value="import 锁" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="90" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dw-lbl" value="危险窗口 (占比小但持续存在)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="820" y="145" width="290" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="time-arrow" style="endArrow=classic;html=1;strokeColor=#6B7280;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="40" y="200" as="sourcePoint" />
+            <mxPoint x="1160" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="time-arrow-lbl" value="时间" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="205" width="40" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="att-title" value="GDB attach 时刻 (随机落点)" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="300" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="att1" value="attach #1&#10;✓ 落在正常区" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="290" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="att1-line" style="endArrow=classic;html=1;strokeColor=#1F6FEB;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="att1" target="att1-tip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="att1-tip" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1F6FEB;strokeColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="130" y="195" width="20" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="att2" value="attach #2&#10;✗ 撞进 malloc" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="150" y="350" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="att2-line" style="endArrow=classic;html=1;strokeColor=#B91C1C;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="att2" target="att2-tip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="att2-tip" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#B91C1C;strokeColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="200" y="195" width="20" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="att3" value="attach #3&#10;✓ 落在正常区" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="500" y="290" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="att3-line" style="endArrow=classic;html=1;strokeColor=#1F6FEB;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="att3" target="att3-tip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="att3-tip" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1F6FEB;strokeColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="550" y="195" width="20" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="att4" value="attach #4&#10;✗ 撞进持有 GIL" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="645" y="350" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="att4-line" style="endArrow=classic;html=1;strokeColor=#B91C1C;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="att4" target="att4-tip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="att4-tip" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#B91C1C;strokeColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="695" y="195" width="20" height="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="att5" value="attach #5&#10;✓ 落在正常区" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="930" y="290" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="att5-line" style="endArrow=classic;html=1;strokeColor=#1F6FEB;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="att5" target="att5-tip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="att5-tip" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1F6FEB;strokeColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="980" y="195" width="20" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="conclude" value="pyrasite 每次注入都是从这条时间线随机抽样：危险窗口虽小，但生产环境下不能赌" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontStyle=2;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="440" width="1120" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

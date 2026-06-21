@@ -6,308 +6,802 @@
 </description>
     <link>https://wulfric.me/</link>
     <atom:link href="https://wulfric.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 07 Jun 2026 16:13:37 +0000</pubDate>
-    <lastBuildDate>Sun, 07 Jun 2026 16:13:37 +0000</lastBuildDate>
+    <pubDate>Sun, 21 Jun 2026 14:59:23 +0000</pubDate>
+    <lastBuildDate>Sun, 21 Jun 2026 14:59:23 +0000</lastBuildDate>
     <generator>Jekyll v4.4.1</generator>
     <rights>wulfric © 2013~2026. All rights reserved.</rights>
     
       <item>
-        <title>Python 运行时观测的三条边界：frame、greenlet 与 task</title>
-        <description>&lt;p&gt;一段 Python 程序跑起来以后，源码里的函数名、行号、局部变量、异常传播并没有消失。它们变成了运行时里的 frame、code object、字节码位置和调用栈。调试器要停在某一行，coverage 要知道哪段代码被执行过，profiler 要记录时间花在什么函数里，线上诊断工具要在进程继续服务时看见这些信息。&lt;/p&gt;
+        <title>gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</title>
+        <description>&lt;p&gt;协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。&lt;/p&gt;
 
-&lt;p&gt;日志只能覆盖提前想到的路径。真正难查的问题常常发生在没有埋点的地方：某个分支被意外走到，某个 coroutine 长时间挂起，某个 gevent 服务看起来像阻塞，实际已经在多个 greenlet 之间来回切换。运行时观测接口的价值就在这里：工具可以跟着解释器的执行节奏，记录函数调用、行号变化、异常、yield、resume、调度切换等事件。&lt;/p&gt;
+&lt;p&gt;Python 里最常见的两个协程库是 asyncio 和 gevent。asyncio 用 &lt;span class=&quot;codespan&quot;&gt;async&lt;/span&gt;/&lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 语法把暂停点写进代码，协程由事件循环调度，暂停和恢复发生在 Python 字节码层。gevent 走的是另一条路：它对外保留同步 API 的外观，底层用 greenlet 保存一整段调用栈，再用一个特殊的 Hub greenlet 跑 event loop 做调度。这条技术路线可以画成这样：&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 处理的是这类问题：解释器执行 Python 代码时，外部工具能在哪些位置插进来。&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 来自 PEP 669，目标是给调试器、覆盖率工具、profiler 提供一套低影响的执行事件接口。&lt;sup id=&quot;fnref:sys-settrace&quot;&gt;&lt;a href=&quot;#fn:sys-settrace&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:sys-monitoring&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:pep-669&quot;&gt;&lt;a href=&quot;#fn:pep-669&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Python yield / generator
+  → 函数可以在 yield 处暂停
+greenlet
+  → 暂停的不是一个函数，而是一整段调用栈
+gevent Hub
+  → 用一个特殊 greenlet 跑 event loop，统一调度
+cooperative I/O
+  → 等 socket / sleep / Event 时切回 Hub
+monkey patch
+  → 让标准库的同步 API 变成上面这套协作式 API
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;这个问题看起来很底层，放进真实程序之后会变得微妙。因为 Python 程序里的“正在运行”有几种形态：&lt;/p&gt;
+&lt;p&gt;每一步都是上一步不够用之后才走出来的。下面顺着这条路走一遍。&lt;/p&gt;
 
-&lt;p&gt;普通函数沿着 CPython frame 一层层调用；gevent 在同一个 OS 线程里切换多组 greenlet 栈；asyncio 把 coroutine 包成 Task，再交给 event loop 调度。观测工具选中的边界不同，看到的世界也不同。&lt;/p&gt;
+&lt;h2 id=&quot;1-同步外观协作内核&quot;&gt;1. 同步外观，协作内核&lt;/h2&gt;
 
-&lt;p&gt;这也是很多追踪问题的根源。事件本身还在，事件归属却可能已经换了一套语义。&lt;/p&gt;
+&lt;p&gt;gevent 没有引入新写法。它不要求你写 &lt;span class=&quot;codespan&quot;&gt;async def&lt;/span&gt;，也不要求在等待点写 &lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt;。业务代码看起来还是普通同步代码：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;conn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;recv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4096&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;conn 是普通 socket 时，&lt;span class=&quot;codespan&quot;&gt;recv()&lt;/span&gt; 没数据会让当前 OS 线程睡过去，整个线程要等内核唤醒。conn 是 gevent socket 时，写法不变，但语义换了：没数据时阻塞的是当前 greenlet，不是整个 OS 线程。greenlet 挂起以后，执行权交给 gevent 的 Hub，Hub 在同一个 OS 线程里调度别的 greenlet，等内核事件回来再切回原 greenlet。&lt;/p&gt;
+
+&lt;p&gt;这样大量同步写法的代码不用改就能拿到高并发 I/O。但源码表面长得一样、运行时语义完全不同，读 gevent 程序时得经常多想一想：当前这个对象是不是已经被 gevent 接管了。&lt;/p&gt;
+
+&lt;p&gt;asyncio 走的是另一条路。它把暂停点写进语法：&lt;span class=&quot;codespan&quot;&gt;data = await reader.read(4096)&lt;/span&gt;，读到 &lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 就知道这里会让出。gevent 把暂停点藏在被替换后的同步 API 里——&lt;span class=&quot;codespan&quot;&gt;data = sock.recv(4096)&lt;/span&gt; 是 OS 线程阻塞还是 greenlet 协作式等待，要看 sock 是什么、socket 模块有没有被 monkey patch。&lt;/p&gt;
+
+&lt;h2 id=&quot;2-yield让一个函数能暂停&quot;&gt;2. yield：让一个函数能暂停&lt;/h2&gt;
+
+&lt;p&gt;普通函数调用很直接：进入函数体，遇到 &lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt; 就把局部状态扔掉、把结果交给调用者。下次再调是另起一个调用，局部变量全部重新创建。&lt;/p&gt;
+
+&lt;p&gt;函数体里只要出现 &lt;span class=&quot;codespan&quot;&gt;yield&lt;/span&gt;，Python 就会把它编译成 generator function。调用这种函数不会立刻执行函数体，而是返回一个 generator object；每次 &lt;span class=&quot;codespan&quot;&gt;next()&lt;/span&gt; 才向前推一段，直到撞到下一个 &lt;span class=&quot;codespan&quot;&gt;yield&lt;/span&gt; 停下。官方文档把 generator 描述成 resumable function：函数在 &lt;span class=&quot;codespan&quot;&gt;yield&lt;/span&gt; 处暂停，保留执行现场，下次从原位置继续。&lt;sup id=&quot;fnref:python-generators&quot;&gt;&lt;a href=&quot;#fn:python-generators&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;numbers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;middle&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;n&quot;&gt;gen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;numbers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;# 打印 start，停在第一个 yield
+&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;# 从第一个 yield 后面继续，打印 middle，停在第二个 yield
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;yield 保留下来的东西不止这些：不只是「下一条要执行哪条字节码」，还有当时的局部变量、异常处理状态、对外层 frame 的引用——整次函数调用的现场都还在。generator 不是「记住一个返回值」，是「把整个函数冻起来放一边」，调用者用 &lt;span class=&quot;codespan&quot;&gt;next()&lt;/span&gt; 把它唤醒一段，它再冻起来。&lt;/p&gt;
+
+&lt;p&gt;yield 有两个绕不开的边界。一是暂停点必须显式写在函数里，外面没法强行打断它。二是 yield 只暂停 generator 自己那一层 frame，对调用它的函数没有效果——yield 把控制权交给的是直接调用者，不是更上层的人。&lt;/p&gt;
+
+&lt;p&gt;最底下的 &lt;span class=&quot;codespan&quot;&gt;db_query&lt;/span&gt; 想在等待 I/O 时让出，假如直接这么写：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;db_query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sql&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;wait_io&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;fetch_result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;load_user&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;db_query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;...&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;# 普通调用，没法把下层的 yield 传出来
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;load_user&lt;/span&gt; 调 &lt;span class=&quot;codespan&quot;&gt;db_query&lt;/span&gt; 看上去是普通函数调用，实际上拿到的是一个 generator object，根本没执行。要让暂停从底下传到顶上，&lt;span class=&quot;codespan&quot;&gt;load_user&lt;/span&gt; 也得改：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;load_user&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;db_query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;...&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;外层 &lt;span class=&quot;codespan&quot;&gt;handle_request&lt;/span&gt; 同理，再外层 web 框架的入口同理。最底下一个 &lt;span class=&quot;codespan&quot;&gt;db_query&lt;/span&gt; 想 yield，整条调用链上的函数都得跟着改写成 generator——要么用 &lt;span class=&quot;codespan&quot;&gt;yield from&lt;/span&gt;，要么用 asyncio 后来做出来的 &lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 语法。&lt;/p&gt;
+
+&lt;p&gt;asyncio 走的就是这条路：把 yield 做成语言原语。gevent 要的是另一个效果：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handle_request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;user&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;load_user&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;user_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;render_profile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;user&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;最底下的阻塞点即使藏在很深的调用里，也能直接让出；恢复以后回到原调用点接着跑、一路返回；调用链中间的函数完全不知道下面发生过让出。这要求暂停的不是一个 frame 而是一整段调用栈，generator 给不了。&lt;/p&gt;
+
+&lt;h2 id=&quot;3-greenlet把整段调用栈搬走&quot;&gt;3. greenlet：把整段调用栈搬走&lt;/h2&gt;
+
+&lt;p&gt;greenlet 的官方文档把它称作 small, independent pseudo-thread，也可以理解成一段能搬来搬去的 frame 栈。greenlet 创建时分配自己的栈空间，第一次 &lt;span class=&quot;codespan&quot;&gt;switch()&lt;/span&gt; 到它就开始跑入口函数；中间可以再 &lt;span class=&quot;codespan&quot;&gt;switch()&lt;/span&gt; 出去；下次切回来时，从上次暂停的位置继续。&lt;sup id=&quot;fnref:greenlet-concepts&quot;&gt;&lt;a href=&quot;#fn:greenlet-concepts&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;最小的两段栈互切：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;task_a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A: before&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;gr_b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;switch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A: after&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;task_b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;B: running&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;gr_a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;switch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+
+&lt;span class=&quot;n&quot;&gt;gr_a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task_a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gr_b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task_b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gr_a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;switch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;输出是 &lt;span class=&quot;codespan&quot;&gt;A: before&lt;/span&gt; → &lt;span class=&quot;codespan&quot;&gt;B: running&lt;/span&gt; → &lt;span class=&quot;codespan&quot;&gt;A: after&lt;/span&gt;。&lt;span class=&quot;codespan&quot;&gt;task_a&lt;/span&gt; 里的 &lt;span class=&quot;codespan&quot;&gt;switch()&lt;/span&gt; 不像 &lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt;，它没让函数结束，只是把当前栈整体冻起来放一边，下次切回来再接着走。&lt;/p&gt;
+
+&lt;p&gt;generator 和 greenlet 的区别如图：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/yield-vs-greenlet.png&quot; alt=&quot;generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;放到真实场景里。一个 greenlet 里跑业务代码，调用链一路下去：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;handle_request()
+  load_user()
+    db.query()
+      socket.recv()      ← 这里 switch 出去
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;socket.recv()&lt;/span&gt; 内部 switch 到 Hub 时，从 &lt;span class=&quot;codespan&quot;&gt;socket.recv()&lt;/span&gt; 一直到 &lt;span class=&quot;codespan&quot;&gt;handle_request()&lt;/span&gt; 这一整段 frame 没有被销毁，只是被冻住。Hub 跑别的事，事件就绪后再切回来，&lt;span class=&quot;codespan&quot;&gt;socket.recv()&lt;/span&gt; 接着返回，沿着 db.query → load_user → handle_request 一路正常返回。调用链中间对深层的 switch 是无感知的，外面看起来就是普通同步函数，没有 yield from 或 async/await 的污染。&lt;/p&gt;
+
+&lt;p&gt;greenlet 不是 OS 线程。一个 OS 线程同一时刻只有一个 greenlet 在跑，greenlet 文档把它叫 current greenlet，用 &lt;span class=&quot;codespan&quot;&gt;greenlet.getcurrent()&lt;/span&gt; 拿到；要别的 greenlet 跑必须显式 &lt;span class=&quot;codespan&quot;&gt;switch()&lt;/span&gt; 过去。&lt;sup id=&quot;fnref:greenlet-current&quot;&gt;&lt;a href=&quot;#fn:greenlet-current&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;切换是手动的，没人替你抢占。&lt;/p&gt;
+
+&lt;p&gt;greenlet 只解决「一个线程里保存多组调用栈、手动在它们之间切」这一件事。什么时候切、谁去等 socket 可读、谁负责把对应的 greenlet 恢复，都不是 greenlet 自己回答的——这是 gevent Hub 干的事。&lt;/p&gt;
+
+&lt;h2 id=&quot;4-hub-和-event-loop&quot;&gt;4. Hub 和 event loop&lt;/h2&gt;
+
+&lt;p&gt;gevent 文档对自己的定义一句话：基于 coroutine 的 Python 网络库，使用 greenlet，在 libev 或 libuv event loop 之上提供高层同步 API。&lt;sup id=&quot;fnref:gevent-intro&quot;&gt;&lt;a href=&quot;#fn:gevent-intro&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;4&lt;/a&gt;&lt;/sup&gt;分开看是三层：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/gevent-three-layers.png&quot; alt=&quot;业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;一个 OS 线程里同时存在很多业务 greenlet 和一个 Hub greenlet。&lt;span class=&quot;codespan&quot;&gt;gevent.spawn(handle_request, req)&lt;/span&gt; 创建一个新的业务 greenlet 登记到调度系统里，但不会立刻跑——要等当前 greenlet 让出，Hub 才有机会切到它。&lt;/p&gt;
+
+&lt;p&gt;业务 greenlet 撞到需要等待的事——等 socket 可读、等 timer 到期、等别的 greenlet 释放锁——就切回 Hub。Hub 跑 event loop，在底层 libev/libuv 上注册 watcher，等 epoll 之类的内核事件。事件就绪后 Hub 再把控制权切给对应的业务 greenlet。&lt;/p&gt;
+
+&lt;p&gt;这不是抢占式调度。一个 greenlet 一直跑 CPU 密集的 Python 代码，不调任何 gevent 协作 API、也不主动 &lt;span class=&quot;codespan&quot;&gt;gevent.sleep(0)&lt;/span&gt;，同线程里其它 greenlet 永远轮不到。gevent 适合 I/O 并发，不适合让 CPU 密集的 Python 代码并行——并发优势完全建立在「大家都在等」上。&lt;/p&gt;
+
+&lt;h2 id=&quot;5-一次-socketrecv-的路径&quot;&gt;5. 一次 socket.recv() 的路径&lt;/h2&gt;
+
+&lt;p&gt;把上面的模型放进一个具体调用。业务代码是开头那段，conn 是 gevent socket，fd 上当前没有数据：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/recv-path.png&quot; alt=&quot;greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;conn.recv()&lt;/span&gt; 内部发现读不到数据，在 event loop 上注册一个 fd 可读 watcher，挂起当前 greenlet，&lt;span class=&quot;codespan&quot;&gt;switch()&lt;/span&gt; 到 Hub。Hub 这边继续跑 event loop——可能在等其它 fd，也可能正好有别的就绪的业务 greenlet 可以调度。某一时刻 epoll 报告 fd 可读，Hub 在 watcher 回调里把对应的 greenlet 重新调度起来，原来的 &lt;span class=&quot;codespan&quot;&gt;conn.recv()&lt;/span&gt; 接着返回数据。&lt;/p&gt;
+
+&lt;p&gt;业务代码这边看到的只是 &lt;span class=&quot;codespan&quot;&gt;data = conn.recv(4096)&lt;/span&gt; 跑了一段时间，然后返回 bytes。注册 watcher、挂起 greenlet、跑 event loop、Hub 切回来，全在 gevent 内部消化掉。&lt;/p&gt;
+
+&lt;p&gt;「阻塞」这个词在 gevent 里要分清。普通 socket 的阻塞是 OS 线程阻塞，整个线程在内核态睡过去；gevent socket 的阻塞只是当前 greenlet 阻塞，OS 线程并没有睡——它切到了 Hub，Hub 接着等其它 fd 或跑别的就绪 greenlet。一个 gevent 进程能用同步写法撑大量并发连接也是因为这个：每个连接一个 greenlet，业务代码看起来像一条直线；等 I/O 时 greenlet 把执行权交回 Hub。&lt;/p&gt;
+
+&lt;h2 id=&quot;6-monkey-patch把标准库接进协作式调度&quot;&gt;6. monkey patch：把标准库接进协作式调度&lt;/h2&gt;
+
+&lt;p&gt;greenlet 提供调用栈级别的暂停，Hub 拿 event loop 调度它们，gevent 的内核就齐了。剩下一个工程问题——业务代码里用的是 &lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time.sleep&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt; 这些标准库 API，它们不会自己变成协作式。每个 gevent 程序都把 &lt;span class=&quot;codespan&quot;&gt;import socket&lt;/span&gt; 改成 &lt;span class=&quot;codespan&quot;&gt;from gevent import socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time.sleep&lt;/span&gt; 改成 &lt;span class=&quot;codespan&quot;&gt;gevent.sleep&lt;/span&gt;，gevent 的适用范围其实很窄：依赖标准库的第三方代码全都用不上。&lt;/p&gt;
+
+&lt;p&gt;monkey patch 就是为这一步存在的。入口很短：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;monkey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;patch_all&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;gevent 文档建议把这两行放在程序生命周期最早的位置，最好在主模块开头比所有其它 import 都早，并且要在程序还是单线程时完成。&lt;sup id=&quot;fnref:gevent-monkey&quot;&gt;&lt;a href=&quot;#fn:gevent-monkey&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;5&lt;/a&gt;&lt;/sup&gt;它替换的是模块属性——&lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time.sleep&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt; 这些名字背后的对象会被换成 gevent 的 cooperative 版本；已经从模块 import 出来留在局部的引用，patch 不到。&lt;/p&gt;
+
+&lt;p&gt;patch 之后，下面这段平凡的代码：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;connect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;example.com&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;80&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sendall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;GET / HTTP/1.0&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\r\n\r\n&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;recv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4096&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;每一个会阻塞的调用都走到第 5 节那条路径：注册 watcher、挂起 greenlet、切到 Hub。&lt;span class=&quot;codespan&quot;&gt;socket.socket&lt;/span&gt; 不是原来的标准库 socket，&lt;span class=&quot;codespan&quot;&gt;recv&lt;/span&gt; 不再是 OS 线程阻塞，源码里看不出任何区别。&lt;/p&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;patch_all()&lt;/span&gt; 替换的范围比直觉上大。除了 socket、time、select、ssl 这些直接和 I/O 相关的，&lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt; 也会被替换——&lt;span class=&quot;codespan&quot;&gt;Thread&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;Lock&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;Event&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;Semaphore&lt;/span&gt; 这些基于 OS 线程语义的对象都被换成基于 greenlet 的版本。&lt;span class=&quot;codespan&quot;&gt;threading.Event().wait()&lt;/span&gt; 在 patch 之后等的不是别的 OS 线程来 &lt;span class=&quot;codespan&quot;&gt;set()&lt;/span&gt;，而是同 OS 线程里另一个 greenlet 来 &lt;span class=&quot;codespan&quot;&gt;set()&lt;/span&gt;；&lt;span class=&quot;codespan&quot;&gt;wait()&lt;/span&gt; 内部会通过 switch 把控制权交回 Hub。&lt;/p&gt;
+
+&lt;p&gt;兼容旧代码是 monkey patch 最直接的收益，很多同步网络库不用大改就能在 gevent 下协作运行。代价就是源码外观和运行时语义脱钩。在 patch 之后的进程里，看到&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;threading&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;并不能立刻断定这就是标准库原始 &lt;span class=&quot;codespan&quot;&gt;threading.Event&lt;/span&gt;——它很可能已经是 gevent 接管过的版本。&lt;/p&gt;
+
+&lt;h2 id=&quot;7-线程世界和-greenlet-世界&quot;&gt;7. 线程世界和 greenlet 世界&lt;/h2&gt;
+
+&lt;p&gt;gevent 程序里到底有几种执行单位，是读这种代码时最容易混的事。&lt;/p&gt;
+
+&lt;p&gt;传统多线程程序里，并发单位就是 OS 线程，每个线程有自己的 C 栈和 Python frame 栈，由内核调度。CPython 受 GIL 限制，同一时刻通常只有一个线程在跑 Python 字节码，但线程仍是操作系统层面的调度对象。&lt;/p&gt;
+
+&lt;p&gt;gevent 在这套模型外又叠了一层：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;OS thread 1
+  main greenlet
+  Hub greenlet
+  business greenlet A、B、C……
+
+OS thread 2
+  main greenlet
+  Hub greenlet
+  business greenlet D、E……
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;每个 OS 线程内部都有自己的一组 greenlet 世界——一个 main greenlet（线程入口）、一个 Hub greenlet、若干业务 greenlet。greenlet 之间不被操作系统抢占，只在 gevent 的协作点切换；OS 线程之间还是内核调度。&lt;/p&gt;
+
+&lt;p&gt;greenlet 不是 OS 线程，spawn 一万个 greenlet 不等于开一万个内核线程。一个 greenlet 长时间不让出，同线程内别的 greenlet 就饿死——CPU 密集的 Python 代码不会因为 gevent 而并行起来。gevent 擅长的是 I/O 密集型并发：执行流大多在等 fd、timer、锁、队列时，Hub 才有调度它们的余地。&lt;/p&gt;
+
+&lt;p&gt;观测工具在 gevent 进程上也容易踩坑。&lt;span class=&quot;codespan&quot;&gt;sys._current_frames()&lt;/span&gt; 返回的是每个 OS 线程当前正在执行的那一个 frame，一个 gevent 线程里挂起了几百个 greenlet 时，它只能看到此刻活跃的那一个，挂起的栈一概看不到。读 gevent 进程的栈快照时，「线程数」和「执行流数」是两件需要分开看的事。&lt;/p&gt;
+
+&lt;p&gt;回头再看 gevent 的这条技术路线，每一步都在解决上一步的尾巴。Python 的 &lt;span class=&quot;codespan&quot;&gt;yield&lt;/span&gt; 让函数能在某一点暂停、恢复，但暂停点必须显式写在函数里，而且只暂停 generator frame 自己那一层，向上传播得靠 &lt;span class=&quot;codespan&quot;&gt;yield from&lt;/span&gt; 一层一层改写整条调用链。greenlet 把暂停的粒度从 frame 升级到调用栈：深层的某次 &lt;span class=&quot;codespan&quot;&gt;switch&lt;/span&gt; 不需要中间函数知情。gevent 在 greenlet 之上跑一个特殊的 Hub greenlet 拿着 libev/libuv 的 event loop 做调度，再用 monkey patch 把 socket、time、select、threading 等标准库 API 替换成会主动切回 Hub 的版本。结果是业务代码看上去还是同步代码，底下已经是另一套执行模型。&lt;/p&gt;
+
+&lt;p&gt;所以读 gevent 程序的时候，源码表面通常不够用。「这里阻塞的是 OS 线程还是 greenlet」「这是原始标准库还是 patch 后的版本」「当前正在跑的是业务 greenlet 还是 Hub」——这三个问题，进入 gevent 进程以后就一直在底下。&lt;/p&gt;
+
+&lt;h2 id=&quot;参考资料&quot;&gt;参考资料&lt;/h2&gt;
+
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:python-generators&quot;&gt;
+      &lt;p&gt;Python 文档：Functional Programming HOWTO - Generators，&lt;a href=&quot;https://docs.python.org/3/howto/functional.html#generators&quot;&gt;https://docs.python.org/3/howto/functional.html#generators&lt;/a&gt;。 &lt;a href=&quot;#fnref:python-generators&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:greenlet-concepts&quot;&gt;
+      &lt;p&gt;greenlet 文档：greenlet Concepts，&lt;a href=&quot;https://greenlet.readthedocs.io/en/latest/greenlet.html&quot;&gt;https://greenlet.readthedocs.io/en/latest/greenlet.html&lt;/a&gt;。 &lt;a href=&quot;#fnref:greenlet-concepts&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:greenlet-current&quot;&gt;
+      &lt;p&gt;greenlet 文档：The Current greenlet，&lt;a href=&quot;https://greenlet.readthedocs.io/en/latest/greenlet.html#the-current-greenlet&quot;&gt;https://greenlet.readthedocs.io/en/latest/greenlet.html#the-current-greenlet&lt;/a&gt;。 &lt;a href=&quot;#fnref:greenlet-current&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:gevent-intro&quot;&gt;
+      &lt;p&gt;gevent 文档：Introduction，&lt;a href=&quot;https://docs.gevent.org/intro.html&quot;&gt;https://docs.gevent.org/intro.html&lt;/a&gt;。 &lt;a href=&quot;#fnref:gevent-intro&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:gevent-monkey&quot;&gt;
+      &lt;p&gt;gevent 文档：&lt;span class=&quot;codespan&quot;&gt;gevent.monkey&lt;/span&gt;，&lt;a href=&quot;https://docs.gevent.org/api/gevent.monkey.html&quot;&gt;https://docs.gevent.org/api/gevent.monkey.html&lt;/a&gt;。 &lt;a href=&quot;#fnref:gevent-monkey&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Sun, 07 Jun 2026 00:00:00 +0000</pubDate>
+        <link>https://wulfric.me/2026/06/gevent-technical-route/</link>
+        <guid isPermaLink="true">https://wulfric.me/2026/06/gevent-technical-route/</guid>
+        
+        <category>python</category>
+        
+        <category>gevent</category>
+        
+        <category>greenlet</category>
+        
+        <category>coroutine</category>
+        
+        
+        <category>技术</category>
+        
+      </item>
+    
+      <item>
+        <title>Python 运行时观测的四条边界：frame、code object、greenlet、task</title>
+        <description>&lt;p&gt;Python 提供了几套观测程序运行时行为的接口：&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt;、asyncio Task API。它们都用来追踪正在执行的代码，但作用对象处于不同层次，触发的事件和能回答的问题也不一样。这篇文章按 frame -&amp;gt; code object -&amp;gt; greenlet -&amp;gt; Task 的顺序，把这四条边界看到什么、看不到什么逐个讲清楚：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;CPython frame：&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 的根基&lt;/li&gt;
+  &lt;li&gt;code object 事件：&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 在 3.12 后的低成本接口&lt;/li&gt;
+  &lt;li&gt;greenlet 调度：gevent 在 frame 之外切换的额外一层&lt;/li&gt;
+  &lt;li&gt;asyncio Task：event loop 内部多个协程的身份归属&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;hr /&gt;
 
-&lt;h2 id=&quot;从-frame-开始&quot;&gt;从 frame 开始&lt;/h2&gt;
+&lt;h2 id=&quot;1-framepython-层的栈帧&quot;&gt;1. frame：Python 层的栈帧&lt;/h2&gt;
 
-&lt;p&gt;frame 可以理解成 Python 层的栈帧。CPython 执行 Python 函数时，会为这次调用准备一份执行现场：正在跑哪段代码、局部变量是什么、全局变量从哪里取、下一条字节码在哪里、上一层调用是谁。这份执行现场暴露到 Python 层，就是 frame object。&lt;/p&gt;
+&lt;p&gt;frame 是 Python 层的栈帧。CPython 每调用一次 Python 函数，就给这次调用造一个对象，记录正在跑哪段代码、局部变量是什么、下一条字节码在哪里、上一层调用者是谁。这个对象在 Python 层就是 frame，可以用 &lt;span class=&quot;codespan&quot;&gt;sys._getframe()&lt;/span&gt; 取出来。&lt;/p&gt;
 
-&lt;p&gt;比如一段调用链：&lt;/p&gt;
-
-&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;main() -&amp;gt; handle_request() -&amp;gt; query_db()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;当 &lt;span class=&quot;codespan&quot;&gt;query_db()&lt;/span&gt; 正在执行时，当前 frame 属于 &lt;span class=&quot;codespan&quot;&gt;query_db()&lt;/span&gt;；它的上一层 frame 指向 &lt;span class=&quot;codespan&quot;&gt;handle_request()&lt;/span&gt;；再往上能回到 &lt;span class=&quot;codespan&quot;&gt;main()&lt;/span&gt;。异常 traceback 也是沿着这串 frame 展开，所以我们能看到错误从哪一层函数传出来。&lt;/p&gt;
-
-&lt;p&gt;frame 里最常用的几块信息包括：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_code&lt;/span&gt;：当前 frame 正在执行的 code object，里面有函数名、文件名、字节码等信息&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_locals&lt;/span&gt;：当前局部变量&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_globals&lt;/span&gt;：当前全局变量&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_lineno&lt;/span&gt;：当前源码行号&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_back&lt;/span&gt;：上一层 frame&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;调试器能停在某一行，coverage 能知道哪一行跑过，profiler 能记录函数进入和退出，底层入口都绕不开 frame 或 code object。&lt;/p&gt;
-
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace(tracefunc)&lt;/span&gt; 是老接口。它给当前线程安装一个 trace function。新作用域进入时会触发 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 事件；trace function 返回的本地 trace function 会继续接收 &lt;span class=&quot;codespan&quot;&gt;line&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;exception&lt;/span&gt;，以及可选的 &lt;span class=&quot;codespan&quot;&gt;opcode&lt;/span&gt; 事件。&lt;sup id=&quot;fnref:sys-settrace:1&quot;&gt;&lt;a href=&quot;#fn:sys-settrace&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;一个最小追踪器长这样：&lt;/p&gt;
+&lt;p&gt;下面这段代码沿 &lt;span class=&quot;codespan&quot;&gt;f_back&lt;/span&gt; 往上一层层取：&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
 
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;_getframe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  line &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_lineno&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_filename&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_back&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;实际输出：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;     query  line   6  demo_frame.py
+    handle  line  10  demo_frame.py
+      main  line  13  demo_frame.py
+  &amp;lt;module&amp;gt;  line  15  demo_frame.py
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;调用链「&lt;span class=&quot;codespan&quot;&gt;main -&amp;gt; handle -&amp;gt; query&lt;/span&gt;」在 frame 链表里就是「query.f_back = handle frame, handle.f_back = main frame, main.f_back = &lt;span class=&quot;codespan&quot;&gt;&amp;lt;module&amp;gt;&lt;/span&gt; frame」。frame 几个常用字段：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_code&lt;/span&gt; – 正在执行的 code object，里面装着函数名、文件名、字节码。调试器靠它定位「在哪个函数里」。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_locals&lt;/span&gt; – 当前局部变量。&lt;span class=&quot;codespan&quot;&gt;pdb&lt;/span&gt; 让你在断点上看变量、改变量，就是读改它。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_globals&lt;/span&gt; – 模块层变量。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_lineno&lt;/span&gt; – 当前源码行号。coverage 沿这一条信息记录「这一行跑过」。&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;f_back&lt;/span&gt; – 上一层 frame。异常 traceback 沿这条指针展开。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;把这件事画出来就是这张图：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/frame-stack.png&quot; alt=&quot;Python frame 栈结构示意。左侧三层调用 main -&amp;gt; handle -&amp;gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&amp;gt; 上溯到 handle -&amp;gt; 继续上溯到 main&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;frame 是 first-class 对象，任何代码都能读它的字段，也能改写 &lt;span class=&quot;codespan&quot;&gt;f_locals&lt;/span&gt; 这类字段。但 &lt;span class=&quot;codespan&quot;&gt;sys._getframe()&lt;/span&gt; 要在代码里调用方主动取；如果想让解释器在每个 frame 边界自动通知外部工具，需要换一个接口。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;2-syssettrace解释器层的-trace-钩子&quot;&gt;2. sys.settrace：解释器层的 trace 钩子&lt;/h2&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace(tracefunc)&lt;/span&gt; 给当前线程装一个 trace function。新作用域进入时触发 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt;；trace function 返回的本地 trace function 会继续接收 &lt;span class=&quot;codespan&quot;&gt;line&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;exception&lt;/span&gt;。&lt;sup id=&quot;fnref:sys-settrace&quot;&gt;&lt;a href=&quot;#fn:sys-settrace&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;一段最小追踪器：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
 
 &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;
-        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_filename&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_lineno&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;query&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  call    &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  line    &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_lineno&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  return  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt;
 
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;query&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handle&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 
 &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;这里有两个很重要的细节。&lt;/p&gt;
+&lt;p&gt;跑一次的输出：&lt;/p&gt;
 
-&lt;p&gt;第一，&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 是线程相关的。它影响当前线程；多线程调试要给每个线程设置 trace function，或者用 &lt;span class=&quot;codespan&quot;&gt;threading.settrace()&lt;/span&gt;。Python 3.12 又加了 &lt;span class=&quot;codespan&quot;&gt;threading.settrace_all_threads()&lt;/span&gt;，可以覆盖已经在执行的 Python 线程。&lt;sup id=&quot;fnref:threading-trace&quot;&gt;&lt;a href=&quot;#fn:threading-trace&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;4&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  call    main
+  line    main:22
+  call    handle
+  line    handle:19
+  call    query
+  line    query:15
+  line    query:16
+  return  query
+  return  handle
+  return  main
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;第二，它的成本来自回调频率。&lt;span class=&quot;codespan&quot;&gt;line&lt;/span&gt; 事件会在大量源码行前触发，&lt;span class=&quot;codespan&quot;&gt;opcode&lt;/span&gt; 更细。每次事件都要调用 Python 函数，工具越想看得细，对程序执行节奏的扰动就越明显。调试器和 coverage 可以接受这种成本，常驻生产 profiler 往往要谨慎得多。&lt;/p&gt;
+&lt;p&gt;事件按顺序展开就是「main 入 -&amp;gt; 跑到第 22 行 -&amp;gt; 调 handle -&amp;gt; handle 跑到第 19 行 -&amp;gt; 调 query -&amp;gt; …」。frame 的进入、离开、每一行执行都按顺序触发了出来。&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 提供的是 frame 级叙事：这个线程进入了哪个 frame，这个 frame 执行到哪一行，什么时候返回或抛异常。只要“一个线程里的调用栈”就是你要分析的执行上下文，它就很好用。&lt;/p&gt;
+&lt;p&gt;有几条值得提前知道的性质：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 是线程相关的，只影响当前线程。多线程要么各自设，要么用 &lt;span class=&quot;codespan&quot;&gt;threading.settrace()&lt;/span&gt;。&lt;sup id=&quot;fnref:threading-trace&quot;&gt;&lt;a href=&quot;#fn:threading-trace&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;&lt;/li&gt;
+  &lt;li&gt;trace function 必须 &lt;span class=&quot;codespan&quot;&gt;return trace&lt;/span&gt; 才能在这个 frame 里继续拿到 &lt;span class=&quot;codespan&quot;&gt;line&lt;/span&gt; 事件。返回 &lt;span class=&quot;codespan&quot;&gt;None&lt;/span&gt; 就只剩 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt;。&lt;/li&gt;
+  &lt;li&gt;只有 Python frame 触发事件。C 函数（包括 C 扩展里的调用）不会产生 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;line&lt;/span&gt;，所以 debugger 和 coverage 都看不到 C 实现的函数内部。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;回调频率是它最大的成本来源。一个直观的测量：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;noop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;noop&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1_000_000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;t0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;perf_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;base&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;perf_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t0&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;noop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;perf_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;traced&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;perf_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t0&lt;/span&gt;
+&lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;baseline &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; ms, traced &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;traced&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; ms, slowdown &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;traced&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在 Python 3.12 / x86_64 上的一次实测：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;baseline 6.1 ms, traced 81.9 ms, slowdown 13.5x
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;return noop&lt;/span&gt; 这种最简单的 trace 也会把 tight loop 拖慢一个数量级。调试器和 coverage 能接受这种代价，长时间在线的 profiler 不行。&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 就是为这种场景设计的。&lt;/p&gt;
 
 &lt;hr /&gt;
 
-&lt;h2 id=&quot;sysmonitoring-把事件做细&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 把事件做细&lt;/h2&gt;
+&lt;h2 id=&quot;3-sysmonitoring低开销的事件接口&quot;&gt;3. sys.monitoring：低开销的事件接口&lt;/h2&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 是 Python 3.12 之后的新接口。PEP 669 给它的定位很明确：降低调试、覆盖率、profiling 这类工具的常态成本。&lt;sup id=&quot;fnref:sys-monitoring:1&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:pep-669:1&quot;&gt;&lt;a href=&quot;#fn:pep-669&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+&lt;p&gt;Python 3.12 加入了 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;。PEP 669 的目标是把调试器、覆盖率、profiler 的常态成本降下来。&lt;sup id=&quot;fnref:sys-monitoring&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:pep-669&quot;&gt;&lt;a href=&quot;#fn:pep-669&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;4&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
 
-&lt;p&gt;它的设计比 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 更像一套事件总线：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;工具先用 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring.use_tool_id(tool_id, name)&lt;/span&gt; 占用一个 tool id&lt;/li&gt;
-  &lt;li&gt;再用 &lt;span class=&quot;codespan&quot;&gt;register_callback(tool_id, event, func)&lt;/span&gt; 注册事件回调&lt;/li&gt;
-  &lt;li&gt;用 &lt;span class=&quot;codespan&quot;&gt;set_events(tool_id, event_set)&lt;/span&gt; 打开全局事件&lt;/li&gt;
-  &lt;li&gt;或者用 &lt;span class=&quot;codespan&quot;&gt;set_local_events(tool_id, code, event_set)&lt;/span&gt; 只打开某个 code object 上的事件&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;事件粒度也更丰富。比如：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_START&lt;/span&gt;：Python 函数开始执行&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_RETURN&lt;/span&gt;：Python 函数返回&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt;：Python 函数 yield&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt;：generator 或 coroutine 恢复执行&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;CALL&lt;/span&gt;：Python 代码里发生一次调用&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;LINE&lt;/span&gt;：即将执行不同源码行对应的指令&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;INSTRUCTION&lt;/span&gt;：即将执行 VM 指令&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;JUMP&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;BRANCH&lt;/span&gt;：控制流跳转&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;RAISE&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;EXCEPTION_HANDLED&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PY_UNWIND&lt;/span&gt;：异常相关事件&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;代码形态大概是这样：&lt;/p&gt;
+&lt;p&gt;它和 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 的差别在于：&lt;span class=&quot;codespan&quot;&gt;settrace&lt;/span&gt; 每个事件都要走一遍 Python 回调，&lt;span class=&quot;codespan&quot;&gt;monitoring&lt;/span&gt; 让你按 code object 注册、按事件类型订阅，并能在单点 &lt;span class=&quot;codespan&quot;&gt;DISABLE&lt;/span&gt; 后续触发，未订阅的代码路径接近零成本。一个最小例子：&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
 
-&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PROFILER_ID&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;events&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PROFILER_ID&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;events&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;
 
-&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;use_tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;demo-profiler&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
+&lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;use_tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;demo-profiler&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
 &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;on_start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;instruction_offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
     &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;instruction_offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
-
-&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;register_callback&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PY_START&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;on_start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;monitoring&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;set_events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PY_START&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;register_callback&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PY_START&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;on_start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;set_events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tool_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;events&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;PY_START&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 改进的是插桩方式；观测对象仍然是 CPython 正在执行的 code object、instruction offset 和函数事件。它可以用 &lt;span class=&quot;codespan&quot;&gt;DISABLE&lt;/span&gt; 关闭某个代码位置上的后续事件，也能按 code object 控制事件集合。断点、单步、覆盖率、调用统计都可以建立在这些能力上。&lt;/p&gt;
-
-&lt;p&gt;这个接口降低了常态成本，但细粒度事件依然昂贵。PEP 669 也提醒过，&lt;span class=&quot;codespan&quot;&gt;LINE&lt;/span&gt; 事件会显著影响性能，精确 profiler 本身会扭曲结果；如果目标是长期线上画像，统计采样经常更稳。&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;gevent-改变了栈的连续性&quot;&gt;gevent 改变了栈的连续性&lt;/h2&gt;
-
-&lt;p&gt;gevent 的核心模型来自 greenlet。gevent 文档把自己描述成基于 greenlet 的 coroutine 网络库；greenlet 文档则把 greenlet 说成一组独立的小栈。每个 greenlet 有自己的 frame 栈，执行可以在这些栈之间显式跳转。&lt;sup id=&quot;fnref:gevent-intro&quot;&gt;&lt;a href=&quot;#fn:gevent-intro&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;5&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:greenlet-concepts&quot;&gt;&lt;a href=&quot;#fn:greenlet-concepts&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;6&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;普通同步代码里，一个线程的 frame 栈大致有清晰的进出顺序：&lt;/p&gt;
-
-&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;main -&amp;gt; handle_request -&amp;gt; query_db -&amp;gt; return -&amp;gt; return
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;工具收到 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt; 后，用一个线程本地的栈就能配对。&lt;/p&gt;
-
-&lt;p&gt;gevent 下，同一个 OS 线程里可能跑着很多请求。某个 greenlet 进入 &lt;span class=&quot;codespan&quot;&gt;query_db()&lt;/span&gt;，里面调用了被 monkey patch 过的 socket API。这个 API 看起来像同步阻塞调用，实际会把当前 greenlet 切到 Hub，让别的 greenlet 继续跑：&lt;/p&gt;
-
-&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;greenlet A: handle_request -&amp;gt; query_db -&amp;gt; socket recv
-                                      switch to Hub
-greenlet B: handle_request -&amp;gt; render -&amp;gt; ...
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;从 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 的视角看，还是同一个 OS 线程在发出事件。问题出在归属关系：A 的 &lt;span class=&quot;codespan&quot;&gt;query_db()&lt;/span&gt; 没有返回，B 的 &lt;span class=&quot;codespan&quot;&gt;handle_request()&lt;/span&gt; 已经开始执行。一个按线程维护调用栈的追踪器，会把 A 和 B 的 frame 混在一起。&lt;/p&gt;
-
-&lt;p&gt;gevent 下常说 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 失效，问题主要在这里：它仍然能收到 CPython frame 事件，事件序列里却没有 greenlet 调度边界。调试某个具体 frame 时，它有价值；构建请求级调用树、耗时归因、阻塞点归因时，单靠它很容易得出错乱结果。&lt;/p&gt;
-
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 也会遇到同类边界。它比 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 事件更细，开销更可控，还能看到 coroutine/generator 的 &lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt;。可 greenlet switch 是 greenlet 运行时的栈转移，标准 monitoring 事件不会直接告诉你“刚才从哪个 greenlet 切到了哪个 greenlet”。缺少这条边，工具就很难把 frame 事件重新挂回正确的逻辑执行流。&lt;/p&gt;
-
-&lt;p&gt;monkey patch 会让这种错位更隐蔽。业务代码写的是 &lt;span class=&quot;codespan&quot;&gt;time.sleep()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;socket.recv()&lt;/span&gt;、数据库驱动调用；运行时实际发生的是一次让出控制权。源码层面的同步形态还在，调度层面的连续性已经变了。&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;greenlet-trace-补上调度边界&quot;&gt;greenlet trace 补上调度边界&lt;/h2&gt;
-
-&lt;p&gt;greenlet 为这个问题提供了自己的追踪接口：&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace()&lt;/span&gt;。greenlet 文档也专门提到，标准 Python tracing/profiling 在 greenlet 下无法按预期工作，因为栈和 frame 切换发生在同一个 Python 线程里。&lt;sup id=&quot;fnref:greenlet-tracing&quot;&gt;&lt;a href=&quot;#fn:greenlet-tracing&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;7&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace()&lt;/span&gt; 安装的回调签名是：&lt;/p&gt;
-
-&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nf&quot;&gt;callback&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;当前定义的事件主要有两类：&lt;/p&gt;
+&lt;p&gt;后文会用到的几个事件：&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;switch&lt;/span&gt;：一次普通 greenlet 切换&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;throw&lt;/span&gt;：通过 &lt;span class=&quot;codespan&quot;&gt;greenlet.throw()&lt;/span&gt; 切到目标 greenlet，并在目标里抛异常&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_START&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RETURN&lt;/span&gt; – Python 函数开始 / 返回&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt; – generator、coroutine 暂停 / 恢复（PEP 669 显式定义&lt;sup id=&quot;fnref:sys-monitoring:1&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;）&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;LINE&lt;/span&gt; – 即将执行新行&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;RAISE&lt;/span&gt; – 抛异常&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;这两个事件的 &lt;span class=&quot;codespan&quot;&gt;args&lt;/span&gt; 都是 &lt;span class=&quot;codespan&quot;&gt;(origin, target)&lt;/span&gt;，也就是从哪个 greenlet 切到哪个 greenlet。&lt;/p&gt;
+&lt;p&gt;其他事件（&lt;span class=&quot;codespan&quot;&gt;CALL&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;INSTRUCTION&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;JUMP&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;BRANCH&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;EXCEPTION_HANDLED&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PY_UNWIND&lt;/span&gt; 等）见官方文档。&lt;sup id=&quot;fnref:sys-monitoring:2&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
 
-&lt;p&gt;一个最小例子：&lt;/p&gt;
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;monitoring&lt;/span&gt; 解决的是「插桩成本」，不是「插桩位置」。它和 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 一样站在 CPython frame / code object 这一层；如果 frame 之上还有另一层调度，这些事件就看不到调度边。&lt;/p&gt;
 
-&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;
+&lt;hr /&gt;
 
+&lt;h2 id=&quot;4-gevent-下-syssettrace-的失效&quot;&gt;4. gevent 下 sys.settrace 的失效&lt;/h2&gt;
 
-&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;on_greenlet_event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;switch&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;throw&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+&lt;p&gt;greenlet 是 gevent 的基础。每个 greenlet 拥有自己独立的一段 C 栈和一串 Python frame；gevent 在 Hub 里按 IO/超时调度，让它们在同一个 OS 线程里轮流跑。&lt;sup id=&quot;fnref:gevent-intro&quot;&gt;&lt;a href=&quot;#fn:gevent-intro&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;5&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:greenlet-concepts&quot;&gt;&lt;a href=&quot;#fn:greenlet-concepts&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;6&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;greenlet 的 switch 实现在自己的 C/汇编代码里。源码里 greenlet 被描述成「a range of C stack addresses that must be saved and restored」，切换时直接 &lt;span class=&quot;codespan&quot;&gt;memcpy&lt;/span&gt; 在堆和栈之间拷贝&lt;sup id=&quot;fnref:greenlet-source&quot;&gt;&lt;a href=&quot;#fn:greenlet-source&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;7&lt;/a&gt;&lt;/sup&gt;；不同架构对应一份汇编（&lt;span class=&quot;codespan&quot;&gt;switch_amd64_unix.h&lt;/span&gt; 等）执行寄存器和栈指针的转移。&lt;strong&gt;CPython 没有为这次 switch 定义任何 trace 或 monitoring 事件&lt;/strong&gt;。frame 事件本身还在，只是事件之间缺一条「这里发生了一次切换」的标记。&lt;/p&gt;
+
+&lt;p&gt;用一段代码看：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  [trace] &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  task (&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_locals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;?&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; start&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; done&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;joinall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;spawn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;spawn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)])&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;实际输出：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  [trace] call    task (A)
+--&amp;gt; A start
+  [trace] call    task (B)
+--&amp;gt; B start
+--&amp;gt; A done
+  [trace] return  task (A)
+--&amp;gt; B done
+  [trace] return  task (B)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;事件顺序是 call A -&amp;gt; call B -&amp;gt; return A -&amp;gt; return B：A 还没 return，B 就已经 call 进来了。沿 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 在线程上维护调用栈，会把 A 和 B 的执行交叠成一团。gevent 下常说的「&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 失效」就是这个意思 – 事件没丢，但事件归属没法只用 frame 还原。&lt;/p&gt;
+
+&lt;p&gt;把事件流和真实归属画在同一张时间轴上：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/gevent-trace-chaos.png&quot; alt=&quot;gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&amp;gt; call task(B) -&amp;gt; return task(A) -&amp;gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;切换发生在汇编层的栈拷贝里，没有任何 Python frame 在那一刻进入或退出。所以 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 不会触发事件，&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 也不会有 &lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt;（这两个事件只在 CPython 自己实现的 generator / coroutine 暂停点触发）。&lt;/p&gt;
+
+&lt;p&gt;greenlet 自己提供了这个接口。&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace(callback)&lt;/span&gt; 安装一个 hook，每次 switch 都把 &lt;span class=&quot;codespan&quot;&gt;(origin, target)&lt;/span&gt; 传给回调。&lt;sup id=&quot;fnref:greenlet-tracing&quot;&gt;&lt;a href=&quot;#fn:greenlet-tracing&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;8&lt;/a&gt;&lt;/sup&gt;两个事件：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;switch&lt;/span&gt; – 普通切换&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;throw&lt;/span&gt; – 通过 &lt;span class=&quot;codespan&quot;&gt;greenlet.throw()&lt;/span&gt; 切到目标并抛异常&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;把它和 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 串起来用：&lt;/p&gt;
+
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;isinstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_run&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;g&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;py_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  [py] &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  task(&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_locals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;?&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;py_trace&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;gl_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;switch&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
         &lt;span class=&quot;n&quot;&gt;origin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;
-        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;origin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  [gl] switch  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;origin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; -&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; start&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; done&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
-&lt;span class=&quot;n&quot;&gt;old_trace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;on_greenlet_event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-&lt;span class=&quot;k&quot;&gt;try&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
-    &lt;span class=&quot;bp&quot;&gt;...&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;finally&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;old_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;greenlet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gl_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;py_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;joinall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;spawn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gevent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;spawn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)])&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;这套接口补上的正是 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 缺少的调度边界。它不会告诉你每一行代码执行了什么，也不会替代 frame 事件；它告诉你逻辑执行流什么时候从一组 frame 栈跳到另一组 frame 栈。&lt;/p&gt;
+&lt;p&gt;输出（截取主要部分）：&lt;/p&gt;
 
-&lt;p&gt;gevent 的监控能力也会用到这条边。gevent 的配置文档提到，监控线程检测 event loop 被阻塞的功能依赖 &lt;span class=&quot;codespan&quot;&gt;greenlet.settrace()&lt;/span&gt;；如果用户覆盖 trace function，需要把前一个 trace function 串起来，否则 gevent 自己的监控也会受影响。&lt;sup id=&quot;fnref:gevent-monitoring&quot;&gt;&lt;a href=&quot;#fn:gevent-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;8&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  [gl] switch  greenlet -&amp;gt; Hub
+  [gl] switch  Hub -&amp;gt; task(A)
+  [py] call    task(A)
+--&amp;gt; A start
+  [gl] switch  task(A) -&amp;gt; Hub
+  [gl] switch  Hub -&amp;gt; task(B)
+  [py] call    task(B)
+--&amp;gt; B start
+  [gl] switch  task(B) -&amp;gt; Hub
+  [gl] switch  Hub -&amp;gt; task(A)
+--&amp;gt; A done
+  [py] return  task(A)
+  [gl] switch  Greenlet -&amp;gt; Hub
+  [gl] switch  Hub -&amp;gt; task(B)
+--&amp;gt; B done
+  [py] return  task(B)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;做 gevent 观测时，比较可靠的模型通常是组合式的：&lt;/p&gt;
+&lt;p&gt;读这条流：先切到 task(A)，A 跑到 sleep 后切回 Hub，Hub 又切到 task(B)，B 跑到 sleep 后再切回 Hub，最后切回去依次让 A 和 B 跑完。每个 &lt;span class=&quot;codespan&quot;&gt;[py] call/return&lt;/span&gt; 都对应一段连续的 greenlet 时间窗口，事件归属重新清晰。&lt;/p&gt;
 
-&lt;ul&gt;
-  &lt;li&gt;CPython frame 事件负责函数、行号、异常、返回值&lt;/li&gt;
-  &lt;li&gt;greenlet trace 负责 &lt;span class=&quot;codespan&quot;&gt;origin -&amp;gt; target&lt;/span&gt; 的调度边&lt;/li&gt;
-  &lt;li&gt;gevent 自己的 Hub、monitor thread、&lt;span class=&quot;codespan&quot;&gt;gevent.util.print_run_info()&lt;/span&gt; 负责运行时状态、阻塞报告和 greenlet 栈信息&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;单独看任何一层，都容易把调度事实压扁。&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;asyncio-的边界在-task&quot;&gt;asyncio 的边界在 Task&lt;/h2&gt;
-
-&lt;p&gt;asyncio 的情况要温和一些。它同样是协作式并发，默认也在一个线程里跑很多任务；但它的调度单位是 coroutine 和 Task，暂停点写在 &lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 上，恢复路径由 event loop 管理。&lt;/p&gt;
-
-&lt;p&gt;asyncio 的调度规则是：event loop 一次运行一个 Task；正在运行的 Task 遇到 &lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 后暂停，event loop 再运行下一个 Task。&lt;sup id=&quot;fnref:asyncio-task&quot;&gt;&lt;a href=&quot;#fn:asyncio-task&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;9&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 在 asyncio 代码里仍然可用。coroutine 执行时还是 Python frame，进入函数、执行行、返回、抛异常，这些事件都能被看到。Python 3.12 的 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 还给了 &lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt; 这类事件，对 generator/coroutine 的暂停和恢复更友好。&lt;/p&gt;
-
-&lt;p&gt;这里缺的是 Task 身份。一个 event loop 线程里可能有很多 Task 轮流执行；frame 事件告诉你当前跑到了哪段代码，Task API 告诉你这段代码属于哪个调度单元。&lt;/p&gt;
-
-&lt;p&gt;标准库已经给了几组常用工具：&lt;sup id=&quot;fnref:asyncio-task:1&quot;&gt;&lt;a href=&quot;#fn:asyncio-task&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;9&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;asyncio.current_task()&lt;/span&gt;：拿到当前正在运行的 Task&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;asyncio.all_tasks()&lt;/span&gt;：列出 loop 里尚未完成的 Task&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_stack()&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;Task.print_stack()&lt;/span&gt;：查看挂起 Task 的栈或 traceback&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_coro()&lt;/span&gt;：拿到 Task 包裹的 coroutine&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_name()&lt;/span&gt;：拿到 Task 名称，适合做日志和诊断标签&lt;/li&gt;
-  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_context()&lt;/span&gt;：Python 3.12 后可取出 Task 对应的 &lt;span class=&quot;codespan&quot;&gt;contextvars.Context&lt;/span&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt; 是 asyncio 观测里很关键的一层。请求 ID、trace ID、租户 ID 这类“逻辑上下文”，放在线程局部变量里会在并发任务之间互相污染；ContextVar 会随 Task 上下文传播，更适合异步框架。&lt;sup id=&quot;fnref:contextvars&quot;&gt;&lt;a href=&quot;#fn:contextvars&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;10&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;调试层面，asyncio 还提供了开发模式工具。可以通过 &lt;span class=&quot;codespan&quot;&gt;PYTHONASYNCIODEBUG=1&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;asyncio.run(..., debug=True)&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;loop.set_debug(True)&lt;/span&gt; 打开 debug mode。它会帮助发现从未 await 的 coroutine、从未取回的 Task 异常，并能在 debug 输出里带上对象创建位置。&lt;span class=&quot;codespan&quot;&gt;sys.set_coroutine_origin_tracking_depth()&lt;/span&gt; 也可以打开 coroutine 创建位置记录，让 coroutine 对象的 &lt;span class=&quot;codespan&quot;&gt;cr_origin&lt;/span&gt; 保存创建栈摘要。&lt;sup id=&quot;fnref:asyncio-dev&quot;&gt;&lt;a href=&quot;#fn:asyncio-dev&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;11&lt;/a&gt;&lt;/sup&gt;&lt;sup id=&quot;fnref:sys-coroutine-origin&quot;&gt;&lt;a href=&quot;#fn:sys-coroutine-origin&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;12&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
-
-&lt;p&gt;asyncio 下的观测路径通常是：&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;用 &lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 拿到 frame / code object 级事件&lt;/li&gt;
-  &lt;li&gt;在事件发生时用 &lt;span class=&quot;codespan&quot;&gt;asyncio.current_task()&lt;/span&gt; 补上 Task 身份&lt;/li&gt;
-  &lt;li&gt;用 &lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt; 绑定请求级上下文&lt;/li&gt;
-  &lt;li&gt;用 debug mode、Task stack、coroutine origin 查创建点和挂起点&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;这里的难点不在事件能不能收到，而在事件如何归入正确的 Task。&lt;/p&gt;
+&lt;p&gt;gevent 自己的监控也走这条边：监控线程靠 &lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt; 拿到 switch 时间戳来判断 event loop 被阻塞，所以业务代码自己装 trace 时如果没把前一个 trace 串起来，gevent 的监控会跟着失效。&lt;sup id=&quot;fnref:gevent-monitoring&quot;&gt;&lt;a href=&quot;#fn:gevent-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;9&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
 
 &lt;hr /&gt;
 
-&lt;h2 id=&quot;工具设计里的边界&quot;&gt;工具设计里的边界&lt;/h2&gt;
+&lt;h2 id=&quot;5-asyncio-的暂停发生在字节码层&quot;&gt;5. asyncio 的暂停发生在字节码层&lt;/h2&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace()&lt;/span&gt;、asyncio Task API 看起来像几套互相重叠的追踪接口。拆开看，它们各自站在不同边界上。&lt;/p&gt;
+&lt;p&gt;asyncio 也是协作式并发，默认也在一个线程里跑很多协程。但它的调度切换发生在不同的层。&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt; 站在 frame 上。它适合 debugger、coverage、教学工具，也适合短时间抓取调用细节。它直接、通用，代价也直接。&lt;/p&gt;
+&lt;p&gt;CPython 文档明确指出，generator 和 coroutine 的暂停是字节码实现的：「This is implemented by the YIELD_VALUE bytecode…」「A yield from expression … is implemented with the SEND instruction.」&lt;sup id=&quot;fnref:cpython-generators&quot;&gt;&lt;a href=&quot;#fn:cpython-generators&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;10&lt;/a&gt;&lt;/sup&gt; &lt;span class=&quot;codespan&quot;&gt;RESUME&lt;/span&gt; 指令在「After an await expression」位置标记恢复点&lt;sup id=&quot;fnref:dis-resume&quot;&gt;&lt;a href=&quot;#fn:dis-resume&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;11&lt;/a&gt;&lt;/sup&gt;。这些指令是 CPython 自己的，sys.monitoring 把它们暴露成 &lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt; 事件&lt;sup id=&quot;fnref:sys-monitoring:3&quot;&gt;&lt;a href=&quot;#fn:sys-monitoring&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;3&lt;/a&gt;&lt;/sup&gt;。所以 asyncio 协程的每一次暂停和恢复，对 CPython 来说都是可见的。&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt; 站在 code object 和解释器事件上。它把低层事件做成可组合接口，给调试器、coverage、profiler 留出了更低成本的实现空间。它解决的是 CPython 事件插桩成本和协作问题。&lt;/p&gt;
+&lt;p&gt;这导致 trace 工具看到的内容也不一样：&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace()&lt;/span&gt; 站在 greenlet 调度边界上。它记录从哪个 greenlet 切到哪个 greenlet，适合 gevent 这类基于 greenlet 的运行时。它解决的是同一 OS 线程里多组栈互相切换后的归属问题。&lt;/p&gt;
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;gevent&lt;/th&gt;
+      &lt;th&gt;asyncio&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;调度切换位置&lt;/td&gt;
+      &lt;td&gt;C/汇编层（&lt;span class=&quot;codespan&quot;&gt;slp_switch&lt;/span&gt;）&lt;/td&gt;
+      &lt;td&gt;字节码层（&lt;span class=&quot;codespan&quot;&gt;YIELD_VALUE&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;SEND&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;RESUME&lt;/span&gt;）&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;CPython 是否感知&lt;/td&gt;
+      &lt;td&gt;不感知&lt;/td&gt;
+      &lt;td&gt;感知（&lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt;）&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 看到的栈&lt;/td&gt;
+      &lt;td&gt;错乱交叠&lt;/td&gt;
+      &lt;td&gt;干净的协程栈&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;需要额外接口标记调度边&lt;/td&gt;
+      &lt;td&gt;需要 &lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;不需要&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;协程暂停时 frame&lt;/td&gt;
+      &lt;td&gt;整段 C 栈被拷走&lt;/td&gt;
+      &lt;td&gt;frame 仍在，&lt;span class=&quot;codespan&quot;&gt;gen_frame_state = SUSPENDED&lt;/span&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
 
-&lt;p&gt;asyncio 的 Task API 站在 coroutine 调度边界上。它把当前 Task、全部 Task、挂起栈、创建上下文暴露出来。它解决的是 event loop 内部多个 coroutine 轮流执行时的身份问题。&lt;/p&gt;
+&lt;p&gt;第二张图把这种分层差异画出来：&lt;/p&gt;
 
-&lt;p&gt;做运行时观测时，把“线程”当成唯一执行上下文，很容易埋下误判。在线程模型里，这个假设大多够用；进入 gevent 或 asyncio 后，一个线程里会出现多个逻辑执行流。frame 事件依然真实，调用树、耗时归因、请求归属却需要额外的调度信息。&lt;/p&gt;
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/suspend-point-comparison.png&quot; alt=&quot;gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&amp;gt; 字节码层 CALL gevent.sleep -&amp;gt; C 扩展层 greenlet.switch() -&amp;gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&amp;gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&amp;gt; frame 仍存活且 gen_frame_state = SUSPENDED -&amp;gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
-&lt;p&gt;判断接口之前，先看观测对象：&lt;/p&gt;
+&lt;p&gt;asyncio 缺的不是 frame 完整性，是 &lt;strong&gt;Task 身份&lt;/strong&gt;。事件本身正确，问题是工具需要把每次 frame 事件归到「哪个 Task」名下。&lt;span class=&quot;codespan&quot;&gt;asyncio.current_task()&lt;/span&gt; 就够用：&lt;/p&gt;
 
-&lt;p&gt;如果对象是源码行、函数进入退出、异常传播，frame 或 monitoring 事件就够接近。&lt;br /&gt;
-如果对象是 gevent 里的请求、连接、任务切换，就要接上 greenlet trace。&lt;br /&gt;
-如果对象是 asyncio 里的请求、后台任务、取消传播，就要接上 Task 和 contextvars。&lt;/p&gt;
+&lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;
 
-&lt;p&gt;选对边界以后，追踪接口才会变成工具。边界选错时，越精细的事件反而越容易制造假象。&lt;/p&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;py_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;co_name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;current_task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;tag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  [py:&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tag&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;] &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;  task(&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f_locals&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;?&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;py_trace&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; start&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;--&amp;gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; done&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;py_trace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;gather&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;create_task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;create_task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;sys&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settrace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;asyncio&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;输出：&lt;/p&gt;
+
+&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  [py:A] call    task(A)
+--&amp;gt; A start
+  [py:A] return  task(A)
+  [py:B] call    task(B)
+--&amp;gt; B start
+  [py:B] return  task(B)
+  [py:A] call    task(A)
+--&amp;gt; A done
+  [py:A] return  task(A)
+  [py:B] call    task(B)
+--&amp;gt; B done
+  [py:B] return  task(B)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;await&lt;/span&gt; 那一刻被解释器当成 PY_YIELD（在 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 接口下表现为 &lt;span class=&quot;codespan&quot;&gt;return&lt;/span&gt;），resume 时再触发一次 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt;。事件数比 gevent 例子还多一倍，但 &lt;span class=&quot;codespan&quot;&gt;current_task()&lt;/span&gt; 始终给出正确归属，每条事件前面都有清楚的 Task 标签，整段事件流不会出现归属错位。&lt;/p&gt;
+
+&lt;p&gt;如果还需要更多上下文，标准库提供了：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;asyncio.all_tasks()&lt;/span&gt; 列出 loop 里所有未完成 Task&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_stack()&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;Task.print_stack()&lt;/span&gt; 看挂起 Task 的当前栈&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_coro()&lt;/span&gt; 拿到底层 coroutine&lt;/li&gt;
+  &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;Task.get_context()&lt;/span&gt; 取 Task 绑定的 &lt;span class=&quot;codespan&quot;&gt;contextvars.Context&lt;/span&gt;&lt;sup id=&quot;fnref:asyncio-task&quot;&gt;&lt;a href=&quot;#fn:asyncio-task&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;12&lt;/a&gt;&lt;/sup&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;asyncio 里另一层常用的工具是 &lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt;。请求 ID、trace ID 这种逻辑上下文放线程局部变量会在 Task 之间互相污染，ContextVar 沿 Task 上下文传播，刚好对应 asyncio 的并发单位。&lt;sup id=&quot;fnref:contextvars&quot;&gt;&lt;a href=&quot;#fn:contextvars&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;13&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;6-四种接口的对照&quot;&gt;6. 四种接口的对照&lt;/h2&gt;
+
+&lt;div class=&quot;table-container&quot;&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;接口&lt;/th&gt;
+      &lt;th&gt;站在哪个边界&lt;/th&gt;
+      &lt;th&gt;看到的&lt;/th&gt;
+      &lt;th&gt;看不到的&lt;/th&gt;
+      &lt;th&gt;典型用途&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;CPython frame&lt;/td&gt;
+      &lt;td&gt;call / line / return / exception&lt;/td&gt;
+      &lt;td&gt;greenlet switch、asyncio Task 身份、C 函数&lt;/td&gt;
+      &lt;td&gt;debugger、coverage、教学工具&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;code object 事件&lt;/td&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;PY_START&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RETURN&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;LINE&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;RAISE&lt;/span&gt; 等&lt;/td&gt;
+      &lt;td&gt;同上，但常态成本更低&lt;/td&gt;
+      &lt;td&gt;profiler、低开销 coverage&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;greenlet 调度边&lt;/td&gt;
+      &lt;td&gt;switch、throw 及 &lt;span class=&quot;codespan&quot;&gt;(origin, target)&lt;/span&gt;&lt;/td&gt;
+      &lt;td&gt;frame 内部细节&lt;/td&gt;
+      &lt;td&gt;gevent 请求归属、阻塞检测&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;asyncio Task API&lt;/td&gt;
+      &lt;td&gt;coroutine 调度身份&lt;/td&gt;
+      &lt;td&gt;&lt;span class=&quot;codespan&quot;&gt;current_task&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;all_tasks&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;Task.get_stack&lt;/span&gt; 等&lt;/td&gt;
+      &lt;td&gt;frame 事件本身&lt;/td&gt;
+      &lt;td&gt;asyncio 请求归属、挂起诊断&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;接口和接口之间不是替代关系。在 gevent 应用里做请求级 profiler，frame 事件来自 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;，调度边来自 &lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt;，运行时状态来自 gevent 自带的 monitor thread 和 &lt;span class=&quot;codespan&quot;&gt;gevent.util.print_run_info()&lt;/span&gt;。在 asyncio 应用里换成 frame 事件加 &lt;span class=&quot;codespan&quot;&gt;asyncio.current_task()&lt;/span&gt; 加 &lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt;。&lt;/p&gt;
+
+&lt;p&gt;把「线程」当作唯一执行上下文，在纯线程模型里基本够用；遇到 gevent 或 asyncio，一个 OS 线程里同时跑着多条逻辑执行流，单看 frame 事件容易把它们的调用栈混在一起。这时要按观测对象选接口：追请求归属，接 &lt;span class=&quot;codespan&quot;&gt;greenlet.settrace&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;asyncio.current_task()&lt;/span&gt;；查阻塞，用 gevent monitor thread 或 &lt;span class=&quot;codespan&quot;&gt;Task.get_stack()&lt;/span&gt;。&lt;/p&gt;
 
 &lt;hr /&gt;
 
 &lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
   &lt;ol&gt;
     &lt;li id=&quot;fn:sys-settrace&quot;&gt;
-      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt;，https://docs.python.org/3/library/sys.html#sys.settrace &lt;a href=&quot;#fnref:sys-settrace&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:sys-settrace:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:sys-monitoring&quot;&gt;
-      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;，https://docs.python.org/3/library/sys.monitoring.html &lt;a href=&quot;#fnref:sys-monitoring&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:sys-monitoring:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:pep-669&quot;&gt;
-      &lt;p&gt;PEP 669: Low Impact Monitoring for CPython，https://peps.python.org/pep-0669/ &lt;a href=&quot;#fnref:pep-669&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:pep-669:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;sys.settrace()&lt;/span&gt;，&lt;a href=&quot;https://docs.python.org/3/library/sys.html#sys.settrace&quot;&gt;https://docs.python.org/3/library/sys.html#sys.settrace&lt;/a&gt; &lt;a href=&quot;#fnref:sys-settrace&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:threading-trace&quot;&gt;
-      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;threading.settrace()&lt;/span&gt;，https://docs.python.org/3/library/threading.html#threading.settrace；&lt;span class=&quot;codespan&quot;&gt;threading.settrace_all_threads()&lt;/span&gt;，https://docs.python.org/3/library/threading.html#threading.settrace_all_threads &lt;a href=&quot;#fnref:threading-trace&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;threading.settrace()&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;threading.settrace_all_threads()&lt;/span&gt;，&lt;a href=&quot;https://docs.python.org/3/library/threading.html#threading.settrace&quot;&gt;https://docs.python.org/3/library/threading.html#threading.settrace&lt;/a&gt; &lt;a href=&quot;#fnref:threading-trace&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:sys-monitoring&quot;&gt;
+      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;，&lt;a href=&quot;https://docs.python.org/3/library/sys.monitoring.html&quot;&gt;https://docs.python.org/3/library/sys.monitoring.html&lt;/a&gt;。&lt;span class=&quot;codespan&quot;&gt;PY_RESUME&lt;/span&gt; 定义：&quot;Resumption of a Python function (for generator and coroutine functions), except for throw() calls.&quot;；&lt;span class=&quot;codespan&quot;&gt;PY_YIELD&lt;/span&gt;：&quot;Yield from a Python function (occurs immediately before the yield…&quot; &lt;a href=&quot;#fnref:sys-monitoring&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:sys-monitoring:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt; &lt;a href=&quot;#fnref:sys-monitoring:2&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;3&lt;/sup&gt;&lt;/a&gt; &lt;a href=&quot;#fnref:sys-monitoring:3&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;4&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:pep-669&quot;&gt;
+      &lt;p&gt;PEP 669: Low Impact Monitoring for CPython，&lt;a href=&quot;https://peps.python.org/pep-0669/&quot;&gt;https://peps.python.org/pep-0669/&lt;/a&gt; &lt;a href=&quot;#fnref:pep-669&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:gevent-intro&quot;&gt;
-      &lt;p&gt;gevent 文档：Introduction，https://docs.gevent.org/intro.html &lt;a href=&quot;#fnref:gevent-intro&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;gevent 文档：Introduction，&lt;a href=&quot;https://docs.gevent.org/intro.html&quot;&gt;https://docs.gevent.org/intro.html&lt;/a&gt; &lt;a href=&quot;#fnref:gevent-intro&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:greenlet-concepts&quot;&gt;
-      &lt;p&gt;greenlet 文档：greenlet Concepts，https://greenlet.readthedocs.io/en/latest/greenlet.html &lt;a href=&quot;#fnref:greenlet-concepts&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;greenlet 文档：greenlet Concepts，&lt;a href=&quot;https://greenlet.readthedocs.io/en/latest/greenlet.html&quot;&gt;https://greenlet.readthedocs.io/en/latest/greenlet.html&lt;/a&gt; &lt;a href=&quot;#fnref:greenlet-concepts&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:greenlet-source&quot;&gt;
+      &lt;p&gt;greenlet 源码：&lt;span class=&quot;codespan&quot;&gt;src/greenlet/greenlet.cpp&lt;/span&gt; 注释「A PyGreenlet is a range of C stack addresses that must be saved and restored」；栈拷贝实现见 &lt;span class=&quot;codespan&quot;&gt;src/greenlet/TStackState.cpp&lt;/span&gt;；汇编切换见 &lt;span class=&quot;codespan&quot;&gt;src/greenlet/platform/switch_amd64_unix.h&lt;/span&gt;。 &lt;a href=&quot;#fnref:greenlet-source&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:greenlet-tracing&quot;&gt;
-      &lt;p&gt;greenlet 文档：Tracing And Profiling，https://greenlet.readthedocs.io/en/stable/tracing.html &lt;a href=&quot;#fnref:greenlet-tracing&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;greenlet 文档：Tracing And Profiling，&lt;a href=&quot;https://greenlet.readthedocs.io/en/stable/tracing.html&quot;&gt;https://greenlet.readthedocs.io/en/stable/tracing.html&lt;/a&gt; &lt;a href=&quot;#fnref:greenlet-tracing&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:gevent-monitoring&quot;&gt;
-      &lt;p&gt;gevent 文档：Monitoring and Debugging gevent Applications，https://www.gevent.org/monitoring.html &lt;a href=&quot;#fnref:gevent-monitoring&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;gevent 文档：Monitoring and Debugging gevent Applications，&lt;a href=&quot;https://www.gevent.org/monitoring.html&quot;&gt;https://www.gevent.org/monitoring.html&lt;/a&gt; &lt;a href=&quot;#fnref:gevent-monitoring&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:cpython-generators&quot;&gt;
+      &lt;p&gt;CPython InternalDocs：generators，&lt;a href=&quot;https://github.com/python/cpython/blob/main/InternalDocs/generators.md&quot;&gt;https://github.com/python/cpython/blob/main/InternalDocs/generators.md&lt;/a&gt; &lt;a href=&quot;#fnref:cpython-generators&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:dis-resume&quot;&gt;
+      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;dis&lt;/span&gt; 模块，&lt;span class=&quot;codespan&quot;&gt;RESUME (context)&lt;/span&gt; 与 context = 3 (After an await expression)，&lt;a href=&quot;https://docs.python.org/3/library/dis.html#opcode-RESUME&quot;&gt;https://docs.python.org/3/library/dis.html#opcode-RESUME&lt;/a&gt; &lt;a href=&quot;#fnref:dis-resume&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:asyncio-task&quot;&gt;
-      &lt;p&gt;Python 文档：Coroutines and Tasks，https://docs.python.org/3/library/asyncio-task.html &lt;a href=&quot;#fnref:asyncio-task&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt; &lt;a href=&quot;#fnref:asyncio-task:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;sup&gt;2&lt;/sup&gt;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;Python 文档：Coroutines and Tasks，&lt;a href=&quot;https://docs.python.org/3/library/asyncio-task.html&quot;&gt;https://docs.python.org/3/library/asyncio-task.html&lt;/a&gt; &lt;a href=&quot;#fnref:asyncio-task&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:contextvars&quot;&gt;
-      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt;，https://docs.python.org/3/library/contextvars.html &lt;a href=&quot;#fnref:contextvars&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:asyncio-dev&quot;&gt;
-      &lt;p&gt;Python 文档：Developing with asyncio，https://docs.python.org/3/library/asyncio-dev.html &lt;a href=&quot;#fnref:asyncio-dev&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
-    &lt;/li&gt;
-    &lt;li id=&quot;fn:sys-coroutine-origin&quot;&gt;
-      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;sys.set_coroutine_origin_tracking_depth()&lt;/span&gt;，https://docs.python.org/3/library/sys.html#sys.set_coroutine_origin_tracking_depth &lt;a href=&quot;#fnref:sys-coroutine-origin&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;Python 文档：&lt;span class=&quot;codespan&quot;&gt;contextvars&lt;/span&gt;，&lt;a href=&quot;https://docs.python.org/3/library/contextvars.html&quot;&gt;https://docs.python.org/3/library/contextvars.html&lt;/a&gt; &lt;a href=&quot;#fnref:contextvars&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
   &lt;/ol&gt;
 &lt;/div&gt;
@@ -332,7 +826,7 @@ greenlet B: handle_request -&amp;gt; render -&amp;gt; ...
       </item>
     
       <item>
-        <title>gevent monkey patch 对 peeka 工具的影响</title>
+        <title>gevent monkey patch 对 profiling 工具的影响</title>
         <description>&lt;p&gt;上一篇文章中，我们提到了几个常见的 python 进程诊断工具。其中提到的 &lt;a href=&quot;https://github.com/peeka-project/peeka&quot;&gt;peeka&lt;/a&gt; 就属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 &lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 等命令再通过这个通道执行。它更接近运行时诊断工具，而不是离线性能分析器。&lt;/p&gt;
 
 &lt;p&gt;运行时诊断工具可以分成控制面和数据面两层：&lt;/p&gt;
@@ -344,11 +838,11 @@ greenlet B: handle_request -&amp;gt; render -&amp;gt; ...
 
 &lt;p&gt;不同工具的控制面和数据面位置不一样。&lt;span class=&quot;codespan&quot;&gt;cProfile&lt;/span&gt; 基本都在目标进程内部；&lt;span class=&quot;codespan&quot;&gt;py-spy&lt;/span&gt; 的控制面在外部，数据采样也尽量从外部完成；memray 会把采集逻辑放进目标进程内部，再把数据写到外部可分析的文件；peeka 的控制面横跨内外两侧，外部 CLI 负责发命令，目标进程里的 agent 负责接命令和执行观测。&lt;/p&gt;
 
-&lt;p&gt;这种差异平时不明显。一旦目标进程使用 gevent，问题就会浮现出来。gevent 通过 monkey patch 把 &lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;select&lt;/span&gt; 等标准库对象替换成协程版本。对业务代码来说，使用 gevent 的目的就是使用其协程能力；对诊断工具来说，它可能会破坏控制面和数据面的正常工作。&lt;/p&gt;
+&lt;p&gt;这些位置差异平时不影响使用。一旦目标进程使用 gevent，问题就会浮现出来。gevent 通过 monkey patch 把 &lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;time&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;select&lt;/span&gt; 等标准库对象替换成协程版本。对业务代码来说，使用 gevent 的目的就是使用其协程能力；对诊断工具来说，它会同时影响控制面和数据面。&lt;/p&gt;
 
 &lt;p&gt;控制面可能在启动 socket、线程或同步信号时卡住。数据面可能还能给出结果，但结果的含义会变化：函数 wrapper 仍然能观察入口调用，递归 trace 和线程 frame 采样却不一定还能代表完整执行过程。&lt;/p&gt;
 
-&lt;p&gt;attach agent 在 gevent 目标进程里的启动超时，就是这种影响最先暴露出来的地方。&lt;/p&gt;
+&lt;p&gt;attach agent 在 gevent 目标进程里的启动超时，是这条链路最先出问题的环节。&lt;/p&gt;
 
 &lt;p&gt;很多 gevent 应用会在启动早期执行：&lt;/p&gt;
 
@@ -365,7 +859,7 @@ greenlet B: handle_request -&amp;gt; render -&amp;gt; ...
 
 &lt;p&gt;具体工具可能会把这个超时写成等待某个文件、notify socket 或 IPC 消息超时。传递方式不同，但外部控制端等的都是同一件事：agent 发出「我已经启动完成」的就绪信号。&lt;/p&gt;
 
-&lt;p&gt;这个启动超时容易被误读成「注入失败」或者「等待时间太短」。实际更常见的情况是：agent 代码已经在目标进程里开始执行，但在发出就绪信号之前阻塞在启动路径上，或者抛出异常中断；外部控制端只能继续等待，最后表现为初始化超时。&lt;/p&gt;
+&lt;p&gt;这种超时容易被误读成「注入失败」或者「等待时间太短」。更常见的情况是：agent 代码已经在目标进程里开始执行，但在发出就绪信号之前阻塞在启动路径上，或者抛出异常中断；外部控制端只能继续等待，最后表现为初始化超时。&lt;/p&gt;
 
 &lt;hr /&gt;
 
@@ -377,20 +871,14 @@ greenlet B: handle_request -&amp;gt; render -&amp;gt; ...
 
 &lt;p&gt;一个 attach agent 的最小流程可以画成这样：&lt;/p&gt;
 
-&lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;诊断工具
-    |
-    | attach(pid)
-    v
-GDB / LLDB / dlopen / PEP 768
-    |
-    | execute agent script
-    v
-目标 Python 进程
-    |
-    | start agent
-    v
-/tmp/agent_&amp;lt;session&amp;gt;.sock  &amp;lt;----&amp;gt;  诊断工具 client
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/agent-attach-flow.png&quot; alt=&quot;attach agent 的注入链路与控制 socket 的跨进程通信&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;attach agent 的注入链路与控制 socket 的跨进程通信&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
 &lt;p&gt;agent 在目标进程里通常要做几件事：&lt;/p&gt;
 
@@ -460,26 +948,26 @@ GDB / LLDB / dlopen / PEP 768
 
 &lt;p&gt;monkey patch 会改变后续 import 的结果：再 &lt;span class=&quot;codespan&quot;&gt;import socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;import threading&lt;/span&gt; 时，拿到的可能已经不是原始实现。&lt;/p&gt;
 
-&lt;p&gt;对业务代码来说，这是 gevent 的能力来源。对 attach agent 来说，这会影响自己的启动路径。&lt;/p&gt;
+&lt;p&gt;业务代码看中的是 gevent 的能力来源；attach agent 看到的却是同一套 API 的副作用。&lt;/p&gt;
 
 &lt;p&gt;最明显的风险是：&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;accept_started&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;更隐蔽的风险在：&lt;/p&gt;
+&lt;p&gt;风险还藏在：&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;CPython 的 &lt;span class=&quot;codespan&quot;&gt;Thread.start()&lt;/span&gt; 不只是创建底层线程。它还会等待线程内部的 &lt;span class=&quot;codespan&quot;&gt;_started&lt;/span&gt; 事件：&lt;/p&gt;
+&lt;p&gt;CPython 的 &lt;span class=&quot;codespan&quot;&gt;Thread.start()&lt;/span&gt; 分两步：先创建底层线程，再等线程内部的 &lt;span class=&quot;codespan&quot;&gt;_started&lt;/span&gt; 事件返回：&lt;/p&gt;
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
     &lt;span class=&quot;nf&quot;&gt;_start_new_thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_bootstrap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
     &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_started&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;如果 &lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt; 已经被 gevent 改造，这个 wait 可能落到 gevent 的 event 语义里。在某些注入时机下，调用链会变成：&lt;/p&gt;
+&lt;p&gt;如果 &lt;span class=&quot;codespan&quot;&gt;threading&lt;/span&gt; 已经被 gevent 改造，这个 wait 可能进入 gevent 的 event 语义。在某些注入时机下，调用链会变成：&lt;/p&gt;
 
 &lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;agent.start()
   -&amp;gt; threading.Thread.start()
@@ -488,13 +976,24 @@ GDB / LLDB / dlopen / PEP 768
            -&amp;gt; gevent.exceptions.BlockingSwitchOutError
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
+&lt;p&gt;把这条链路展开看，可以更清楚地看到问题出在哪一层、外部诊断工具又看到了什么：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/agent-blocking-stack.png&quot; alt=&quot;调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
 &lt;p&gt;常见错误是 &lt;span class=&quot;codespan&quot;&gt;BlockingSwitchOutError&lt;/span&gt;&lt;sup id=&quot;fnref:blocking-switch-out&quot;&gt;&lt;a href=&quot;#fn:blocking-switch-out&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;：&lt;/p&gt;
 
 &lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;gevent.exceptions.BlockingSwitchOutError:
 Impossible to call blocking function in the event loop callback
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;这个异常和 GDB、LLDB、PEP 768&lt;sup id=&quot;fnref:pep-768&quot;&gt;&lt;a href=&quot;#fn:pep-768&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt; 这些注入方式没有直接关系。agent 已经进入目标进程，只是在执行过程中撞到了 gevent 对阻塞切换的限制。&lt;/p&gt;
+&lt;p&gt;这个异常和 GDB、LLDB、PEP 768&lt;sup id=&quot;fnref:pep-768&quot;&gt;&lt;a href=&quot;#fn:pep-768&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot; role=&quot;doc-noteref&quot;&gt;2&lt;/a&gt;&lt;/sup&gt; 这些注入方式没有直接关系。agent 已经进入目标进程，只是在执行过程中触发了 gevent 对阻塞切换的限制。&lt;/p&gt;
 
 &lt;p&gt;外部最终只等到：&lt;/p&gt;
 
@@ -587,6 +1086,17 @@ Impossible to call blocking function in the event loop callback
 
 &lt;p&gt;如果目标进程已经加载了 &lt;span class=&quot;codespan&quot;&gt;gevent.monkey&lt;/span&gt;，&lt;span class=&quot;codespan&quot;&gt;monkey.get_original()&lt;/span&gt; 可以拿到 monkey patch 之前的对象。&lt;span class=&quot;codespan&quot;&gt;native_start_new_thread()&lt;/span&gt; 借这个接口，在 gevent 已经 patch 过 &lt;span class=&quot;codespan&quot;&gt;_thread&lt;/span&gt; 时仍然取回原始线程入口。&lt;/p&gt;
 
+&lt;p&gt;上面这几处替换——&lt;span class=&quot;codespan&quot;&gt;socket&lt;/span&gt; 换 &lt;span class=&quot;codespan&quot;&gt;_socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;threading.Thread&lt;/span&gt; 换 &lt;span class=&quot;codespan&quot;&gt;_thread.start_new_thread&lt;/span&gt;、用 &lt;span class=&quot;codespan&quot;&gt;monkey.get_original()&lt;/span&gt; 兜底——做的其实是同一件事：把 agent 控制面从「被 patch 的 Python 高层 API」退到「Python C 扩展暴露的底层原语」。如下图所示：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/api-layers.png&quot; alt=&quot;原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
 &lt;blockquote&gt;
   &lt;p&gt;控制面越依赖目标进程的高层 runtime，越容易被业务框架的 monkey patch 影响。&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -614,7 +1124,6 @@ Impossible to call blocking function in the event loop callback
 
 &lt;div  class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;
 
-
 &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;probe_agent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sock_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
     &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;AF_UNIX&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;socket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SOCK_STREAM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
         &lt;span class=&quot;n&quot;&gt;client&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;settimeout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
@@ -624,13 +1133,13 @@ Impossible to call blocking function in the event loop callback
 
 &lt;p&gt;就绪信号只表示「agent 已完成基本初始化」。写文件、回连 notify socket、发送 IPC 消息都只是传递方式；agent 是否真的能接收连接并返回响应，交给后续 hello 探测确认。&lt;/p&gt;
 
-&lt;p&gt;这样一来，就绪同步由内核 socket backlog 和外部 hello 探测承接，发出就绪信号之前不需要 Python 层 event。&lt;/p&gt;
+&lt;p&gt;就绪同步因此落在内核 socket backlog 和外部 hello 探测上，发出就绪信号之前不需要 Python 层 event。&lt;/p&gt;
 
 &lt;hr /&gt;
 
 &lt;h2 id=&quot;3-数据面命令能执行不代表观测语义完全相同&quot;&gt;3. 数据面：命令能执行，不代表观测语义完全相同&lt;/h2&gt;
 
-&lt;p&gt;命令通道稳定以后，问题还没有结束。agent 能接收命令，只说明 socket、后台线程和 hello 探测这些控制面路径已经可用；真正执行 &lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 时，代码会进入函数 wrapper、tracing backend、frame sampling 这些数据面路径。它们依赖的观测机制不同，受 gevent 影响的方式也不同，所以还要继续看数据面：命令能返回结果是一回事，结果能解释到什么程度是另一回事。&lt;/p&gt;
+&lt;p&gt;命令通道稳定以后，问题还没有结束。agent 能接收命令，只说明 socket、后台线程和 hello 探测这些控制面路径已经可用；真正执行 &lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 时，代码会进入函数 wrapper、tracing backend、frame sampling 这些数据面路径。它们依赖的观测机制不同，受 gevent 影响的方式也不同。&lt;/p&gt;
 
 &lt;h3 id=&quot;31-不同命令在-gevent-下能看到的范围不同&quot;&gt;3.1 不同命令在 gevent 下能看到的范围不同&lt;/h3&gt;
 
@@ -679,7 +1188,7 @@ Impossible to call blocking function in the event loop callback
 
 &lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 更复杂，因为它们试图观察更深的执行过程。&lt;/p&gt;
 
-&lt;p&gt;这时输出仍然可以给，但应该把 backend、观测范围和降级原因一起带出来，避免调用方把降级结果当成完整结果。&lt;/p&gt;
+&lt;p&gt;这时输出仍然可以给，但应该把 backend、观测范围和降级原因一起带出来，让调用方知道这是降级结果，不要按完整结果来解读。&lt;/p&gt;
 
 &lt;hr /&gt;
 
@@ -687,7 +1196,18 @@ Impossible to call blocking function in the event loop callback
 
 &lt;p&gt;完整 &lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 通常依赖解释器的 tracing 机制。Python 3.12+ 可以用 &lt;span class=&quot;codespan&quot;&gt;sys.monitoring&lt;/span&gt;，更老版本通常用 &lt;span class=&quot;codespan&quot;&gt;sys.settrace&lt;/span&gt;。这类机制会进入 frame 事件流，用来展开函数内部的子调用。&lt;/p&gt;
 
-&lt;p&gt;在 gevent patched 或 active hub 状态下，递归 tracing 更容易碰到调度和 frame 栈边界。此时更稳的选择是降级成 &lt;span class=&quot;codespan&quot;&gt;wrapper_only&lt;/span&gt;：&lt;/p&gt;
+&lt;p&gt;完整调用树要求 tracing backend 持续跟住目标函数内部的 call / return 事件。gevent 会在同一个 OS thread 里切换不同 greenlet，trace 拿到的是这个 OS thread 上的事件流，中间可能夹着别的 greenlet 的 frame：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/gevent-trace-timeline.png&quot; alt=&quot;gevent 下 trace 事件流被另一个 greenlet 穿插的示意图&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;gevent 下 trace 事件流被另一个 greenlet 穿插的示意图&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;从单次 &lt;span class=&quot;codespan&quot;&gt;target()&lt;/span&gt; 的角度看，这棵「调用树」会被别的执行路径穿插，已经不能代表它自己的内部结构。与其展开错的，不如降级成 &lt;span class=&quot;codespan&quot;&gt;wrapper_only&lt;/span&gt;：&lt;/p&gt;
 
 &lt;div  class=&quot;language-text highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;trace target()
   -&amp;gt; wrapper 记录 target() 总耗时
@@ -726,7 +1246,16 @@ Impossible to call blocking function in the event loop callback
 
 &lt;p&gt;这套采样模型在普通线程程序里比较直观。但 gevent 使用 greenlet 调度，多个 greenlet 共享同一个 OS thread。&lt;/p&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys._current_frames()&lt;/span&gt; 返回的是每个 OS thread 当前正在执行的 frame。它天然更容易看到「现在正在跑的 greenlet」，看不到所有挂起的 greenlet。&lt;/p&gt;
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;sys._current_frames()&lt;/span&gt; 返回的是每个 OS thread 当前正在执行的 frame。它能看到「现在正在跑的 greenlet」，看不到所有挂起的 greenlet。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/gevent/top-sampling-blindspot.png&quot; alt=&quot;普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
 &lt;p&gt;所以在 gevent 下，&lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 的结果仍然有用，但覆盖范围有限。它适合说明当前活跃执行路径的热点，不适合被解释成「所有 greenlet 的完整 CPU 画像」。&lt;/p&gt;
 
@@ -748,23 +1277,23 @@ Impossible to call blocking function in the event loop callback
 
 &lt;hr /&gt;
 
-&lt;h2 id=&quot;4-总结控制面先保活数据面说明边界&quot;&gt;4. 总结：控制面先保活，数据面说明边界&lt;/h2&gt;
+&lt;h2 id=&quot;4-总结&quot;&gt;4. 总结&lt;/h2&gt;
 
-&lt;p&gt;gevent 带来的问题不是单点故障。它先可能让 attach agent 的控制面卡在 socket、线程、就绪信号这些启动路径上；控制面修好以后，数据面的结果也不能直接按普通线程模型解释。&lt;/p&gt;
+&lt;p&gt;gevent 对 attach agent 的影响分两个阶段：先是控制面卡在 socket、线程、就绪信号这些启动路径上；控制面修好以后，数据面的结果也不能直接按普通线程模型解释。&lt;/p&gt;
 
-&lt;p&gt;处理顺序可以简单分成两步：&lt;/p&gt;
+&lt;p&gt;处理顺序分两步：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;控制面先退到底层原语，用 &lt;span class=&quot;codespan&quot;&gt;_socket&lt;/span&gt;、原始 &lt;span class=&quot;codespan&quot;&gt;_thread.start_new_thread&lt;/span&gt; 和 hello 探测保证 agent 能启动、能通信；&lt;/li&gt;
-  &lt;li&gt;数据面再按命令说明观测范围，&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;monitor&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;stack&lt;/span&gt; 保持函数边界观测，&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 在 gevent 下要标出降级和盲区。&lt;/li&gt;
+  &lt;li&gt;控制面先退到底层原语，用 &lt;span class=&quot;codespan&quot;&gt;_socket&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;_thread.start_new_thread&lt;/span&gt; 和 hello 探测保证 agent 能启动、能通信；&lt;/li&gt;
+  &lt;li&gt;数据面再按命令说明观测范围，&lt;span class=&quot;codespan&quot;&gt;watch&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;monitor&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;stack&lt;/span&gt; 只做函数边界观测，&lt;span class=&quot;codespan&quot;&gt;trace&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;top&lt;/span&gt; 在 gevent 下要标出降级和盲区。&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;外部最先看到的可能只是 &lt;span class=&quot;codespan&quot;&gt;Agent initialization timeout&lt;/span&gt;，但它只说明控制面没有完成就绪流程。继续往下排查时，要分清 agent 是不是已经进入目标进程、命令通道能不能建立，以及命令返回的数据还能代表什么。&lt;/p&gt;
+&lt;p&gt;外部最先看到的可能只是 &lt;span class=&quot;codespan&quot;&gt;Agent initialization timeout&lt;/span&gt;，但这条信息只说明控制面没走完就绪流程。再往下排查，要分清三件事：agent 是不是已经进入目标进程、命令通道能不能建立、命令返回的数据还能代表什么。&lt;/p&gt;
 
 &lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
   &lt;ol&gt;
     &lt;li id=&quot;fn:blocking-switch-out&quot;&gt;
-      &lt;p&gt;gevent API 文档：&lt;a href=&quot;https://www.gevent.org/api/gevent.hub.html#gevent.hub.BlockingSwitchOutError&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;BlockingSwitchOutError&lt;/span&gt;&lt;/a&gt;。 &lt;a href=&quot;#fnref:blocking-switch-out&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;BlockingSwitchOutError&lt;/span&gt;：gevent 在「不允许切换 greenlet 的上下文」里检测到要执行阻塞操作时抛出。gevent 的协作式阻塞函数（patch 后的 &lt;span class=&quot;codespan&quot;&gt;Event.wait()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;socket.recv()&lt;/span&gt; 等）在阻塞前需要 switch 到 hub 让别的 greenlet 跑；如果当前栈本来就在 hub 的 callback 里，再 switch 会造成 hub 重入，于是直接报错而不是死锁。详见 gevent API 文档：&lt;a href=&quot;https://www.gevent.org/api/gevent.hub.html#gevent.hub.BlockingSwitchOutError&quot;&gt;&lt;span class=&quot;codespan&quot;&gt;BlockingSwitchOutError&lt;/span&gt;&lt;/a&gt;。 &lt;a href=&quot;#fnref:blocking-switch-out&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
     &lt;/li&gt;
     &lt;li id=&quot;fn:pep-768&quot;&gt;
       &lt;p&gt;&lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768: Safe external debugger interface for CPython&lt;/a&gt;。 &lt;a href=&quot;#fnref:pep-768&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
@@ -806,7 +1335,7 @@ Impossible to call blocking function in the event loop callback
 &lt;ul&gt;
   &lt;li&gt;地址空间隔离：每个进程有独立的虚拟地址空间，A 进程无法直接读写 B 进程的内存&lt;/li&gt;
   &lt;li&gt;GIL（全局解释器锁）：Python 的 C API 调用几乎都需要持有 GIL&lt;/li&gt;
-  &lt;li&gt;执行时机：目标进程可能正处于任何状态——malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
+  &lt;li&gt;执行时机：目标进程可能正处于任何状态 – malloc 中途、GC 扫描中、持有 import 锁……&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;工程上可以拆成三个子问题：&lt;/p&gt;
@@ -817,7 +1346,18 @@ Impossible to call blocking function in the event loop callback
   &lt;li&gt;选择足够安全的执行时机（时机选择）&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;不同的工具对这三个问题给出了不同的答案。&lt;/p&gt;
+&lt;p&gt;不同的工具对这三个问题给出了不同的答案。下面这张表把三代方案对应到这三个子问题上：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/three-generations-matrix.png&quot; alt=&quot;三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;后面三节按这三代展开。&lt;/p&gt;
 
 &lt;hr /&gt;
 
@@ -875,7 +1415,7 @@ Impossible to call blocking function in the event loop callback
     │── ptrace(DETACH) ────────&amp;gt;│  脱离
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;GDB 正是利用 ptrace 的能力，在目标进程的上下文中&quot;调用&quot;C 函数。具体来说，GDB 每执行一条 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 命令，都会经历以下 6 步：&lt;/p&gt;
+&lt;p&gt;GDB 正是利用 ptrace 的能力，在目标进程的上下文中「调用」C 函数。具体来说，GDB 每执行一条 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 命令，都会经历以下 6 步：&lt;/p&gt;
 &lt;ol&gt;
   &lt;li&gt;保存目标进程当前的寄存器状态&lt;/li&gt;
   &lt;li&gt;将函数参数写入寄存器/栈（遵循 ABI 调用约定）&lt;/li&gt;
@@ -885,7 +1425,16 @@ Impossible to call blocking function in the event loop callback
   &lt;li&gt;函数执行完毕后，GDB 命中断点，恢复原始寄存器&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;因此，pyrasite 的三条 GDB 命令（&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Ensure()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyRun_SimpleString(...)&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Release($1)&lt;/span&gt;）各自独立地经历这 6 步。每次 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 都是一次完整的&quot;保存-&amp;gt;篡改-&amp;gt;执行-&amp;gt;恢复&quot;循环。&lt;/p&gt;
+&lt;p&gt;因此，pyrasite 的三条 GDB 命令（&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Ensure()&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyRun_SimpleString(...)&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;call PyGILState_Release($1)&lt;/span&gt;）各自独立地经历这 6 步。每次 &lt;span class=&quot;codespan&quot;&gt;call&lt;/span&gt; 都是一次完整的「保存 -&amp;gt; 设置 -&amp;gt; 执行 -&amp;gt; 恢复」循环。&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/gdb-call-cycle.png&quot; alt=&quot;单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
 &lt;h3 id=&quot;随机暂停点的风险&quot;&gt;随机暂停点的风险&lt;/h3&gt;
 
@@ -899,7 +1448,7 @@ Impossible to call blocking function in the event loop callback
       -&amp;gt; 死锁
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;更具体地说：&lt;/p&gt;
+&lt;p&gt;下表列出几种典型情况：&lt;/p&gt;
 
 &lt;div class=&quot;table-container&quot;&gt;
 &lt;table&gt;
@@ -930,7 +1479,18 @@ Impossible to call blocking function in the event loop callback
 &lt;/table&gt;
 &lt;/div&gt;
 
-&lt;p&gt;pyrasite 本质上是在&quot;碰运气&quot;——大多数时候目标进程不在这些危险状态，所以注入成功。但在生产环境中，这种不确定性是不可接受的。&lt;/p&gt;
+&lt;p&gt;把这些危险窗口放回时间线上看，每次 GDB attach 都是一次随机抽样：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/random-pause-risk.png&quot; alt=&quot;pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
+&lt;p&gt;pyrasite 本质上是在「碰运气」 – 大多数时候目标进程不在这些危险状态，所以注入成功。但在生产环境中，这种不确定性是不可接受的。&lt;/p&gt;
 
 &lt;hr /&gt;
 
@@ -940,28 +1500,20 @@ Impossible to call blocking function in the event loop callback
 
 &lt;h3 id=&quot;原理概览&quot;&gt;原理概览&lt;/h3&gt;
 
-&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;peeka/memray 控制端          GDB/LLDB 子进程              目标 Python 进程
-    │                            │                              │
-    │  3.1：bind/listen 本地端口  │                              │
-    │-- 启动 GDB/LLDB ----------&amp;gt;│                              │  3.1：传入端口和注入库路径
-    │                            │-- ptrace ATTACH ------------&amp;gt;│  暂停
-    │                            │-- 等待安全断点命中 -----------&amp;gt;│  3.2：malloc/PyMem_* 等 C 函数入口
-    │                            │                              │
-    │                            │-- dlopen(&quot;_inject.so&quot;) -----&amp;gt;│  3.3：加载 C 扩展到目标地址空间
-    │                            │-- call peeka_spawn_agent() -&amp;gt;│  3.4：创建新 pthread
-    │                            │-- ptrace DETACH ------------&amp;gt;│  恢复执行
-    │                            │                              │
-    │&amp;lt;---------------------------┼------------------------------│  3.5：[新 pthread] connect() 回连 + 接收脚本
-    │                            │                              │  ├- PyGILState_Ensure()
-    │                            │                              │  ├- PyEval_EvalCode()
-    │                            │                              │  └- PyGILState_Release()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;这条路径上会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。&lt;/p&gt;
 
-&lt;p&gt;在这条路径里，确实会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。&lt;/p&gt;
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/dlopen-pthread-timeline.png&quot; alt=&quot;第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
 &lt;p&gt;后面按五个关键环节展开：控制端准备、安全断点、dlopen 注入、独立线程、反向连接传输。&lt;/p&gt;
 
-&lt;h3 id=&quot;31-控制端准备监听端口与启动调试器&quot;&gt;3.1 控制端准备——监听端口与启动调试器&lt;/h3&gt;
+&lt;h3 id=&quot;31-控制端准备--监听端口与启动调试器&quot;&gt;3.1 控制端准备 – 监听端口与启动调试器&lt;/h3&gt;
 
 &lt;p&gt;在 GDB/LLDB 进入目标进程之前，peeka/memray 控制端会先准备一个本地 TCP server。这个端口的作用很单一：等目标进程中新建的 agent 线程回连，然后把完整的 agent 脚本传过去。&lt;/p&gt;
 
@@ -996,7 +1548,7 @@ Impossible to call blocking function in the event loop callback
   &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;$peeka_rtld_now&lt;/span&gt;：传给 &lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 的 &lt;span class=&quot;codespan&quot;&gt;RTLD_NOW&lt;/span&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&quot;32-安全断点选择正确的时机&quot;&gt;3.2 安全断点——选择正确的时机&lt;/h3&gt;
+&lt;h3 id=&quot;32-安全断点--选择正确的时机&quot;&gt;3.2 安全断点 – 选择正确的时机&lt;/h3&gt;
 
 &lt;p&gt;pyrasite 在任意位置暂停后就执行 C API；memray/peeka 会等到更明确的 C 函数边界再注入。&lt;/p&gt;
 
@@ -1033,9 +1585,18 @@ continue
 
 &lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;Py_AddPendingCall(&amp;amp;PyCallable_Check, 0)&lt;/span&gt; 会把 &lt;span class=&quot;codespan&quot;&gt;PyCallable_Check&lt;/span&gt; 放进 pending-call 队列，等待 CPython eval loop 在下一个检查点调用它。这个安排用于覆盖一种常见情况：目标进程正在跑纯 Python tight loop，短时间内不触发新的 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt; 或 &lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt;。&lt;span class=&quot;codespan&quot;&gt;b PyCallable_Check&lt;/span&gt; 在最终 &lt;span class=&quot;codespan&quot;&gt;continue&lt;/span&gt; 之前设好后，pending call 触发时就能命中断点。因此源码里把 &lt;span class=&quot;codespan&quot;&gt;Py_AddPendingCall&lt;/span&gt; 放在 &lt;span class=&quot;codespan&quot;&gt;b malloc&lt;/span&gt; 之前并不矛盾。&lt;/p&gt;
 
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/pending-call-fallback.png&quot; alt=&quot;pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
 &lt;p&gt;2）把注入动作挂到一组 C 函数入口断点上。&lt;/p&gt;
 
-&lt;p&gt;2.1）先设置断点。脚本在 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyCallable_Check&lt;/span&gt; 等函数上打断点。这里的&quot;函数入口&quot;指 GDB 断点列出的 C 函数入口；用户代码里 &lt;span class=&quot;codespan&quot;&gt;def foo(): ...&lt;/span&gt; 的 Python 函数入口属于另一个层面。例如：&lt;/p&gt;
+&lt;p&gt;2.1）先设置断点。脚本在 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyCallable_Check&lt;/span&gt; 等函数上打断点。这里的「函数入口」指 GDB 断点列出的 C 函数入口；用户代码里 &lt;span class=&quot;codespan&quot;&gt;def foo(): ...&lt;/span&gt; 的 Python 函数入口属于另一个层面。例如：&lt;/p&gt;
 
 &lt;ul&gt;
   &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;calloc&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;free&lt;/span&gt; 是 libc allocator 的函数入口&lt;/li&gt;
@@ -1043,19 +1604,28 @@ continue
   &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyErr_CheckSignals&lt;/span&gt;、&lt;span class=&quot;codespan&quot;&gt;PyCallable_Check&lt;/span&gt; 是 CPython 运行时中的普通 C API 函数入口&lt;/li&gt;
 &lt;/ul&gt;
 
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/breakpoint-layers.png&quot; alt=&quot;CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
+
 &lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt; 覆盖的是不同层。&lt;span class=&quot;codespan&quot;&gt;PyMem_Malloc&lt;/span&gt; 是 CPython 的分配 API，底层可能走 pymalloc，也可能在需要新 arena、大块分配、&lt;span class=&quot;codespan&quot;&gt;PYTHONMALLOC=malloc&lt;/span&gt; 或自定义 allocator 时进一步走系统 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt;。同时设置 &lt;span class=&quot;codespan&quot;&gt;PyMem_*&lt;/span&gt; 和 &lt;span class=&quot;codespan&quot;&gt;malloc/free&lt;/span&gt; 断点，可以覆盖 CPython 分配层和 libc 分配层这两个边界。&lt;/p&gt;
 
 &lt;p&gt;2.2）再绑定命中后的动作。&lt;span class=&quot;codespan&quot;&gt;commands 1-10&lt;/span&gt; 给这些断点绑定同一组命令：一旦任意断点命中，就调用 &lt;span class=&quot;codespan&quot;&gt;dlopen(...)&lt;/span&gt; 加载注入库，再调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(...)&lt;/span&gt; 创建 agent 线程。&lt;/p&gt;
 
 &lt;p&gt;命中后先 &lt;span class=&quot;codespan&quot;&gt;disable breakpoints&lt;/span&gt; / &lt;span class=&quot;codespan&quot;&gt;delete breakpoints&lt;/span&gt; 也很重要。&lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 本身可能触发动态链接、符号解析和内存分配，如果断点还留着，注入过程可能再次撞上 &lt;span class=&quot;codespan&quot;&gt;malloc/free&lt;/span&gt; 断点，导致流程变得不可控。&lt;/p&gt;
 
-&lt;p&gt;断点命中时，GDB 停在某个函数的入口处：以 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt; 为例，此时命中的线程还没进入 allocator 内部临界区，也还没有修改堆结构。这比 pyrasite 在随机暂停点直接调用 Python C API 可控得多。严格说，它没有证明整个进程绝对安全；它把注入时机从&quot;任意机器指令位置&quot;收敛到&quot;已知 C 函数边界&quot;。&lt;/p&gt;
+&lt;p&gt;断点命中时，GDB 停在某个函数的入口处：以 &lt;span class=&quot;codespan&quot;&gt;malloc&lt;/span&gt; 为例，此时命中的线程还没进入 allocator 内部临界区，也还没有修改堆结构。这比 pyrasite 在随机暂停点直接调用 Python C API 可控得多。这种做法并没有证明整个进程绝对安全，但它把注入时机从「任意机器指令位置」收敛到「已知 C 函数边界」。&lt;/p&gt;
 
-&lt;h3 id=&quot;33-dlopen将-c-扩展加载到目标进程&quot;&gt;3.3 dlopen——将 C 扩展加载到目标进程&lt;/h3&gt;
+&lt;h3 id=&quot;33-dlopen--将-c-扩展加载到目标进程&quot;&gt;3.3 dlopen – 将 C 扩展加载到目标进程&lt;/h3&gt;
 
-&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 &lt;span class=&quot;codespan&quot;&gt;dlopen(&quot;_inject.abi3.so&quot;, RTLD_NOW)&lt;/span&gt;，我们将一个编译好的 C 扩展加载到目标进程的地址空间中。&lt;/p&gt;
+&lt;p&gt;&lt;span class=&quot;codespan&quot;&gt;dlopen&lt;/span&gt; 是 POSIX 系统的动态链接器接口。通过 GDB 在目标进程中调用 &lt;span class=&quot;codespan&quot;&gt;dlopen(&quot;_inject.abi3.so&quot;, RTLD_NOW)&lt;/span&gt;，就把一个编译好的 C 扩展加载到目标进程的地址空间。&lt;/p&gt;
 
-&lt;p&gt;这比 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString&lt;/span&gt; 强大的关键在于：C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束。&lt;/p&gt;
+&lt;p&gt;dlopen 比 &lt;span class=&quot;codespan&quot;&gt;PyRun_SimpleString&lt;/span&gt; 多了一层能力：C 代码可以创建线程，可以操作底层系统资源，不受 GIL 约束。&lt;/p&gt;
 
 &lt;p&gt;peeka 在 macOS 上使用 LLDB 完成相同的工作：&lt;/p&gt;
 
@@ -1068,7 +1638,7 @@ expr auto $spawn = $dlsym($dll, &quot;peeka_spawn_agent&quot;)
 p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&quot;34-独立线程解耦注入与执行&quot;&gt;3.4 独立线程——解耦注入与执行&lt;/h3&gt;
+&lt;h3 id=&quot;34-独立线程--解耦注入与执行&quot;&gt;3.4 独立线程 – 解耦注入与执行&lt;/h3&gt;
 
 &lt;p&gt;dlopen 之后，GDB 调用 C 扩展的 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent()&lt;/span&gt; 函数。这个函数的工作很少：&lt;/p&gt;
 
@@ -1099,7 +1669,7 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;h3 id=&quot;独立线程降低-gil-死锁风险&quot;&gt;独立线程降低 GIL 死锁风险&lt;/h3&gt;
 
-&lt;p&gt;在 pyrasite 方案中，&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 在 GDB 暂停目标进程时被调用——如果暂停的线程恰好持有 GIL，这里会死锁。&lt;/p&gt;
+&lt;p&gt;在 pyrasite 方案中，&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 在 GDB 暂停目标进程时被调用 – 如果暂停的线程恰好持有 GIL，这里会死锁。&lt;/p&gt;
 
 &lt;p&gt;在 dlopen + pthread 方案中：&lt;/p&gt;
 &lt;ol&gt;
@@ -1108,11 +1678,9 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
   &lt;li&gt;&lt;span class=&quot;codespan&quot;&gt;PyGILState_Ensure()&lt;/span&gt; 会等待 GIL 可用，避开暂停状态下的强行获取&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;这消除了 GIL 死锁的主要原因。&lt;/p&gt;
+&lt;h3 id=&quot;35-反向连接--agent-代码的传输&quot;&gt;3.5 反向连接 – agent 代码的传输&lt;/h3&gt;
 
-&lt;h3 id=&quot;35-反向连接agent-代码的传输&quot;&gt;3.5 反向连接——agent 代码的传输&lt;/h3&gt;
-
-&lt;p&gt;agent 代码的传输也很关键。peeka 采用反向连接，避免把代码内容直接写进 GDB 命令；否则字符串转义会很痛苦。&lt;/p&gt;
+&lt;p&gt;peeka 采用反向连接传输 agent 代码，避免把代码内容直接写进 GDB 命令；否则字符串转义会很痛苦。&lt;/p&gt;
 
 &lt;p&gt;这里要区分两个概念：控制端进程是用户运行的 peeka/memray 进程；GDB/LLDB 子进程是控制端临时启动的 debugger 进程。前者负责生成和发送 agent 脚本，后者只负责把 &lt;span class=&quot;codespan&quot;&gt;_inject.so&lt;/span&gt; 加载进目标进程并调用 &lt;span class=&quot;codespan&quot;&gt;peeka_spawn_agent(port)&lt;/span&gt;。&lt;/p&gt;
 
@@ -1185,7 +1753,7 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;p&gt;目标进程里的新线程回连 peeka/memray，主要是为了工程可靠性：agent 代码可以任意长、包含引号、换行、反斜杠、非 ASCII 字符等复杂内容，无需经过 GDB 命令行转义；GDB 只需要传一个整数端口号，注入阶段更短，出错面更小。&lt;/p&gt;
 
-&lt;h3 id=&quot;36-小结第二代方案的完整顺序&quot;&gt;3.6 小结——第二代方案的完整顺序&lt;/h3&gt;
+&lt;h3 id=&quot;36-小结--第二代方案的完整顺序&quot;&gt;3.6 小结 – 第二代方案的完整顺序&lt;/h3&gt;
 
 &lt;p&gt;把 3.1 到 3.5 串起来，第二代方案的完整顺序是：&lt;/p&gt;
 
@@ -1202,53 +1770,24 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;h2 id=&quot;4-第三代pep-768-与-sysremote_exec&quot;&gt;4. 第三代：PEP 768 与 sys.remote_exec&lt;/h2&gt;
 
-&lt;p&gt;Python 3.14 引入了 &lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768&lt;/a&gt;，从解释器层面提供了原生的进程注入支持。这是一个根本性的范式转变。&lt;/p&gt;
+&lt;p&gt;Python 3.14 引入了 &lt;a href=&quot;https://peps.python.org/pep-0768/&quot;&gt;PEP 768&lt;/a&gt;，从解释器层面提供了原生的进程注入支持。&lt;/p&gt;
 
 &lt;h3 id=&quot;核心思路&quot;&gt;核心思路&lt;/h3&gt;
 
-&lt;p&gt;前两代方案都从外部进入目标进程：通过 ptrace/GDB/LLDB 控制执行流，然后在一个&quot;可能安全&quot;的位置执行代码。PEP 768 把调度权交回解释器：外部工具告诉解释器要执行哪个脚本，解释器自己在安全检查点执行。&lt;/p&gt;
+&lt;p&gt;前两代方案都从外部进入目标进程：通过 ptrace/GDB/LLDB 控制执行流，然后在一个「可能安全」的位置执行代码。PEP 768 把调度权交回解释器：外部工具告诉解释器要执行哪个脚本，解释器自己在安全检查点执行。&lt;/p&gt;
 
 &lt;h3 id=&quot;运作机制&quot;&gt;运作机制&lt;/h3&gt;
 
-&lt;div  class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;外部进程                       目标 Python 解释器
-    │                              │
-    │  (1) 读 /proc/pid/maps       │
-    │      定位 PyRuntime 地址       │
-    │                              │
-    │  (2) 读 _Py_DebugOffsets      │
-    │      获取内部结构偏移量         │
-    │                              │
-    │  (3) 选择一个 PyThreadState   │
-    │      通常是 main thread       │
-    │                              │
-    │  (4) 写入脚本路径到            │
-    │      tstate-&amp;gt;debugger_        │
-    │        script_path            │
-    │                              │
-    │  (5) 设置 pending call 标志   │
-    │      tstate-&amp;gt;debugger_        │
-    │        pending_call = 1       │
-    │                              │
-    │  (6) 设置 eval breaker        │
-    │      eval_breaker |=          │
-    │        PLEASE_STOP_BIT        │
-    │                              │
-    │  完成，无需等待                │
-    │                              │
-    │                              │  ... 正常执行字节码 ...
-    │                              │
-    │                              │  eval loop 检查 eval_breaker
-    │                              │  ↓
-    │                              │  发现 pending_call 标志
-    │                              │  ↓
-    │                              │  _PyRunRemoteDebugger()
-    │                              │  ↓
-    │                              │  读取 script_path
-    │                              │  ↓
-    │                              │  fopen + PyRun_AnyFile
-    │                              │  ↓
-    │                              │  执行脚本 ✅
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;外部进程一次性写完几个内存槽就返回，目标线程在下一次回到 eval loop 时才真正消费这次请求：&lt;/p&gt;
+
+&lt;p&gt;&lt;figure&gt;
+          &lt;picture&gt;
+            
+            
+            &lt;img src=&quot;/images/peeka/pep768-timeline.png&quot; alt=&quot;PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本&quot; width= height= /&gt;
+          &lt;/picture&gt;
+          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本&lt;/figcaption&gt;
+        &lt;/figure&gt;&lt;/p&gt;
 
 &lt;p&gt;这里的关键是第三步：远程执行请求必须落到某个 &lt;span class=&quot;codespan&quot;&gt;PyThreadState&lt;/span&gt; 上。&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec(pid, script)&lt;/span&gt; 这个公共 API 不暴露 thread id，CPython 通常调度到目标进程的 main thread，在它下一次回到 eval loop 安全检查点时执行脚本。底层远程调试协议更通用：外部工具可以先定位解释器，再选择一个具体的 &lt;span class=&quot;codespan&quot;&gt;PyThreadState&lt;/span&gt;，常见做法是使用 &lt;span class=&quot;codespan&quot;&gt;threads_main&lt;/span&gt;，也可以遍历 &lt;span class=&quot;codespan&quot;&gt;threads_head&lt;/span&gt; 并按 &lt;span class=&quot;codespan&quot;&gt;native_thread_id&lt;/span&gt; 找到特定线程。&lt;/p&gt;
 
@@ -1315,10 +1854,10 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;h3 id=&quot;安全保障&quot;&gt;安全保障&lt;/h3&gt;
 
-&lt;p&gt;PEP 768 在安全性上的设计非常审慎：&lt;/p&gt;
+&lt;p&gt;PEP 768 在安全性上做了几层防护：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;仅接受文件路径：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 写入的是一个&lt;strong&gt;文件路径&lt;/strong&gt;，脚本内容来自目标进程可读的文件系统路径。这意味着攻击者除了跨进程写内存权限，还要放置目标进程可读的恶意脚本&lt;/li&gt;
+  &lt;li&gt;仅接受文件路径：&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 写入的是一个&lt;strong&gt;文件路径&lt;/strong&gt;，脚本内容来自目标进程可读的文件系统路径。攻击者除了需要跨进程写内存权限，还要放置目标进程可读的恶意脚本&lt;/li&gt;
   &lt;li&gt;审计钩子：执行前触发 &lt;span class=&quot;codespan&quot;&gt;cpython.remote_debugger_script&lt;/span&gt; 审计事件，安全策略可以拦截&lt;/li&gt;
   &lt;li&gt;可禁用：&lt;span class=&quot;codespan&quot;&gt;PYTHON_DISABLE_REMOTE_DEBUG&lt;/span&gt; 环境变量或 &lt;span class=&quot;codespan&quot;&gt;-X disable-remote-debug&lt;/span&gt; 启动参数&lt;/li&gt;
   &lt;li&gt;编译时可移除：&lt;span class=&quot;codespan&quot;&gt;./configure --without-remote-debug&lt;/span&gt;&lt;/li&gt;
@@ -1506,7 +2045,7 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 
 &lt;p&gt;两个项目虽然共享 dlopen + pthread 的核心方案，但在定位上略有不同：&lt;/p&gt;
 
-&lt;p&gt;memray：一次选择，快速失败。memray 在启动时通过 &lt;span class=&quot;codespan&quot;&gt;resolve_debugger()&lt;/span&gt; 按优先级（&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;gdb&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;lldb&lt;/span&gt;）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。这是刻意的设计选择——memray 作为专业的内存分析器，对运行环境有明确的前置要求。&lt;/p&gt;
+&lt;p&gt;memray：一次选择，快速失败。memray 在启动时通过 &lt;span class=&quot;codespan&quot;&gt;resolve_debugger()&lt;/span&gt; 按优先级（&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;gdb&lt;/span&gt; &amp;gt; &lt;span class=&quot;codespan&quot;&gt;lldb&lt;/span&gt;）选定一种注入方法。GDB 路径硬依赖 C 扩展，dlopen 失败直接报错。memray 作为专业的内存分析器，对运行环境有明确的前置要求。&lt;/p&gt;
 
 &lt;p&gt;peeka：优先使用原生能力，旧版本使用 C 扩展注入。peeka 在 Python 3.14+ 上优先使用 &lt;span class=&quot;codespan&quot;&gt;sys.remote_exec()&lt;/span&gt;；更老的 Python 版本则使用 GDB/LLDB + dlopen + pthread。过去曾有过 PyRun_SimpleString 风格的 legacy 回退，但这条路径有时机安全风险，当前实现已经移除。&lt;/p&gt;
 
@@ -1570,14 +2109,12 @@ p ((int(*)(int))$spawn)($port) ? &quot;FAILURE&quot; : &quot;SUCCESS&quot;
 &lt;p&gt;Python 进程注入经历了三代演进：&lt;/p&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;直接调用 C API（pyrasite）：简单粗暴，但有崩溃和死锁风险&lt;/li&gt;
+  &lt;li&gt;直接调用 C API（pyrasite）：直接但风险大，有崩溃和死锁可能&lt;/li&gt;
   &lt;li&gt;dlopen + pthread（memray/peeka）：通过安全断点和独立线程显著降低风险&lt;/li&gt;
   &lt;li&gt;解释器原生支持（PEP 768）：从根本上解决问题，让解释器自己在安全时机执行代码&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;如果你的目标环境是 Python 3.14+，&lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt; 是毫无争议的最佳选择。如果需要支持更老的版本，dlopen + pthread 方案提供了合理的安全性和兼容性平衡。&lt;/p&gt;
-
-&lt;p&gt;进程注入落在系统编程、编译器原理和 CPython 内部机制的交汇点。理解这些底层原理，能帮助你在遇到&quot;进程卡死&quot;或&quot;注入失败&quot;时，快速定位问题所在。&lt;/p&gt;
+&lt;p&gt;如果你的目标环境是 Python 3.14+，优先选 &lt;span class=&quot;codespan&quot;&gt;sys.remote_exec&lt;/span&gt;。如果需要支持更老的版本，dlopen + pthread 方案提供了合理的安全性和兼容性平衡。&lt;/p&gt;
 
 &lt;hr /&gt;
 
@@ -4443,109 +4980,6 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
         <guid isPermaLink="true">https://wulfric.me/2025/10/tech-weekly-oct/</guid>
         
         <category>weekly</category>
-        
-        
-        <category>技术</category>
-        
-      </item>
-    
-      <item>
-        <title>ReAct 论文翻译：Synergizing Reasoning and Acting in Language Models</title>
-        <description>&lt;p&gt;在语言模型中协同推理和行动的研究。&lt;/p&gt;
-
-&lt;h2 id=&quot;摘要&quot;&gt;摘要&lt;/h2&gt;
-
-&lt;p&gt;虽然大型语言模型（LLM）在语言理解和交互决策任务中展示出了令人印象深刻的性能，但它们在推理（例如思维链提示）和行动（例如行动计划生成）方面的能力主要被作为分离的主题进行研究。在本文中，我们探索了LLM在交替生成推理跟踪和任务特定行动方面的应用，从而允许两者之间更大的协同效应：推理跟踪帮助模型诱导、跟踪和更新行动计划以及处理异常，而行动则允许它与外部源（如知识库或环境）进行交互并收集额外信息。我们将我们的方法命名为ReAct，并将其应用于各种语言和决策任务中，展示了其在超越最先进基线的同时，提高了人类的可解释性和可信度。具体而言，在问题回答（HotpotQA）和事实验证（Fever）方面，ReAct通过与简单的维基百科API交互，克服了思维链推理中的幻觉和错误传播等普遍问题，并生成了更易解释的人类任务解决轨迹，相比没有推理跟踪的基线有了显著提高。此外，在两个交互式决策基准（ALFWorld和WebShop）上，ReAct的绝对成功率分别超过了模仿学习和强化学习方法34%和10%，并且只提示了一个或两个上下文示例。&lt;/p&gt;
-
-&lt;h2 id=&quot;1-intro&quot;&gt;1. intro&lt;/h2&gt;
-
-&lt;p&gt;人类智能的一个独特特征是能够无缝地将以任务为导向的行动与语言推理（或内部语言，Alderson-Day＆Fernyhough，2015）结合起来，这被理论上认为在人类认知中具有重要作用，以启用自我调节或策略化（Vygotsky，1987; Luria，1965; Fernyhough，2010）并维持工作记忆（Baddeley，1992）。考虑在厨房中做一道菜的例子。在任何两个具体的行动之间，我们可能会用语言进行推理以追踪进度（“现在一切都切好了，我应该把锅里的水烧开”），处理异常或根据情况调整计划（“我没有盐，所以我用酱油和胡椒代替”），以及意识到需要外部信息（“如何准备面团？让我在互联网上搜索一下”）。我们还可以行动（打开菜谱阅读食谱，打开冰箱，检查配料）以支持推理并回答问题（“我现在能做什么菜？”）。这种“行动”和“推理”之间的紧密协同使人类能够快速学习新任务，并进行强健的决策或推理，即使在以前未见过的情况下或面临信息不确定性时也能如此。&lt;/p&gt;
-
-&lt;p&gt;最近的研究结果提示了将语言推理与交互决策制定相结合的自主系统的可能性。一方面，经过适当提示的大型语言模型（LLMs）已经展示出具有新兴能力，可以在算术、常识和符号推理任务中执行几个推理步骤，从问题中推导出答案（Wei等，2022）。然而，这种“思维链”推理是一个静态的黑盒子，因为模型使用自己的内部表示来生成思维，而没有与外部世界联系，这限制了其反应性推理或更新知识的能力。这可能会导致像事实幻觉和推理过程中的错误传播等问题（图1（1b））。另一方面，最近的研究探索了预训练语言模型在交互环境中规划和行动的应用（Ahn等，2022; Nakano等，2021; Yao等，2020; Huang等，2022a），重点是通过语言先验来预测行动。这些方法通常将多模态观察转换为文本，使用语言模型生成特定领域的行动或计划，然后使用控制器选择或执行它们。然而，它们没有利用语言模型对高层次目标进行抽象推理或维护工作记忆以支持行动，除了Huang等人（2022b）在当前状态下执行有限形式的语言推理以重申空间事实。除了这种简单的与几个块交互的具体任务外，还没有研究如何以协同的方式将推理和行动结合起来进行一般任务解决，以及这种组合是否与单独推理或行动相比带来系统性的优势。&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;/images/chatgpt/ReAct-figure1.png&quot; alt=&quot;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;在这项工作中，我们提出了ReAct，这是一种将语言模型与推理和行动相结合的通用范例，用于解决各种语言推理和决策任务（图1）。ReAct提示LLMs以交替方式生成与任务相关的语言推理轨迹和行动，这使得模型能够执行动态推理，创建、维护和调整高级计划以进行行动（推理到行动），同时与外部环境（例如维基百科）交互，将额外信息纳入推理（行动到推理）。&lt;/p&gt;
-
-&lt;p&gt;我们对ReAct和现有最先进的基准模型在四个不同的基准测试中进行了实证评估：问答（HotPotQA，Yang等，2018），事实验证（Fever，Thorne等，2018），基于文本的游戏（ALFWorld，Shridhar等，2020b）和网页导航（WebShop，Yao等，2022）。对于HotPotQA和Fever，由于可以访问模型可以与之交互的维基百科API，ReAct在表现上优于纯行动生成模型，同时与思维链（CoT）（Wei等，2022）的表现相当。总体而言，最佳方法是ReAct和CoT的组合，允许在推理过程中同时使用内部知识和外部获取的信息。在ALFWorld和WebShop上，使用两个甚至一个ReAct提示就能够优于使用103~105个任务实例进行训练的模仿或强化学习方法，成功率分别提高了34%和10%。我们还通过与仅有行动的对照基线的比较，展示了在决策制定中稀疏且多功能推理的重要性。除了具有广泛的适用性和性能提升之外，推理和行动的组合还有助于模型的可解释性、可信度和可诊断性，在所有领域中，人类可以轻松区分模型内部知识和外部环境中的信息，并检查推理过程以了解模型行动的决策基础。&lt;/p&gt;
-
-&lt;p&gt;综上所述，我们的主要贡献如下：（1）我们引入了ReAct，一种新颖的基于提示的范例，用于将推理和行动在语言模型中协同解决一般任务；（2）我们在各种基准测试中进行了广泛的实验，展示了ReAct在少样本学习设置下相对于之前单独执行推理或行动生成的方法的优势；（3）我们进行了系统的去除实验和分析，以了解在推理任务中行动的重要性以及在交互任务中推理的重要性；（4）我们分析了ReAct在提示设置下的限制（即对推理和行动行为的有限支持），并进行了初始的微调实验，展示了ReAct利用额外训练数据改善性能的潜力。将ReAct扩展到更多任务的训练和操作，并将其与强化学习等互补的范例相结合，可以进一步释放大型语言模型的潜力。&lt;/p&gt;
-
-&lt;h2 id=&quot;2-协同推理和行动&quot;&gt;2. 协同推理和行动&lt;/h2&gt;
-
-&lt;div class=&quot;table-container&quot;&gt;
-&lt;table&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td&gt;考虑一个代理与环境互动以解决任务的一般设置。在时间步骤t，代理从环境接收观察值ot∈O，并根据某个策略π(at&lt;/td&gt;
-      &lt;td&gt;ct)采取行动at∈A，其中ct=(o1, a1, · · · , ot−1, at−1, ot)是代理的上下文。当映射ct 7→ at非常隐式且需要大量计算时，学习策略面临挑战。例如，图1（1c）中的代理无法生成正确的最终行动（Act 4）以完成问答任务，因为它需要对轨迹上下文（问题、行动1-3、观察1-3）进行复杂的推理。同样，图1（2a）中的代理未能从上下文中理解到水槽1不含有胡椒瓶1，因此不断产生幻觉行动。&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;ReAct的想法很简单：我们将代理的行动空间增加到Aˆ = A ∪ L，其中L是语言空间。语言空间中的行动aˆt∈L，我们将其称为思考或推理轨迹，不会影响外部环境，因此不会产生观察反馈。相反，思考aˆt旨在通过对当前上下文ct进行推理来组合有用的信息，并更新上下文ct+1 = (ct, aˆt)以支持未来的推理或行动。如图1所示，可以有各种类型的有用的思考，例如分解任务目标并创建行动计划（2b，Act 1；1d，Thought 1），注入与任务解决相关的常识知识（2b，Act 1），从观察中提取重要部分（1d，Thought2，4），跟踪进度并转移行动计划（2b，Act 8），处理异常情况并调整行动计划（1d，Thought 3），等等。&lt;/p&gt;
-
-&lt;p&gt;然而，由于语言空间L是无限的，学习这个增强的行动空间是困难的，需要强大的语言先验知识。在本文中，我们主要关注的是这样的设置：使用冻结的大型语言模型PaLM-540B（Chowdhery等，2022）1，通过少量的上下文示例来提示生成特定领域的行动和自由形式的语言思考以解决任务（图1（1d），（2b））。每个上下文示例都是一种人类轨迹，包含了一系列行动、思考和环境观察，用于解决一个任务实例（详见附录C）。对于需要推理的主要任务（图1（1）），我们交替生成思考和行动，使任务解决轨迹由多个思考-行动-观察步骤组成。相反，对于可能涉及大量行动的决策制定任务（图1（2）），思考只需要在轨迹的最相关位置稀疏出现，因此我们让语言模型自行决定思考和行动的异步发生。&lt;/p&gt;
-
-&lt;p&gt;由于决策制定和推理能力整合到了大型语言模型中，ReAct具有几个独特的特点：A）直观易用的设计：设计ReAct提示很简单，因为人类注释者只需在其采取的行动之上用语言记录下他们的思考过程。本文中没有使用特定的格式选择、思考设计或示例选择。我们在第3和第4节详细介绍了每个任务的提示设计。B）通用灵活的：由于思考空间和思考-行动发生的灵活性，ReAct适用于具有不同行动空间和推理需求的各种任务，包括但不限于问答、事实验证、文本游戏和Web导航。C）性能优越且健壮：ReAct在仅使用一个到六个上下文示例进行学习的情况下，对新任务实例具有很强的泛化性能，始终优于仅在不同领域进行推理或行动的基线。我们还在第3节展示了启用微调时的额外好处，以及在第4节中展示了ReAct在提示选择方面的健壮性。D）与人类对齐且可控：ReAct承诺提供一个可解释的顺序决策制定和推理过程，人类可以轻松检查推理和事实正确性。此外，如第4节中的图5所示，人类还可以通过思考编辑来控制或更正代理行为。&lt;/p&gt;
-
-&lt;h2 id=&quot;3-基于知识的推理任务&quot;&gt;3. 基于知识的推理任务&lt;/h2&gt;
-
-&lt;p&gt;我们从基于知识的推理任务开始，例如多跳问答和事实验证。如图1（1d）所示，通过与维基百科API交互，ReAct能够检索支持推理的信息，同时利用推理来确定下一步要检索什么，展示了推理和行动的协同作用。&lt;/p&gt;
-
-&lt;h3 id=&quot;31-设置&quot;&gt;3.1 设置&lt;/h3&gt;
-
-&lt;p&gt;域：我们考虑两个具有挑战性的知识检索和推理数据集：（1）Hot-PotQA（Yang等，2018），一个需要在两个或多个维基百科段落上进行推理的多跳问答基准测试，和（2）FEVER（Thorne等，2018），一个事实验证基准测试，其中每个声明基于是否存在维基百科段落来进行支持、反驳或不足够信息的注释。在本文中，我们对这两个任务都采用仅有问题的设置，模型仅接收问题/声明作为输入，没有访问支持段落的权限，并且必须依靠其内部知识或通过与外部环境交互来检索知识以支持推理。&lt;/p&gt;
-
-&lt;p&gt;行动空间：我们设计了一个简单的维基百科Web API，支持交互式信息检索，包括三种类型的行动：（1）搜索[实体]，如果存在，则返回相应实体维基页面的前5句话，否则建议维基百科搜索引擎的前5个相似实体；（2）查找[字符串]，它会返回包含字符串的页面中的下一句话，模拟浏览器上Ctrl+F的功能；（3）完成[答案]，它会使用答案结束当前任务。我们注意到，这个行动空间主要只能基于精确段落名称检索到段落的一小部分，远远不如最先进的词汇或神经检索器。目的是模拟人类如何与维基百科交互，并通过明确的语言推理强制模型检索信息。&lt;/p&gt;
-
-&lt;h3 id=&quot;32-方法&quot;&gt;3.2 方法&lt;/h3&gt;
-
-&lt;p&gt;ReAct Prompting: 对于HotpotQA和FEVER，我们从训练集中随机选择了6个和3个案例，并手动编写了ReAct格式的轨迹，用作提示中的少量样本。与图1（d）类似，每个轨迹由多个思考-行动-观察步骤（即密集思考）组成，其中自由形式的思考用于各种目的。具体而言，我们使用一些思考来分解问题（“我需要搜索x，找到y，然后找到z”），从维基百科观察中提取信息（“x始于1844年”，“该段落没有提到x”），进行常识（“x不是y，所以z必须是…”）或算术推理（“1844 &amp;lt; 1989”），指导搜索重构（“也许我可以搜索/查找x”），并综合最终答案（“…所以答案是x”）。更多详细信息请参见附录C。&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;/images/chatgpt/ReAct-table1.png&quot; alt=&quot;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;表1：PaLM-540B在HotpotQA和FEVER上的提示结果&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;figure&gt;
-          &lt;picture&gt;
-            
-            
-            &lt;img src=&quot;/images/chatgpt/ReAct-figure2.png&quot; alt=&quot;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&quot; width= height= /&gt;
-          &lt;/picture&gt;
-          &lt;figcaption&gt;&lt;i class=&apos;icon-pencil&apos;&gt;&lt;/i&gt;图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果&lt;/figcaption&gt;
-        &lt;/figure&gt;&lt;/p&gt;
-
-&lt;p&gt;基线: 我们系统地删除ReAct轨迹以构建用于多个基线的提示（格式如图1（1a-1c））：（a）标准提示（Standard），它删除了ReAct轨迹中的所有思考、行动和观察。 （b）思考链提示（CoT）（Wei等，2022），它删除了行动和观察，并作为仅基于推理的基线。我们还通过在推理过程中使用解码温度0.7对21个CoT轨迹进行采样并采用多数答案来构建自一致性基线（CoT-SC）（Wang等，2022a;b），发现它始终提高了CoT的性能。 （c）仅执行提示（Act），它删除了ReAct轨迹中的思考，略微类似于WebGPT（Nakano等，2021）如何与互联网交互以回答问题，尽管它针对不同的任务和行动空间，并使用模仿和强化学习而不是提示。&lt;/p&gt;
-
-&lt;p&gt;连接内部的和外部的知识：正如将在第3.3节中详细介绍的那样，我们观察到ReAct展示的问题解决过程更加事实和基础，而CoT在制定推理结构方面更加准确，但很容易受到虚构的事实或思考的影响。因此，我们建议将ReAct和CoT-SC结合起来，并让模型根据以下启发式决定何时切换到另一种方法：A）ReAct→CoT-SC：当ReAct在给定的步骤内未能返回答案时，回退到CoT-SC。我们为HotpotQA和FEVER设置了7和5个步骤，因为我们发现更多的步骤不会改善ReAct的性能3。B）CoT-SC→ReAct：当n个CoT-SC样本中的多数答案出现不到n/2次时（即内部知识可能不够自信地支持任务），回退到ReAct。&lt;/p&gt;
-
-&lt;p&gt;微调：由于在大规模手动注释推理轨迹和行动方面存在挑战，我们考虑采用类似于Zelikman等人（2022）的引导方法，使用由ReAct（以及其他基线）生成的带有正确答案的3,000个轨迹来微调较小的语言模型（PaLM-8/62B）以解码轨迹（所有思考、行动、观察），并以输入问题/声明为条件。更多细节请参见附录B.1。&lt;/p&gt;
-
-&lt;h2 id=&quot;6-结论&quot;&gt;6 结论&lt;/h2&gt;
-
-&lt;p&gt;我们提出了ReAct—一种简单而有效的方法，用于在大型语言模型中协同推理和行动。通过多种多跳问答、事实检查和交互决策任务的实验，我们展示了ReAct可以实现卓越性能和可解释的决策追踪。尽管我们的方法简单，但大型行动空间的复杂任务需要更多的演示来学习，这很不幸可能会超出上下文学习的输入长度限制。我们探索了在HotpotQA上的微调方法，并取得了初步的有希望的结果，但是从更多高质量的人类注释中学习将是进一步提高性能的必要条件。通过多任务训练扩展ReAct并将其与强化学习等补充范例相结合，可能会产生更强大的代理程序，进一步释放LLM在更多应用中的潜力。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 04 May 2023 22:48:00 +0000</pubDate>
-        <link>https://wulfric.me/2023/05/ReAct-ch/</link>
-        <guid isPermaLink="true">https://wulfric.me/2023/05/ReAct-ch/</guid>
-        
-        <category>ai</category>
-        
-        <category>chatgpt</category>
         
         
         <category>技术</category>

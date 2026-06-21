@@ -1,0 +1,80 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="frame-stack" name="frame-stack">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Python frame 栈：调用链就是 f_back 指针组成的链表" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1020" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-call" value="代码调用链" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="280" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-frame" value="运行时 frame 对象" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="380" y="70" width="380" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-tb" value="异常传播 (traceback)" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="820" y="70" width="240" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="code-main" value="def main():&#10;    handle()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="code-handle" value="def handle():&#10;    query()" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="code-query" value="def query():&#10;    raise ValueError(...)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Courier New;fontSize=11;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="370" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="frame-main" value="frame: main&#10;f_code.co_name = 'main'&#10;f_lineno = 15&#10;f_locals = {}&#10;f_back -> None" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="110" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="frame-handle" value="frame: handle&#10;f_code.co_name = 'handle'&#10;f_lineno = 12&#10;f_locals = {}&#10;f_back -> frame: main" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="240" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="frame-query" value="frame: query   &#10;f_code.co_name = 'query'&#10;f_lineno = 7&#10;f_locals = {'sql': 'SELECT ...'}&#10;f_back -> frame: handle" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;fontFamily=Courier New;fontSize=10;strokeWidth=1.5;align=left;spacing=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="370" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="call-edge-1" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F2937;strokeWidth=1.5;" edge="1" parent="1" source="code-main" target="code-handle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="call-edge-2" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F2937;strokeWidth=1.5;" edge="1" parent="1" source="code-handle" target="code-query">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fback-1" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="frame-handle" target="frame-main">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fback-1-lbl" value="f_back" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Courier New;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="745" y="210" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="fback-2" style="endArrow=classic;html=1;rounded=0;strokeColor=#1F6FEB;strokeWidth=1.5;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="frame-query" target="frame-handle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fback-2-lbl" value="f_back" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Courier New;fontColor=#1F6FEB;" vertex="1" parent="1">
+          <mxGeometry x="745" y="340" width="60" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tb-3" value="3. query 抛出&#10;ValueError" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="380" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tb-2" value="2. 沿 f_back 上溯&#10;到 handle" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="250" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tb-1" value="1. 继续 f_back&#10;最终到 main" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=10;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="120" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tb-edge-1" style="endArrow=classic;html=1;rounded=0;strokeColor=#B91C1C;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="tb-3" target="tb-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tb-edge-2" style="endArrow=classic;html=1;rounded=0;strokeColor=#B91C1C;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="tb-2" target="tb-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="frame 是 Python 的 first-class 对象：可用 sys._getframe() 取出当前 frame，沿 f_back 一直追溯到顶层。traceback、调试器、profiler 都建立在这条链上。" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=2;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="1020" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

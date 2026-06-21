@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="theme-color" content="#9C0">
+
+  <!-- Resource hints for performance -->
+  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
+
+  <link rel="alternate" hreflang="x-default" href="" />
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  <title>gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</title>
+  <meta name="description" content="协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。
+">
+  <meta name="keywords" content="python,gevent,greenlet,coroutine">
+  <link rel="canonical" href="https://wulfric.me/2026/06/gevent-technical-route/">
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      <h1 class='header-header'>
+  
+  <a class="site-title" href="/">
+    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+  </a>
+</h1>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="post typo">
+
+  <header class="post-header clearfix">
+    <div class='date pull-left clearfix'>
+      <div class='day-month pull-left'>
+        <div class='day'>07</div>
+        <div class='month'>JUN</div>
+      </div>
+      <div class='year pull-left'>2026</div>
+    </div>
+    <h1 class="post-title">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</h1>
+  </header>
+
+  
+<blockquote id='by-nc-nd'>
+  声明: 本文采用
+  <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a>
+  授权。
+</blockquote>
+
+
+
+
+  <article class="post-content">
+    <p>协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。</p>
+
+<p>Python 里最常见的两个协程库是 asyncio 和 gevent。asyncio 用 <span class="codespan">async</span>/<span class="codespan">await</span> 语法把暂停点写进代码，协程由事件循环调度，暂停和恢复发生在 Python 字节码层。gevent 走的是另一条路：它对外保留同步 API 的外观，底层用 greenlet 保存一整段调用栈，再用一个特殊的 Hub greenlet 跑 event loop 做调度。这条技术路线可以画成这样：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Python yield / generator
+  → 函数可以在 yield 处暂停
+greenlet
+  → 暂停的不是一个函数，而是一整段调用栈
+gevent Hub
+  → 用一个特殊 greenlet 跑 event loop，统一调度
+cooperative I/O
+  → 等 socket / sleep / Event 时切回 Hub
+monkey patch
+  → 让标准库的同步 API 变成上面这套协作式 API
+</code></pre></div></div>
+
+<p>每一步都是上一步不够用之后才走出来的。下面顺着这条路走一遍。</p>
+
+<h2 id="1-同步外观协作内核">1. 同步外观，协作内核</h2>
+
+<p>gevent 没有引入新写法。它不要求你写 <span class="codespan">async def</span>，也不要求在等待点写 <span class="codespan">await</span>。业务代码看起来还是普通同步代码：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">conn</span><span class="p">.</span><span class="nf">recv</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nf">process</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>conn 是普通 socket 时，<span class="codespan">recv()</span> 没数据会让当前 OS 线程睡过去，整个线程要等内核唤醒。conn 是 gevent socket 时，写法不变，但语义换了：没数据时阻塞的是当前 greenlet，不是整个 OS 线程。greenlet 挂起以后，执行权交给 gevent 的 Hub，Hub 在同一个 OS 线程里调度别的 greenlet，等内核事件回来再切回原 greenlet。</p>
+
+<p>这样大量同步写法的代码不用改就能拿到高并发 I/O。但源码表面长得一样、运行时语义完全不同，读 gevent 程序时得经常多想一想：当前这个对象是不是已经被 gevent 接管了。</p>
+
+<p>asyncio 走的是另一条路。它把暂停点写进语法：<span class="codespan">data = await reader.read(4096)</span>，读到 <span class="codespan">await</span> 就知道这里会让出。gevent 把暂停点藏在被替换后的同步 API 里——<span class="codespan">data = sock.recv(4096)</span> 是 OS 线程阻塞还是 greenlet 协作式等待，要看 sock 是什么、socket 模块有没有被 monkey patch。</p>
+
+<h2 id="2-yield让一个函数能暂停">2. yield：让一个函数能暂停</h2>
+
+<p>普通函数调用很直接：进入函数体，遇到 <span class="codespan">return</span> 就把局部状态扔掉、把结果交给调用者。下次再调是另起一个调用，局部变量全部重新创建。</p>
+
+<p>函数体里只要出现 <span class="codespan">yield</span>，Python 就会把它编译成 generator function。调用这种函数不会立刻执行函数体，而是返回一个 generator object；每次 <span class="codespan">next()</span> 才向前推一段，直到撞到下一个 <span class="codespan">yield</span> 停下。官方文档把 generator 描述成 resumable function：函数在 <span class="codespan">yield</span> 处暂停，保留执行现场，下次从原位置继续。<sup id="fnref:python-generators"><a href="#fn:python-generators" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">numbers</span><span class="p">():</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">start</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="mi">1</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">middle</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="mi">2</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">end</span><span class="sh">"</span><span class="p">)</span>
+
+
+<span class="n">gen</span> <span class="o">=</span> <span class="nf">numbers</span><span class="p">()</span>
+<span class="nf">next</span><span class="p">(</span><span class="n">gen</span><span class="p">)</span>   <span class="c1"># 打印 start，停在第一个 yield
+</span><span class="nf">next</span><span class="p">(</span><span class="n">gen</span><span class="p">)</span>   <span class="c1"># 从第一个 yield 后面继续，打印 middle，停在第二个 yield
+</span></code></pre></div></div>
+
+<p>yield 保留下来的东西不止这些：不只是「下一条要执行哪条字节码」，还有当时的局部变量、异常处理状态、对外层 frame 的引用——整次函数调用的现场都还在。generator 不是「记住一个返回值」，是「把整个函数冻起来放一边」，调用者用 <span class="codespan">next()</span> 把它唤醒一段，它再冻起来。</p>
+
+<p>yield 有两个绕不开的边界。一是暂停点必须显式写在函数里，外面没法强行打断它。二是 yield 只暂停 generator 自己那一层 frame，对调用它的函数没有效果——yield 把控制权交给的是直接调用者，不是更上层的人。</p>
+
+<p>最底下的 <span class="codespan">db_query</span> 想在等待 I/O 时让出，假如直接这么写：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">db_query</span><span class="p">(</span><span class="n">sql</span><span class="p">):</span>
+    <span class="k">yield</span> <span class="sh">"</span><span class="s">wait_io</span><span class="sh">"</span>
+    <span class="k">return</span> <span class="nf">fetch_result</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">load_user</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nf">db_query</span><span class="p">(</span><span class="sh">"</span><span class="s">...</span><span class="sh">"</span><span class="p">)</span>   <span class="c1"># 普通调用，没法把下层的 yield 传出来
+</span></code></pre></div></div>
+
+<p><span class="codespan">load_user</span> 调 <span class="codespan">db_query</span> 看上去是普通函数调用，实际上拿到的是一个 generator object，根本没执行。要让暂停从底下传到顶上，<span class="codespan">load_user</span> 也得改：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">load_user</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">yield</span> <span class="k">from</span> <span class="nf">db_query</span><span class="p">(</span><span class="sh">"</span><span class="s">...</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+</code></pre></div></div>
+
+<p>外层 <span class="codespan">handle_request</span> 同理，再外层 web 框架的入口同理。最底下一个 <span class="codespan">db_query</span> 想 yield，整条调用链上的函数都得跟着改写成 generator——要么用 <span class="codespan">yield from</span>，要么用 asyncio 后来做出来的 <span class="codespan">await</span> 语法。</p>
+
+<p>asyncio 走的就是这条路：把 yield 做成语言原语。gevent 要的是另一个效果：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">handle_request</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="nf">load_user</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">user_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nf">render_profile</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>最底下的阻塞点即使藏在很深的调用里，也能直接让出；恢复以后回到原调用点接着跑、一路返回；调用链中间的函数完全不知道下面发生过让出。这要求暂停的不是一个 frame 而是一整段调用栈，generator 给不了。</p>
+
+<h2 id="3-greenlet把整段调用栈搬走">3. greenlet：把整段调用栈搬走</h2>
+
+<p>greenlet 的官方文档把它称作 small, independent pseudo-thread，也可以理解成一段能搬来搬去的 frame 栈。greenlet 创建时分配自己的栈空间，第一次 <span class="codespan">switch()</span> 到它就开始跑入口函数；中间可以再 <span class="codespan">switch()</span> 出去；下次切回来时，从上次暂停的位置继续。<sup id="fnref:greenlet-concepts"><a href="#fn:greenlet-concepts" class="footnote" rel="footnote" role="doc-noteref">2</a></sup></p>
+
+<p>最小的两段栈互切：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">greenlet</span> <span class="kn">import</span> <span class="n">greenlet</span>
+
+
+<span class="k">def</span> <span class="nf">task_a</span><span class="p">():</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">A: before</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">gr_b</span><span class="p">.</span><span class="nf">switch</span><span class="p">()</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">A: after</span><span class="sh">"</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">task_b</span><span class="p">():</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">B: running</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">gr_a</span><span class="p">.</span><span class="nf">switch</span><span class="p">()</span>
+
+
+<span class="n">gr_a</span> <span class="o">=</span> <span class="nf">greenlet</span><span class="p">(</span><span class="n">task_a</span><span class="p">)</span>
+<span class="n">gr_b</span> <span class="o">=</span> <span class="nf">greenlet</span><span class="p">(</span><span class="n">task_b</span><span class="p">)</span>
+<span class="n">gr_a</span><span class="p">.</span><span class="nf">switch</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>输出是 <span class="codespan">A: before</span> → <span class="codespan">B: running</span> → <span class="codespan">A: after</span>。<span class="codespan">task_a</span> 里的 <span class="codespan">switch()</span> 不像 <span class="codespan">return</span>，它没让函数结束，只是把当前栈整体冻起来放一边，下次切回来再接着走。</p>
+
+<p>generator 和 greenlet 的区别如图：</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/gevent/yield-vs-greenlet.png" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去</figcaption>
+        </figure></p>
+
+<p>放到真实场景里。一个 greenlet 里跑业务代码，调用链一路下去：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>handle_request()
+  load_user()
+    db.query()
+      socket.recv()      ← 这里 switch 出去
+</code></pre></div></div>
+
+<p><span class="codespan">socket.recv()</span> 内部 switch 到 Hub 时，从 <span class="codespan">socket.recv()</span> 一直到 <span class="codespan">handle_request()</span> 这一整段 frame 没有被销毁，只是被冻住。Hub 跑别的事，事件就绪后再切回来，<span class="codespan">socket.recv()</span> 接着返回，沿着 db.query → load_user → handle_request 一路正常返回。调用链中间对深层的 switch 是无感知的，外面看起来就是普通同步函数，没有 yield from 或 async/await 的污染。</p>
+
+<p>greenlet 不是 OS 线程。一个 OS 线程同一时刻只有一个 greenlet 在跑，greenlet 文档把它叫 current greenlet，用 <span class="codespan">greenlet.getcurrent()</span> 拿到；要别的 greenlet 跑必须显式 <span class="codespan">switch()</span> 过去。<sup id="fnref:greenlet-current"><a href="#fn:greenlet-current" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>切换是手动的，没人替你抢占。</p>
+
+<p>greenlet 只解决「一个线程里保存多组调用栈、手动在它们之间切」这一件事。什么时候切、谁去等 socket 可读、谁负责把对应的 greenlet 恢复，都不是 greenlet 自己回答的——这是 gevent Hub 干的事。</p>
+
+<h2 id="4-hub-和-event-loop">4. Hub 和 event loop</h2>
+
+<p>gevent 文档对自己的定义一句话：基于 coroutine 的 Python 网络库，使用 greenlet，在 libev 或 libuv event loop 之上提供高层同步 API。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>分开看是三层：</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/gevent/gevent-three-layers.png" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal</figcaption>
+        </figure></p>
+
+<p>一个 OS 线程里同时存在很多业务 greenlet 和一个 Hub greenlet。<span class="codespan">gevent.spawn(handle_request, req)</span> 创建一个新的业务 greenlet 登记到调度系统里，但不会立刻跑——要等当前 greenlet 让出，Hub 才有机会切到它。</p>
+
+<p>业务 greenlet 撞到需要等待的事——等 socket 可读、等 timer 到期、等别的 greenlet 释放锁——就切回 Hub。Hub 跑 event loop，在底层 libev/libuv 上注册 watcher，等 epoll 之类的内核事件。事件就绪后 Hub 再把控制权切给对应的业务 greenlet。</p>
+
+<p>这不是抢占式调度。一个 greenlet 一直跑 CPU 密集的 Python 代码，不调任何 gevent 协作 API、也不主动 <span class="codespan">gevent.sleep(0)</span>，同线程里其它 greenlet 永远轮不到。gevent 适合 I/O 并发，不适合让 CPU 密集的 Python 代码并行——并发优势完全建立在「大家都在等」上。</p>
+
+<h2 id="5-一次-socketrecv-的路径">5. 一次 socket.recv() 的路径</h2>
+
+<p>把上面的模型放进一个具体调用。业务代码是开头那段，conn 是 gevent socket，fd 上当前没有数据：</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/gevent/recv-path.png" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据</figcaption>
+        </figure></p>
+
+<p><span class="codespan">conn.recv()</span> 内部发现读不到数据，在 event loop 上注册一个 fd 可读 watcher，挂起当前 greenlet，<span class="codespan">switch()</span> 到 Hub。Hub 这边继续跑 event loop——可能在等其它 fd，也可能正好有别的就绪的业务 greenlet 可以调度。某一时刻 epoll 报告 fd 可读，Hub 在 watcher 回调里把对应的 greenlet 重新调度起来，原来的 <span class="codespan">conn.recv()</span> 接着返回数据。</p>
+
+<p>业务代码这边看到的只是 <span class="codespan">data = conn.recv(4096)</span> 跑了一段时间，然后返回 bytes。注册 watcher、挂起 greenlet、跑 event loop、Hub 切回来，全在 gevent 内部消化掉。</p>
+
+<p>「阻塞」这个词在 gevent 里要分清。普通 socket 的阻塞是 OS 线程阻塞，整个线程在内核态睡过去；gevent socket 的阻塞只是当前 greenlet 阻塞，OS 线程并没有睡——它切到了 Hub，Hub 接着等其它 fd 或跑别的就绪 greenlet。一个 gevent 进程能用同步写法撑大量并发连接也是因为这个：每个连接一个 greenlet，业务代码看起来像一条直线；等 I/O 时 greenlet 把执行权交回 Hub。</p>
+
+<h2 id="6-monkey-patch把标准库接进协作式调度">6. monkey patch：把标准库接进协作式调度</h2>
+
+<p>greenlet 提供调用栈级别的暂停，Hub 拿 event loop 调度它们，gevent 的内核就齐了。剩下一个工程问题——业务代码里用的是 <span class="codespan">socket.socket</span>、<span class="codespan">time.sleep</span>、<span class="codespan">threading.Event</span> 这些标准库 API，它们不会自己变成协作式。每个 gevent 程序都把 <span class="codespan">import socket</span> 改成 <span class="codespan">from gevent import socket</span>、<span class="codespan">time.sleep</span> 改成 <span class="codespan">gevent.sleep</span>，gevent 的适用范围其实很窄：依赖标准库的第三方代码全都用不上。</p>
+
+<p>monkey patch 就是为这一步存在的。入口很短：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
+<span class="n">monkey</span><span class="p">.</span><span class="nf">patch_all</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>gevent 文档建议把这两行放在程序生命周期最早的位置，最好在主模块开头比所有其它 import 都早，并且要在程序还是单线程时完成。<sup id="fnref:gevent-monkey"><a href="#fn:gevent-monkey" class="footnote" rel="footnote" role="doc-noteref">5</a></sup>它替换的是模块属性——<span class="codespan">socket.socket</span>、<span class="codespan">time.sleep</span>、<span class="codespan">threading.Event</span> 这些名字背后的对象会被换成 gevent 的 cooperative 版本；已经从模块 import 出来留在局部的引用，patch 不到。</p>
+
+<p>patch 之后，下面这段平凡的代码：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">socket</span>
+
+<span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="p">.</span><span class="nf">socket</span><span class="p">()</span>
+<span class="n">sock</span><span class="p">.</span><span class="nf">connect</span><span class="p">((</span><span class="sh">"</span><span class="s">example.com</span><span class="sh">"</span><span class="p">,</span> <span class="mi">80</span><span class="p">))</span>
+<span class="n">sock</span><span class="p">.</span><span class="nf">sendall</span><span class="p">(</span><span class="sa">b</span><span class="sh">"</span><span class="s">GET / HTTP/1.0</span><span class="se">\r\n\r\n</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">sock</span><span class="p">.</span><span class="nf">recv</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>每一个会阻塞的调用都走到第 5 节那条路径：注册 watcher、挂起 greenlet、切到 Hub。<span class="codespan">socket.socket</span> 不是原来的标准库 socket，<span class="codespan">recv</span> 不再是 OS 线程阻塞，源码里看不出任何区别。</p>
+
+<p><span class="codespan">patch_all()</span> 替换的范围比直觉上大。除了 socket、time、select、ssl 这些直接和 I/O 相关的，<span class="codespan">threading</span> 也会被替换——<span class="codespan">Thread</span>、<span class="codespan">Lock</span>、<span class="codespan">Event</span>、<span class="codespan">Semaphore</span> 这些基于 OS 线程语义的对象都被换成基于 greenlet 的版本。<span class="codespan">threading.Event().wait()</span> 在 patch 之后等的不是别的 OS 线程来 <span class="codespan">set()</span>，而是同 OS 线程里另一个 greenlet 来 <span class="codespan">set()</span>；<span class="codespan">wait()</span> 内部会通过 switch 把控制权交回 Hub。</p>
+
+<p>兼容旧代码是 monkey patch 最直接的收益，很多同步网络库不用大改就能在 gevent 下协作运行。代价就是源码外观和运行时语义脱钩。在 patch 之后的进程里，看到</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">threading</span>
+<span class="n">threading</span><span class="p">.</span><span class="nc">Event</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>并不能立刻断定这就是标准库原始 <span class="codespan">threading.Event</span>——它很可能已经是 gevent 接管过的版本。</p>
+
+<h2 id="7-线程世界和-greenlet-世界">7. 线程世界和 greenlet 世界</h2>
+
+<p>gevent 程序里到底有几种执行单位，是读这种代码时最容易混的事。</p>
+
+<p>传统多线程程序里，并发单位就是 OS 线程，每个线程有自己的 C 栈和 Python frame 栈，由内核调度。CPython 受 GIL 限制，同一时刻通常只有一个线程在跑 Python 字节码，但线程仍是操作系统层面的调度对象。</p>
+
+<p>gevent 在这套模型外又叠了一层：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>OS thread 1
+  main greenlet
+  Hub greenlet
+  business greenlet A、B、C……
+
+OS thread 2
+  main greenlet
+  Hub greenlet
+  business greenlet D、E……
+</code></pre></div></div>
+
+<p>每个 OS 线程内部都有自己的一组 greenlet 世界——一个 main greenlet（线程入口）、一个 Hub greenlet、若干业务 greenlet。greenlet 之间不被操作系统抢占，只在 gevent 的协作点切换；OS 线程之间还是内核调度。</p>
+
+<p>greenlet 不是 OS 线程，spawn 一万个 greenlet 不等于开一万个内核线程。一个 greenlet 长时间不让出，同线程内别的 greenlet 就饿死——CPU 密集的 Python 代码不会因为 gevent 而并行起来。gevent 擅长的是 I/O 密集型并发：执行流大多在等 fd、timer、锁、队列时，Hub 才有调度它们的余地。</p>
+
+<p>观测工具在 gevent 进程上也容易踩坑。<span class="codespan">sys._current_frames()</span> 返回的是每个 OS 线程当前正在执行的那一个 frame，一个 gevent 线程里挂起了几百个 greenlet 时，它只能看到此刻活跃的那一个，挂起的栈一概看不到。读 gevent 进程的栈快照时，「线程数」和「执行流数」是两件需要分开看的事。</p>
+
+<p>回头再看 gevent 的这条技术路线，每一步都在解决上一步的尾巴。Python 的 <span class="codespan">yield</span> 让函数能在某一点暂停、恢复，但暂停点必须显式写在函数里，而且只暂停 generator frame 自己那一层，向上传播得靠 <span class="codespan">yield from</span> 一层一层改写整条调用链。greenlet 把暂停的粒度从 frame 升级到调用栈：深层的某次 <span class="codespan">switch</span> 不需要中间函数知情。gevent 在 greenlet 之上跑一个特殊的 Hub greenlet 拿着 libev/libuv 的 event loop 做调度，再用 monkey patch 把 socket、time、select、threading 等标准库 API 替换成会主动切回 Hub 的版本。结果是业务代码看上去还是同步代码，底下已经是另一套执行模型。</p>
+
+<p>所以读 gevent 程序的时候，源码表面通常不够用。「这里阻塞的是 OS 线程还是 greenlet」「这是原始标准库还是 patch 后的版本」「当前正在跑的是业务 greenlet 还是 Hub」——这三个问题，进入 gevent 进程以后就一直在底下。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:python-generators">
+      <p>Python 文档：Functional Programming HOWTO - Generators，<a href="https://docs.python.org/3/howto/functional.html#generators">https://docs.python.org/3/howto/functional.html#generators</a>。 <a href="#fnref:python-generators" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:greenlet-concepts">
+      <p>greenlet 文档：greenlet Concepts，<a href="https://greenlet.readthedocs.io/en/latest/greenlet.html">https://greenlet.readthedocs.io/en/latest/greenlet.html</a>。 <a href="#fnref:greenlet-concepts" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:greenlet-current">
+      <p>greenlet 文档：The Current greenlet，<a href="https://greenlet.readthedocs.io/en/latest/greenlet.html#the-current-greenlet">https://greenlet.readthedocs.io/en/latest/greenlet.html#the-current-greenlet</a>。 <a href="#fnref:greenlet-current" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:gevent-intro">
+      <p>gevent 文档：Introduction，<a href="https://docs.gevent.org/intro.html">https://docs.gevent.org/intro.html</a>。 <a href="#fnref:gevent-intro" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:gevent-monkey">
+      <p>gevent 文档：<span class="codespan">gevent.monkey</span>，<a href="https://docs.gevent.org/api/gevent.monkey.html">https://docs.gevent.org/api/gevent.monkey.html</a>。 <a href="#fnref:gevent-monkey" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </article>
+
+  <!-- Table of Contents -->
+  <aside id="toc-sidebar" class="toc-sidebar">
+    <div class="toc-header">
+      <span>目录</span>
+      <button id="toc-close" class="toc-close" aria-label="关闭目录">&times;</button>
+    </div>
+    <nav id="toc-nav" class="toc-nav"></nav>
+  </aside>
+  <button id="toc-toggle" class="toc-toggle" aria-label="打开目录">
+    <span class="toc-icon">&#9776;</span>
+  </button>
+
+  <div id='additional' class='clearfix'>
+    <div id="tags" class='pull-left'>
+      <i class='icon-tags'></i>
+<!-- python, gevent, greenlet, coroutine -->
+
+    <a class='tag' href="/tags/python">
+      python
+    </a>
+
+    <a class='tag' href="/tags/gevent">
+      gevent
+    </a>
+
+    <a class='tag' href="/tags/greenlet">
+      greenlet
+    </a>
+
+    <a class='tag' href="/tags/coroutine">
+      coroutine
+    </a>
+
+
+    </div>
+    
+      <a class='pull-right' href="#comments" id="get-comment">
+        <i class='icon-chat'></i>
+        评论
+      </a>
+    
+  </div>
+
+  
+    <div id="comments" class="comments-hide">
+      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
+	<script type="text/javascript">
+   (function(d, s) {
+       var j, e = d.getElementsByTagName(s)[0];
+
+       if (typeof LivereTower === 'function') { return; }
+
+       j = d.createElement(s);
+       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+       j.async = true;
+       j.defer = true;
+
+       e.parentNode.insertBefore(j, e);
+   })(document, 'script');
+	</script>
+<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
+</div>
+
+    </div>
+  
+
+</div>
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2026. All rights reserved.
+</footer>
+
+
+    </div>
+    <script defer src="/assets/javascripts/app.js"></script>
+    <!-- <script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script>
+(function(){
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+  }
+  else {
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})();
+</script>
+ -->
+    <!-- <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-54608037-1', 'auto');
+  ga('require', 'displayfeatures');
+  ga('send', 'pageview');
+</script>
+ -->
+  </body>
+
+</html>

@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="matrix" name="three-generations-matrix">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="h-empty" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h-q1" value="① 进入目标地址空间" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontStyle=1;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="240" y="40" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h-q2" value="② 在目标解释器安全执行 (GIL)" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontStyle=1;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="540" y="40" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h-q3" value="③ 选择安全的执行时机" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontStyle=1;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="840" y="40" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r1-label" value="第一代&#10;pyrasite" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#E5E7EB;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=13;fontStyle=1;fontColor=#374151;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r1-q1" value="ptrace 暂停目标&#10;GDB 控制执行流" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E5E7EB;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="240" y="120" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r1-q2" value="GDB call PyGILState_Ensure&#10;在暂停点强行获取 GIL&#10;持有者刚好被暂停 → 死锁" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E5E7EB;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="540" y="120" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r1-q3" value="任意机器指令位置&#10;可能在 malloc / GC / import 中途&#10;碰运气" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E5E7EB;strokeColor=#6B7280;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="840" y="120" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r2-label" value="第二代&#10;memray / peeka&#10;(dlopen + pthread)" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#60A5FA;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=13;fontStyle=1;fontColor=#1E40AF;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="r2-q1" value="GDB/LLDB 暂停目标&#10;dlopen 加载 _inject.so" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#60A5FA;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="240" y="250" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="r2-q2" value="独立 pthread 在目标进程&#10;正常运行后再 PyGILState_Ensure&#10;避开暂停点强行获取" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#60A5FA;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="540" y="250" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="r2-q3" value="安全断点收敛到&#10;malloc / PyMem_* 等 C 函数边界&#10;比随机暂停可控" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#60A5FA;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="840" y="250" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-label" value="第三代&#10;PEP 768&#10;sys.remote_exec" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=13;fontStyle=1;fontColor=#1F6FEB;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="390" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-q1" value="process_vm_writev&#10;写脚本路径 + 控制位&#10;不需要 ptrace 暂停" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="240" y="390" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-q2" value="解释器自己在 eval loop 执行&#10;天然持有 GIL&#10;不需要外部获取" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="540" y="390" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-q3" value="解释器自己挑安全检查点&#10;在 eval breaker 触发时执行&#10;不会落在危险窗口" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="840" y="390" width="300" height="110" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

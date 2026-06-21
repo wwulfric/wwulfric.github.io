@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="yield-vs-greenlet" name="yield-vs-greenlet">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="540" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="generator vs greenlet：暂停的是一个 frame，还是一整段调用栈" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-title" value="generator：只能暂停 yield 所在那一层 frame" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="540" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-box" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="540" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-f1" value="handle_request()&#10;必须改写成 generator" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="125" width="460" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-f2" value="load_user()&#10;必须改写成 generator" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="100" y="195" width="420" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-f3" value="db_query()&#10;必须改写成 generator" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="120" y="265" width="380" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-f4" value="yield &quot;wait_io&quot;&#10;暂停点只在这层 frame" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="140" y="335" width="340" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-note" value="一个 yield 想往外传，得沿调用链一层层手动 yield from" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="60" y="395" width="500" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-a1" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="gen-f4" target="gen-f3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-a2" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="gen-f3" target="gen-f2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-a3" style="endArrow=classic;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.5;dashed=1;" edge="1" parent="1" source="gen-f2" target="gen-f1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-title" value="greenlet：switch() 一次把整段调用栈搬走" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="620" y="70" width="540" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-box" value="" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="620" y="100" width="540" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-lbl" value="greenlet A 的调用栈（被整体冻住）" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="640" y="108" width="380" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-f1" value="handle_request()&#10;无需改写，不知道下面让出过" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="640" y="132" width="380" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-f2" value="load_user()&#10;无需改写" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="200" width="340" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-f3" value="db.query()&#10;无需改写" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="265" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-f4" value="socket.recv()&#10;greenlet.switch(hub)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#B91C1C;strokeWidth=1.5;fontFamily=Courier New;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="332" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-out" value="Hub greenlet" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#BFDBFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="338" width="110" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-sw" style="endArrow=classic;html=1;strokeColor=#B91C1C;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gl-f4" target="gl-out">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-sw-lbl" value="switch" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#B91C1C;" vertex="1" parent="1">
+          <mxGeometry x="968" y="315" width="50" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="gl-note" value="深层 switch 不需要中间函数知情；恢复时整段栈原样继续" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="640" y="395" width="500" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="蓝色 = 普通调用栈     黄色 = 必须改写成 generator     红色 = 暂停发生的位置" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="465" width="1120" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

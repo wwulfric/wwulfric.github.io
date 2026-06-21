@@ -18,8 +18,8 @@
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>Python 运行时观测的三条边界：frame、greenlet 与 task</title>
-  <meta name="description" content="一段 Python 程序跑起来以后，源码里的函数名、行号、局部变量、异常传播并没有消失。它们变成了运行时里的 frame、code object、字节码位置和调用栈。调试器要停在某一行，coverage 要知道哪段代码被执行过，profiler 要记录时间花在什么函数里，线上诊断工具要在进程继续服务时看见这些信息。
+  <title>Python 运行时观测的四条边界：frame、code object、greenlet、task</title>
+  <meta name="description" content="Python 提供了几套观测程序运行时行为的接口：sys.settrace、sys.monitoring、greenlet.settrace、asyncio Task API。它们都用来追踪正在执行的代码，但作用对象处于不同层次，触发的事件和能回答的问题也不一样。这篇文章按 frame -&gt; code object -&gt; greenlet -&gt; Task 的顺序，把这四条边界看到什么、看不到什么逐个讲清楚：
 ">
   <meta name="keywords" content="python,cpython,gevent,asyncio,debug">
   <link rel="canonical" href="https://wulfric.me/2026/05/python-runtime-tracing-boundaries/">
@@ -58,7 +58,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">Python 运行时观测的三条边界：frame、greenlet 与 task</h1>
+    <h1 class="post-title">Python 运行时观测的四条边界：frame、code object、greenlet、task</h1>
   </header>
 
   
@@ -72,301 +72,517 @@
 
 
   <article class="post-content">
-    <p>一段 Python 程序跑起来以后，源码里的函数名、行号、局部变量、异常传播并没有消失。它们变成了运行时里的 frame、code object、字节码位置和调用栈。调试器要停在某一行，coverage 要知道哪段代码被执行过，profiler 要记录时间花在什么函数里，线上诊断工具要在进程继续服务时看见这些信息。</p>
+    <p>Python 提供了几套观测程序运行时行为的接口：<span class="codespan">sys.settrace</span>、<span class="codespan">sys.monitoring</span>、<span class="codespan">greenlet.settrace</span>、asyncio Task API。它们都用来追踪正在执行的代码，但作用对象处于不同层次，触发的事件和能回答的问题也不一样。这篇文章按 frame -&gt; code object -&gt; greenlet -&gt; Task 的顺序，把这四条边界看到什么、看不到什么逐个讲清楚：</p>
 
-<p>日志只能覆盖提前想到的路径。真正难查的问题常常发生在没有埋点的地方：某个分支被意外走到，某个 coroutine 长时间挂起，某个 gevent 服务看起来像阻塞，实际已经在多个 greenlet 之间来回切换。运行时观测接口的价值就在这里：工具可以跟着解释器的执行节奏，记录函数调用、行号变化、异常、yield、resume、调度切换等事件。</p>
-
-<p><span class="codespan">sys.settrace()</span> 和 <span class="codespan">sys.monitoring</span> 处理的是这类问题：解释器执行 Python 代码时，外部工具能在哪些位置插进来。<span class="codespan">sys.monitoring</span> 来自 PEP 669，目标是给调试器、覆盖率工具、profiler 提供一套低影响的执行事件接口。<sup id="fnref:sys-settrace"><a href="#fn:sys-settrace" class="footnote" rel="footnote" role="doc-noteref">1</a></sup><sup id="fnref:sys-monitoring"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">2</a></sup><sup id="fnref:pep-669"><a href="#fn:pep-669" class="footnote" rel="footnote" role="doc-noteref">3</a></sup></p>
-
-<p>这个问题看起来很底层，放进真实程序之后会变得微妙。因为 Python 程序里的“正在运行”有几种形态：</p>
-
-<p>普通函数沿着 CPython frame 一层层调用；gevent 在同一个 OS 线程里切换多组 greenlet 栈；asyncio 把 coroutine 包成 Task，再交给 event loop 调度。观测工具选中的边界不同，看到的世界也不同。</p>
-
-<p>这也是很多追踪问题的根源。事件本身还在，事件归属却可能已经换了一套语义。</p>
+<ul>
+  <li>CPython frame：<span class="codespan">sys.settrace</span> 的根基</li>
+  <li>code object 事件：<span class="codespan">sys.monitoring</span> 在 3.12 后的低成本接口</li>
+  <li>greenlet 调度：gevent 在 frame 之外切换的额外一层</li>
+  <li>asyncio Task：event loop 内部多个协程的身份归属</li>
+</ul>
 
 <hr />
 
-<h2 id="从-frame-开始">从 frame 开始</h2>
+<h2 id="1-framepython-层的栈帧">1. frame：Python 层的栈帧</h2>
 
-<p>frame 可以理解成 Python 层的栈帧。CPython 执行 Python 函数时，会为这次调用准备一份执行现场：正在跑哪段代码、局部变量是什么、全局变量从哪里取、下一条字节码在哪里、上一层调用是谁。这份执行现场暴露到 Python 层，就是 frame object。</p>
+<p>frame 是 Python 层的栈帧。CPython 每调用一次 Python 函数，就给这次调用造一个对象，记录正在跑哪段代码、局部变量是什么、下一条字节码在哪里、上一层调用者是谁。这个对象在 Python 层就是 frame，可以用 <span class="codespan">sys._getframe()</span> 取出来。</p>
 
-<p>比如一段调用链：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main() -&gt; handle_request() -&gt; query_db()
-</code></pre></div></div>
-
-<p>当 <span class="codespan">query_db()</span> 正在执行时，当前 frame 属于 <span class="codespan">query_db()</span>；它的上一层 frame 指向 <span class="codespan">handle_request()</span>；再往上能回到 <span class="codespan">main()</span>。异常 traceback 也是沿着这串 frame 展开，所以我们能看到错误从哪一层函数传出来。</p>
-
-<p>frame 里最常用的几块信息包括：</p>
-
-<ul>
-  <li><span class="codespan">f_code</span>：当前 frame 正在执行的 code object，里面有函数名、文件名、字节码等信息</li>
-  <li><span class="codespan">f_locals</span>：当前局部变量</li>
-  <li><span class="codespan">f_globals</span>：当前全局变量</li>
-  <li><span class="codespan">f_lineno</span>：当前源码行号</li>
-  <li><span class="codespan">f_back</span>：上一层 frame</li>
-</ul>
-
-<p>调试器能停在某一行，coverage 能知道哪一行跑过，profiler 能记录函数进入和退出，底层入口都绕不开 frame 或 code object。</p>
-
-<p><span class="codespan">sys.settrace(tracefunc)</span> 是老接口。它给当前线程安装一个 trace function。新作用域进入时会触发 <span class="codespan">call</span> 事件；trace function 返回的本地 trace function 会继续接收 <span class="codespan">line</span>、<span class="codespan">return</span>、<span class="codespan">exception</span>，以及可选的 <span class="codespan">opcode</span> 事件。<sup id="fnref:sys-settrace:1"><a href="#fn:sys-settrace" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></p>
-
-<p>一个最小追踪器长这样：</p>
+<p>下面这段代码沿 <span class="codespan">f_back</span> 往上一层层取：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span>
 
+<span class="k">def</span> <span class="nf">query</span><span class="p">():</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="nf">_getframe</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">f</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">f</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_name</span><span class="si">:</span><span class="o">&gt;</span><span class="mi">10</span><span class="si">}</span><span class="s">  line </span><span class="si">{</span><span class="n">f</span><span class="p">.</span><span class="n">f_lineno</span><span class="si">:</span><span class="o">&gt;</span><span class="mi">3</span><span class="si">}</span><span class="s">  </span><span class="si">{</span><span class="n">f</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_filename</span><span class="p">.</span><span class="nf">split</span><span class="p">(</span><span class="sh">'</span><span class="s">/</span><span class="sh">'</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="n">f_back</span>
+
+<span class="k">def</span> <span class="nf">handle</span><span class="p">():</span>
+    <span class="nf">query</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="nf">handle</span><span class="p">()</span>
+
+<span class="nf">main</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>实际输出：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>     query  line   6  demo_frame.py
+    handle  line  10  demo_frame.py
+      main  line  13  demo_frame.py
+  &lt;module&gt;  line  15  demo_frame.py
+</code></pre></div></div>
+
+<p>调用链「<span class="codespan">main -&gt; handle -&gt; query</span>」在 frame 链表里就是「query.f_back = handle frame, handle.f_back = main frame, main.f_back = <span class="codespan">&lt;module&gt;</span> frame」。frame 几个常用字段：</p>
+
+<ul>
+  <li><span class="codespan">f_code</span> – 正在执行的 code object，里面装着函数名、文件名、字节码。调试器靠它定位「在哪个函数里」。</li>
+  <li><span class="codespan">f_locals</span> – 当前局部变量。<span class="codespan">pdb</span> 让你在断点上看变量、改变量，就是读改它。</li>
+  <li><span class="codespan">f_globals</span> – 模块层变量。</li>
+  <li><span class="codespan">f_lineno</span> – 当前源码行号。coverage 沿这一条信息记录「这一行跑过」。</li>
+  <li><span class="codespan">f_back</span> – 上一层 frame。异常 traceback 沿这条指针展开。</li>
+</ul>
+
+<p>把这件事画出来就是这张图：</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/peeka/frame-stack.png" alt="Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>Python frame 栈结构示意。左侧三层调用 main -> handle -> query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -> 上溯到 handle -> 继续上溯到 main</figcaption>
+        </figure></p>
+
+<p>frame 是 first-class 对象，任何代码都能读它的字段，也能改写 <span class="codespan">f_locals</span> 这类字段。但 <span class="codespan">sys._getframe()</span> 要在代码里调用方主动取；如果想让解释器在每个 frame 边界自动通知外部工具，需要换一个接口。</p>
+
+<hr />
+
+<h2 id="2-syssettrace解释器层的-trace-钩子">2. sys.settrace：解释器层的 trace 钩子</h2>
+
+<p><span class="codespan">sys.settrace(tracefunc)</span> 给当前线程装一个 trace function。新作用域进入时触发 <span class="codespan">call</span>；trace function 返回的本地 trace function 会继续接收 <span class="codespan">line</span>、<span class="codespan">return</span>、<span class="codespan">exception</span>。<sup id="fnref:sys-settrace"><a href="#fn:sys-settrace" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></p>
+
+<p>一段最小追踪器：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span>
 
 <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">:</span>
-        <span class="n">code</span> <span class="o">=</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_code</span>
-        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">,</span> <span class="n">code</span><span class="p">.</span><span class="n">co_name</span><span class="p">,</span> <span class="n">code</span><span class="p">.</span><span class="n">co_filename</span><span class="p">,</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_lineno</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_name</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="sh">"</span><span class="s">query</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">handle</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">main</span><span class="sh">"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">:</span>
+            <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  call    </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">line</span><span class="sh">"</span><span class="p">:</span>
+            <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  line    </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s">:</span><span class="si">{</span><span class="n">frame</span><span class="p">.</span><span class="n">f_lineno</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">return</span><span class="sh">"</span><span class="p">:</span>
+            <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  return  </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">trace</span>
 
+<span class="k">def</span> <span class="nf">query</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">def</span> <span class="nf">handle</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nf">query</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nf">handle</span><span class="p">()</span>
 
 <span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="nf">main</span><span class="p">()</span>
+<span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>这里有两个很重要的细节。</p>
+<p>跑一次的输出：</p>
 
-<p>第一，<span class="codespan">sys.settrace()</span> 是线程相关的。它影响当前线程；多线程调试要给每个线程设置 trace function，或者用 <span class="codespan">threading.settrace()</span>。Python 3.12 又加了 <span class="codespan">threading.settrace_all_threads()</span>，可以覆盖已经在执行的 Python 线程。<sup id="fnref:threading-trace"><a href="#fn:threading-trace" class="footnote" rel="footnote" role="doc-noteref">4</a></sup></p>
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  call    main
+  line    main:22
+  call    handle
+  line    handle:19
+  call    query
+  line    query:15
+  line    query:16
+  return  query
+  return  handle
+  return  main
+</code></pre></div></div>
 
-<p>第二，它的成本来自回调频率。<span class="codespan">line</span> 事件会在大量源码行前触发，<span class="codespan">opcode</span> 更细。每次事件都要调用 Python 函数，工具越想看得细，对程序执行节奏的扰动就越明显。调试器和 coverage 可以接受这种成本，常驻生产 profiler 往往要谨慎得多。</p>
+<p>事件按顺序展开就是「main 入 -&gt; 跑到第 22 行 -&gt; 调 handle -&gt; handle 跑到第 19 行 -&gt; 调 query -&gt; …」。frame 的进入、离开、每一行执行都按顺序触发了出来。</p>
 
-<p><span class="codespan">sys.settrace()</span> 提供的是 frame 级叙事：这个线程进入了哪个 frame，这个 frame 执行到哪一行，什么时候返回或抛异常。只要“一个线程里的调用栈”就是你要分析的执行上下文，它就很好用。</p>
+<p>有几条值得提前知道的性质：</p>
+
+<ul>
+  <li><span class="codespan">sys.settrace</span> 是线程相关的，只影响当前线程。多线程要么各自设，要么用 <span class="codespan">threading.settrace()</span>。<sup id="fnref:threading-trace"><a href="#fn:threading-trace" class="footnote" rel="footnote" role="doc-noteref">2</a></sup></li>
+  <li>trace function 必须 <span class="codespan">return trace</span> 才能在这个 frame 里继续拿到 <span class="codespan">line</span> 事件。返回 <span class="codespan">None</span> 就只剩 <span class="codespan">call</span>。</li>
+  <li>只有 Python frame 触发事件。C 函数（包括 C 扩展里的调用）不会产生 <span class="codespan">call</span> / <span class="codespan">line</span>，所以 debugger 和 coverage 都看不到 C 实现的函数内部。</li>
+</ul>
+
+<p>回调频率是它最大的成本来源。一个直观的测量：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span><span class="p">,</span> <span class="n">time</span>
+
+<span class="k">def</span> <span class="nf">noop</span><span class="p">(</span><span class="o">*</span><span class="n">a</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">noop</span>
+
+<span class="k">def</span> <span class="nf">loop</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">1_000_000</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="nf">perf_counter</span><span class="p">();</span> <span class="nf">loop</span><span class="p">();</span> <span class="n">base</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="nf">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+<span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">noop</span><span class="p">);</span> <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="nf">perf_counter</span><span class="p">();</span> <span class="nf">loop</span><span class="p">();</span> <span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+<span class="n">traced</span> <span class="o">=</span> <span class="n">time</span><span class="p">.</span><span class="nf">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+<span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">baseline </span><span class="si">{</span><span class="n">base</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="p">.</span><span class="mi">1</span><span class="n">f</span><span class="si">}</span><span class="s"> ms, traced </span><span class="si">{</span><span class="n">traced</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="p">.</span><span class="mi">1</span><span class="n">f</span><span class="si">}</span><span class="s"> ms, slowdown </span><span class="si">{</span><span class="n">traced</span><span class="o">/</span><span class="n">base</span><span class="si">:</span><span class="p">.</span><span class="mi">1</span><span class="n">f</span><span class="si">}</span><span class="s">x</span><span class="sh">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>在 Python 3.12 / x86_64 上的一次实测：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>baseline 6.1 ms, traced 81.9 ms, slowdown 13.5x
+</code></pre></div></div>
+
+<p><span class="codespan">return noop</span> 这种最简单的 trace 也会把 tight loop 拖慢一个数量级。调试器和 coverage 能接受这种代价，长时间在线的 profiler 不行。<span class="codespan">sys.monitoring</span> 就是为这种场景设计的。</p>
 
 <hr />
 
-<h2 id="sysmonitoring-把事件做细"><span class="codespan">sys.monitoring</span> 把事件做细</h2>
+<h2 id="3-sysmonitoring低开销的事件接口">3. sys.monitoring：低开销的事件接口</h2>
 
-<p><span class="codespan">sys.monitoring</span> 是 Python 3.12 之后的新接口。PEP 669 给它的定位很明确：降低调试、覆盖率、profiling 这类工具的常态成本。<sup id="fnref:sys-monitoring:1"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">2</a></sup><sup id="fnref:pep-669:1"><a href="#fn:pep-669" class="footnote" rel="footnote" role="doc-noteref">3</a></sup></p>
+<p>Python 3.12 加入了 <span class="codespan">sys.monitoring</span>。PEP 669 的目标是把调试器、覆盖率、profiler 的常态成本降下来。<sup id="fnref:sys-monitoring"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">3</a></sup><sup id="fnref:pep-669"><a href="#fn:pep-669" class="footnote" rel="footnote" role="doc-noteref">4</a></sup></p>
 
-<p>它的设计比 <span class="codespan">sys.settrace()</span> 更像一套事件总线：</p>
-
-<ul>
-  <li>工具先用 <span class="codespan">sys.monitoring.use_tool_id(tool_id, name)</span> 占用一个 tool id</li>
-  <li>再用 <span class="codespan">register_callback(tool_id, event, func)</span> 注册事件回调</li>
-  <li>用 <span class="codespan">set_events(tool_id, event_set)</span> 打开全局事件</li>
-  <li>或者用 <span class="codespan">set_local_events(tool_id, code, event_set)</span> 只打开某个 code object 上的事件</li>
-</ul>
-
-<p>事件粒度也更丰富。比如：</p>
-
-<ul>
-  <li><span class="codespan">PY_START</span>：Python 函数开始执行</li>
-  <li><span class="codespan">PY_RETURN</span>：Python 函数返回</li>
-  <li><span class="codespan">PY_YIELD</span>：Python 函数 yield</li>
-  <li><span class="codespan">PY_RESUME</span>：generator 或 coroutine 恢复执行</li>
-  <li><span class="codespan">CALL</span>：Python 代码里发生一次调用</li>
-  <li><span class="codespan">LINE</span>：即将执行不同源码行对应的指令</li>
-  <li><span class="codespan">INSTRUCTION</span>：即将执行 VM 指令</li>
-  <li><span class="codespan">JUMP</span>、<span class="codespan">BRANCH</span>：控制流跳转</li>
-  <li><span class="codespan">RAISE</span>、<span class="codespan">EXCEPTION_HANDLED</span>、<span class="codespan">PY_UNWIND</span>：异常相关事件</li>
-</ul>
-
-<p>代码形态大概是这样：</p>
+<p>它和 <span class="codespan">sys.settrace</span> 的差别在于：<span class="codespan">settrace</span> 每个事件都要走一遍 Python 回调，<span class="codespan">monitoring</span> 让你按 code object 注册、按事件类型订阅，并能在单点 <span class="codespan">DISABLE</span> 后续触发，未订阅的代码路径接近零成本。一个最小例子：</p>
 
 <div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span>
 
-<span class="n">tool_id</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="n">PROFILER_ID</span>
-<span class="n">events</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="n">events</span>
+<span class="n">mon</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span>
+<span class="n">tool_id</span> <span class="o">=</span> <span class="n">mon</span><span class="p">.</span><span class="n">PROFILER_ID</span>
+<span class="n">events</span> <span class="o">=</span> <span class="n">mon</span><span class="p">.</span><span class="n">events</span>
 
-<span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="nf">use_tool_id</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">demo-profiler</span><span class="sh">"</span><span class="p">)</span>
-
+<span class="n">mon</span><span class="p">.</span><span class="nf">use_tool_id</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">demo-profiler</span><span class="sh">"</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">on_start</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">instruction_offset</span><span class="p">):</span>
     <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">start</span><span class="sh">"</span><span class="p">,</span> <span class="n">code</span><span class="p">.</span><span class="n">co_name</span><span class="p">,</span> <span class="n">instruction_offset</span><span class="p">)</span>
 
-
-<span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="nf">register_callback</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="n">events</span><span class="p">.</span><span class="n">PY_START</span><span class="p">,</span> <span class="n">on_start</span><span class="p">)</span>
-<span class="n">sys</span><span class="p">.</span><span class="n">monitoring</span><span class="p">.</span><span class="nf">set_events</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="n">events</span><span class="p">.</span><span class="n">PY_START</span><span class="p">)</span>
+<span class="n">mon</span><span class="p">.</span><span class="nf">register_callback</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="n">events</span><span class="p">.</span><span class="n">PY_START</span><span class="p">,</span> <span class="n">on_start</span><span class="p">)</span>
+<span class="n">mon</span><span class="p">.</span><span class="nf">set_events</span><span class="p">(</span><span class="n">tool_id</span><span class="p">,</span> <span class="n">events</span><span class="p">.</span><span class="n">PY_START</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p><span class="codespan">sys.monitoring</span> 改进的是插桩方式；观测对象仍然是 CPython 正在执行的 code object、instruction offset 和函数事件。它可以用 <span class="codespan">DISABLE</span> 关闭某个代码位置上的后续事件，也能按 code object 控制事件集合。断点、单步、覆盖率、调用统计都可以建立在这些能力上。</p>
-
-<p>这个接口降低了常态成本，但细粒度事件依然昂贵。PEP 669 也提醒过，<span class="codespan">LINE</span> 事件会显著影响性能，精确 profiler 本身会扭曲结果；如果目标是长期线上画像，统计采样经常更稳。</p>
-
-<hr />
-
-<h2 id="gevent-改变了栈的连续性">gevent 改变了栈的连续性</h2>
-
-<p>gevent 的核心模型来自 greenlet。gevent 文档把自己描述成基于 greenlet 的 coroutine 网络库；greenlet 文档则把 greenlet 说成一组独立的小栈。每个 greenlet 有自己的 frame 栈，执行可以在这些栈之间显式跳转。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">5</a></sup><sup id="fnref:greenlet-concepts"><a href="#fn:greenlet-concepts" class="footnote" rel="footnote" role="doc-noteref">6</a></sup></p>
-
-<p>普通同步代码里，一个线程的 frame 栈大致有清晰的进出顺序：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main -&gt; handle_request -&gt; query_db -&gt; return -&gt; return
-</code></pre></div></div>
-
-<p>工具收到 <span class="codespan">call</span> 和 <span class="codespan">return</span> 后，用一个线程本地的栈就能配对。</p>
-
-<p>gevent 下，同一个 OS 线程里可能跑着很多请求。某个 greenlet 进入 <span class="codespan">query_db()</span>，里面调用了被 monkey patch 过的 socket API。这个 API 看起来像同步阻塞调用，实际会把当前 greenlet 切到 Hub，让别的 greenlet 继续跑：</p>
-
-<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>greenlet A: handle_request -&gt; query_db -&gt; socket recv
-                                      switch to Hub
-greenlet B: handle_request -&gt; render -&gt; ...
-</code></pre></div></div>
-
-<p>从 <span class="codespan">sys.settrace()</span> 的视角看，还是同一个 OS 线程在发出事件。问题出在归属关系：A 的 <span class="codespan">query_db()</span> 没有返回，B 的 <span class="codespan">handle_request()</span> 已经开始执行。一个按线程维护调用栈的追踪器，会把 A 和 B 的 frame 混在一起。</p>
-
-<p>gevent 下常说 <span class="codespan">sys.settrace()</span> 失效，问题主要在这里：它仍然能收到 CPython frame 事件，事件序列里却没有 greenlet 调度边界。调试某个具体 frame 时，它有价值；构建请求级调用树、耗时归因、阻塞点归因时，单靠它很容易得出错乱结果。</p>
-
-<p><span class="codespan">sys.monitoring</span> 也会遇到同类边界。它比 <span class="codespan">sys.settrace()</span> 事件更细，开销更可控，还能看到 coroutine/generator 的 <span class="codespan">PY_YIELD</span> 和 <span class="codespan">PY_RESUME</span>。可 greenlet switch 是 greenlet 运行时的栈转移，标准 monitoring 事件不会直接告诉你“刚才从哪个 greenlet 切到了哪个 greenlet”。缺少这条边，工具就很难把 frame 事件重新挂回正确的逻辑执行流。</p>
-
-<p>monkey patch 会让这种错位更隐蔽。业务代码写的是 <span class="codespan">time.sleep()</span>、<span class="codespan">socket.recv()</span>、数据库驱动调用；运行时实际发生的是一次让出控制权。源码层面的同步形态还在，调度层面的连续性已经变了。</p>
-
-<hr />
-
-<h2 id="greenlet-trace-补上调度边界">greenlet trace 补上调度边界</h2>
-
-<p>greenlet 为这个问题提供了自己的追踪接口：<span class="codespan">greenlet.settrace()</span>。greenlet 文档也专门提到，标准 Python tracing/profiling 在 greenlet 下无法按预期工作，因为栈和 frame 切换发生在同一个 Python 线程里。<sup id="fnref:greenlet-tracing"><a href="#fn:greenlet-tracing" class="footnote" rel="footnote" role="doc-noteref">7</a></sup></p>
-
-<p><span class="codespan">greenlet.settrace()</span> 安装的回调签名是：</p>
-
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">callback</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>当前定义的事件主要有两类：</p>
+<p>后文会用到的几个事件：</p>
 
 <ul>
-  <li><span class="codespan">switch</span>：一次普通 greenlet 切换</li>
-  <li><span class="codespan">throw</span>：通过 <span class="codespan">greenlet.throw()</span> 切到目标 greenlet，并在目标里抛异常</li>
+  <li><span class="codespan">PY_START</span> / <span class="codespan">PY_RETURN</span> – Python 函数开始 / 返回</li>
+  <li><span class="codespan">PY_YIELD</span> / <span class="codespan">PY_RESUME</span> – generator、coroutine 暂停 / 恢复（PEP 669 显式定义<sup id="fnref:sys-monitoring:1"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>）</li>
+  <li><span class="codespan">LINE</span> – 即将执行新行</li>
+  <li><span class="codespan">RAISE</span> – 抛异常</li>
 </ul>
 
-<p>这两个事件的 <span class="codespan">args</span> 都是 <span class="codespan">(origin, target)</span>，也就是从哪个 greenlet 切到哪个 greenlet。</p>
+<p>其他事件（<span class="codespan">CALL</span>、<span class="codespan">INSTRUCTION</span>、<span class="codespan">JUMP</span>、<span class="codespan">BRANCH</span>、<span class="codespan">EXCEPTION_HANDLED</span>、<span class="codespan">PY_UNWIND</span> 等）见官方文档。<sup id="fnref:sys-monitoring:2"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">3</a></sup></p>
 
-<p>一个最小例子：</p>
+<p><span class="codespan">monitoring</span> 解决的是「插桩成本」，不是「插桩位置」。它和 <span class="codespan">sys.settrace</span> 一样站在 CPython frame / code object 这一层；如果 frame 之上还有另一层调度，这些事件就看不到调度边。</p>
 
-<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">greenlet</span>
+<hr />
 
+<h2 id="4-gevent-下-syssettrace-的失效">4. gevent 下 sys.settrace 的失效</h2>
 
-<span class="k">def</span> <span class="nf">on_greenlet_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">event</span> <span class="ow">in</span> <span class="p">(</span><span class="sh">"</span><span class="s">switch</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">throw</span><span class="sh">"</span><span class="p">):</span>
+<p>greenlet 是 gevent 的基础。每个 greenlet 拥有自己独立的一段 C 栈和一串 Python frame；gevent 在 Hub 里按 IO/超时调度，让它们在同一个 OS 线程里轮流跑。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">5</a></sup><sup id="fnref:greenlet-concepts"><a href="#fn:greenlet-concepts" class="footnote" rel="footnote" role="doc-noteref">6</a></sup></p>
+
+<p>greenlet 的 switch 实现在自己的 C/汇编代码里。源码里 greenlet 被描述成「a range of C stack addresses that must be saved and restored」，切换时直接 <span class="codespan">memcpy</span> 在堆和栈之间拷贝<sup id="fnref:greenlet-source"><a href="#fn:greenlet-source" class="footnote" rel="footnote" role="doc-noteref">7</a></sup>；不同架构对应一份汇编（<span class="codespan">switch_amd64_unix.h</span> 等）执行寄存器和栈指针的转移。<strong>CPython 没有为这次 switch 定义任何 trace 或 monitoring 事件</strong>。frame 事件本身还在，只是事件之间缺一条「这里发生了一次切换」的标记。</p>
+
+<p>用一段代码看：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span>
+<span class="kn">import</span> <span class="n">gevent</span>
+
+<span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_name</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="sh">"</span><span class="s">task</span><span class="sh">"</span> <span class="ow">and</span> <span class="n">event</span> <span class="ow">in</span> <span class="p">(</span><span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">return</span><span class="sh">"</span><span class="p">):</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  [trace] </span><span class="si">{</span><span class="n">event</span><span class="si">:</span><span class="mi">6</span><span class="si">}</span><span class="s">  task (</span><span class="si">{</span><span class="n">frame</span><span class="p">.</span><span class="n">f_locals</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">?</span><span class="sh">'</span><span class="p">)</span><span class="si">}</span><span class="s">)</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">trace</span>
+
+<span class="k">def</span> <span class="nf">task</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> start</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">gevent</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> done</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<span class="n">gevent</span><span class="p">.</span><span class="nf">joinall</span><span class="p">([</span><span class="n">gevent</span><span class="p">.</span><span class="nf">spawn</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="sh">"</span><span class="s">A</span><span class="sh">"</span><span class="p">),</span> <span class="n">gevent</span><span class="p">.</span><span class="nf">spawn</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="sh">"</span><span class="s">B</span><span class="sh">"</span><span class="p">)])</span>
+<span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>实际输出：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [trace] call    task (A)
+--&gt; A start
+  [trace] call    task (B)
+--&gt; B start
+--&gt; A done
+  [trace] return  task (A)
+--&gt; B done
+  [trace] return  task (B)
+</code></pre></div></div>
+
+<p>事件顺序是 call A -&gt; call B -&gt; return A -&gt; return B：A 还没 return，B 就已经 call 进来了。沿 <span class="codespan">sys.settrace</span> 在线程上维护调用栈，会把 A 和 B 的执行交叠成一团。gevent 下常说的「<span class="codespan">sys.settrace</span> 失效」就是这个意思 – 事件没丢，但事件归属没法只用 frame 还原。</p>
+
+<p>把事件流和真实归属画在同一张时间轴上：</p>
+
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/peeka/gevent-trace-chaos.png" alt="gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -> call task(B) -> return task(A) -> return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知</figcaption>
+        </figure></p>
+
+<p>切换发生在汇编层的栈拷贝里，没有任何 Python frame 在那一刻进入或退出。所以 <span class="codespan">sys.settrace</span> 不会触发事件，<span class="codespan">sys.monitoring</span> 也不会有 <span class="codespan">PY_YIELD</span> / <span class="codespan">PY_RESUME</span>（这两个事件只在 CPython 自己实现的 generator / coroutine 暂停点触发）。</p>
+
+<p>greenlet 自己提供了这个接口。<span class="codespan">greenlet.settrace(callback)</span> 安装一个 hook，每次 switch 都把 <span class="codespan">(origin, target)</span> 传给回调。<sup id="fnref:greenlet-tracing"><a href="#fn:greenlet-tracing" class="footnote" rel="footnote" role="doc-noteref">8</a></sup>两个事件：</p>
+
+<ul>
+  <li><span class="codespan">switch</span> – 普通切换</li>
+  <li><span class="codespan">throw</span> – 通过 <span class="codespan">greenlet.throw()</span> 切到目标并抛异常</li>
+</ul>
+
+<p>把它和 <span class="codespan">sys.settrace</span> 串起来用：</p>
+
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span><span class="p">,</span> <span class="n">gevent</span><span class="p">,</span> <span class="n">greenlet</span>
+
+<span class="k">def</span> <span class="nf">label</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nf">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">gevent</span><span class="p">.</span><span class="n">Greenlet</span><span class="p">)</span> <span class="ow">and</span> <span class="n">g</span><span class="p">.</span><span class="n">_run</span> <span class="ow">and</span> <span class="n">g</span><span class="p">.</span><span class="n">args</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">g</span><span class="p">.</span><span class="n">_run</span><span class="p">.</span><span class="n">__name__</span><span class="si">}</span><span class="s">(</span><span class="si">{</span><span class="n">g</span><span class="p">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s">)</span><span class="sh">"</span>
+    <span class="k">return</span> <span class="nf">type</span><span class="p">(</span><span class="n">g</span><span class="p">).</span><span class="n">__name__</span>
+
+<span class="k">def</span> <span class="nf">py_trace</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_name</span> <span class="o">==</span> <span class="sh">"</span><span class="s">task</span><span class="sh">"</span> <span class="ow">and</span> <span class="n">event</span> <span class="ow">in</span> <span class="p">(</span><span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">return</span><span class="sh">"</span><span class="p">):</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  [py] </span><span class="si">{</span><span class="n">event</span><span class="si">:</span><span class="mi">6</span><span class="si">}</span><span class="s">  task(</span><span class="si">{</span><span class="n">frame</span><span class="p">.</span><span class="n">f_locals</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">?</span><span class="sh">'</span><span class="p">)</span><span class="si">}</span><span class="s">)</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">py_trace</span>
+
+<span class="k">def</span> <span class="nf">gl_trace</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">switch</span><span class="sh">"</span><span class="p">:</span>
         <span class="n">origin</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">args</span>
-        <span class="nf">print</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="sh">"</span><span class="s">-&gt;</span><span class="sh">"</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  [gl] switch  </span><span class="si">{</span><span class="nf">label</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span><span class="si">}</span><span class="s"> -&gt; </span><span class="si">{</span><span class="nf">label</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
 
+<span class="k">def</span> <span class="nf">task</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> start</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">gevent</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> done</span><span class="sh">"</span><span class="p">)</span>
 
-<span class="n">old_trace</span> <span class="o">=</span> <span class="n">greenlet</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">on_greenlet_event</span><span class="p">)</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="bp">...</span>
-<span class="k">finally</span><span class="p">:</span>
-    <span class="n">greenlet</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">old_trace</span><span class="p">)</span>
+<span class="n">greenlet</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">gl_trace</span><span class="p">)</span>
+<span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">py_trace</span><span class="p">)</span>
+<span class="n">gevent</span><span class="p">.</span><span class="nf">joinall</span><span class="p">([</span><span class="n">gevent</span><span class="p">.</span><span class="nf">spawn</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="sh">"</span><span class="s">A</span><span class="sh">"</span><span class="p">),</span> <span class="n">gevent</span><span class="p">.</span><span class="nf">spawn</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="sh">"</span><span class="s">B</span><span class="sh">"</span><span class="p">)])</span>
 </code></pre></div></div>
 
-<p>这套接口补上的正是 <span class="codespan">sys.settrace()</span> 和 <span class="codespan">sys.monitoring</span> 缺少的调度边界。它不会告诉你每一行代码执行了什么，也不会替代 frame 事件；它告诉你逻辑执行流什么时候从一组 frame 栈跳到另一组 frame 栈。</p>
+<p>输出（截取主要部分）：</p>
 
-<p>gevent 的监控能力也会用到这条边。gevent 的配置文档提到，监控线程检测 event loop 被阻塞的功能依赖 <span class="codespan">greenlet.settrace()</span>；如果用户覆盖 trace function，需要把前一个 trace function 串起来，否则 gevent 自己的监控也会受影响。<sup id="fnref:gevent-monitoring"><a href="#fn:gevent-monitoring" class="footnote" rel="footnote" role="doc-noteref">8</a></sup></p>
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [gl] switch  greenlet -&gt; Hub
+  [gl] switch  Hub -&gt; task(A)
+  [py] call    task(A)
+--&gt; A start
+  [gl] switch  task(A) -&gt; Hub
+  [gl] switch  Hub -&gt; task(B)
+  [py] call    task(B)
+--&gt; B start
+  [gl] switch  task(B) -&gt; Hub
+  [gl] switch  Hub -&gt; task(A)
+--&gt; A done
+  [py] return  task(A)
+  [gl] switch  Greenlet -&gt; Hub
+  [gl] switch  Hub -&gt; task(B)
+--&gt; B done
+  [py] return  task(B)
+</code></pre></div></div>
 
-<p>做 gevent 观测时，比较可靠的模型通常是组合式的：</p>
+<p>读这条流：先切到 task(A)，A 跑到 sleep 后切回 Hub，Hub 又切到 task(B)，B 跑到 sleep 后再切回 Hub，最后切回去依次让 A 和 B 跑完。每个 <span class="codespan">[py] call/return</span> 都对应一段连续的 greenlet 时间窗口，事件归属重新清晰。</p>
 
-<ul>
-  <li>CPython frame 事件负责函数、行号、异常、返回值</li>
-  <li>greenlet trace 负责 <span class="codespan">origin -&gt; target</span> 的调度边</li>
-  <li>gevent 自己的 Hub、monitor thread、<span class="codespan">gevent.util.print_run_info()</span> 负责运行时状态、阻塞报告和 greenlet 栈信息</li>
-</ul>
-
-<p>单独看任何一层，都容易把调度事实压扁。</p>
-
-<hr />
-
-<h2 id="asyncio-的边界在-task">asyncio 的边界在 Task</h2>
-
-<p>asyncio 的情况要温和一些。它同样是协作式并发，默认也在一个线程里跑很多任务；但它的调度单位是 coroutine 和 Task，暂停点写在 <span class="codespan">await</span> 上，恢复路径由 event loop 管理。</p>
-
-<p>asyncio 的调度规则是：event loop 一次运行一个 Task；正在运行的 Task 遇到 <span class="codespan">await</span> 后暂停，event loop 再运行下一个 Task。<sup id="fnref:asyncio-task"><a href="#fn:asyncio-task" class="footnote" rel="footnote" role="doc-noteref">9</a></sup></p>
-
-<p><span class="codespan">sys.settrace()</span> 和 <span class="codespan">sys.monitoring</span> 在 asyncio 代码里仍然可用。coroutine 执行时还是 Python frame，进入函数、执行行、返回、抛异常，这些事件都能被看到。Python 3.12 的 <span class="codespan">sys.monitoring</span> 还给了 <span class="codespan">PY_YIELD</span>、<span class="codespan">PY_RESUME</span> 这类事件，对 generator/coroutine 的暂停和恢复更友好。</p>
-
-<p>这里缺的是 Task 身份。一个 event loop 线程里可能有很多 Task 轮流执行；frame 事件告诉你当前跑到了哪段代码，Task API 告诉你这段代码属于哪个调度单元。</p>
-
-<p>标准库已经给了几组常用工具：<sup id="fnref:asyncio-task:1"><a href="#fn:asyncio-task" class="footnote" rel="footnote" role="doc-noteref">9</a></sup></p>
-
-<ul>
-  <li><span class="codespan">asyncio.current_task()</span>：拿到当前正在运行的 Task</li>
-  <li><span class="codespan">asyncio.all_tasks()</span>：列出 loop 里尚未完成的 Task</li>
-  <li><span class="codespan">Task.get_stack()</span> / <span class="codespan">Task.print_stack()</span>：查看挂起 Task 的栈或 traceback</li>
-  <li><span class="codespan">Task.get_coro()</span>：拿到 Task 包裹的 coroutine</li>
-  <li><span class="codespan">Task.get_name()</span>：拿到 Task 名称，适合做日志和诊断标签</li>
-  <li><span class="codespan">Task.get_context()</span>：Python 3.12 后可取出 Task 对应的 <span class="codespan">contextvars.Context</span></li>
-</ul>
-
-<p><span class="codespan">contextvars</span> 是 asyncio 观测里很关键的一层。请求 ID、trace ID、租户 ID 这类“逻辑上下文”，放在线程局部变量里会在并发任务之间互相污染；ContextVar 会随 Task 上下文传播，更适合异步框架。<sup id="fnref:contextvars"><a href="#fn:contextvars" class="footnote" rel="footnote" role="doc-noteref">10</a></sup></p>
-
-<p>调试层面，asyncio 还提供了开发模式工具。可以通过 <span class="codespan">PYTHONASYNCIODEBUG=1</span>、<span class="codespan">asyncio.run(..., debug=True)</span> 或 <span class="codespan">loop.set_debug(True)</span> 打开 debug mode。它会帮助发现从未 await 的 coroutine、从未取回的 Task 异常，并能在 debug 输出里带上对象创建位置。<span class="codespan">sys.set_coroutine_origin_tracking_depth()</span> 也可以打开 coroutine 创建位置记录，让 coroutine 对象的 <span class="codespan">cr_origin</span> 保存创建栈摘要。<sup id="fnref:asyncio-dev"><a href="#fn:asyncio-dev" class="footnote" rel="footnote" role="doc-noteref">11</a></sup><sup id="fnref:sys-coroutine-origin"><a href="#fn:sys-coroutine-origin" class="footnote" rel="footnote" role="doc-noteref">12</a></sup></p>
-
-<p>asyncio 下的观测路径通常是：</p>
-
-<ol>
-  <li>用 <span class="codespan">sys.settrace()</span> 或 <span class="codespan">sys.monitoring</span> 拿到 frame / code object 级事件</li>
-  <li>在事件发生时用 <span class="codespan">asyncio.current_task()</span> 补上 Task 身份</li>
-  <li>用 <span class="codespan">contextvars</span> 绑定请求级上下文</li>
-  <li>用 debug mode、Task stack、coroutine origin 查创建点和挂起点</li>
-</ol>
-
-<p>这里的难点不在事件能不能收到，而在事件如何归入正确的 Task。</p>
+<p>gevent 自己的监控也走这条边：监控线程靠 <span class="codespan">greenlet.settrace</span> 拿到 switch 时间戳来判断 event loop 被阻塞，所以业务代码自己装 trace 时如果没把前一个 trace 串起来，gevent 的监控会跟着失效。<sup id="fnref:gevent-monitoring"><a href="#fn:gevent-monitoring" class="footnote" rel="footnote" role="doc-noteref">9</a></sup></p>
 
 <hr />
 
-<h2 id="工具设计里的边界">工具设计里的边界</h2>
+<h2 id="5-asyncio-的暂停发生在字节码层">5. asyncio 的暂停发生在字节码层</h2>
 
-<p><span class="codespan">sys.settrace()</span>、<span class="codespan">sys.monitoring</span>、<span class="codespan">greenlet.settrace()</span>、asyncio Task API 看起来像几套互相重叠的追踪接口。拆开看，它们各自站在不同边界上。</p>
+<p>asyncio 也是协作式并发，默认也在一个线程里跑很多协程。但它的调度切换发生在不同的层。</p>
 
-<p><span class="codespan">sys.settrace()</span> 站在 frame 上。它适合 debugger、coverage、教学工具，也适合短时间抓取调用细节。它直接、通用，代价也直接。</p>
+<p>CPython 文档明确指出，generator 和 coroutine 的暂停是字节码实现的：「This is implemented by the YIELD_VALUE bytecode…」「A yield from expression … is implemented with the SEND instruction.」<sup id="fnref:cpython-generators"><a href="#fn:cpython-generators" class="footnote" rel="footnote" role="doc-noteref">10</a></sup> <span class="codespan">RESUME</span> 指令在「After an await expression」位置标记恢复点<sup id="fnref:dis-resume"><a href="#fn:dis-resume" class="footnote" rel="footnote" role="doc-noteref">11</a></sup>。这些指令是 CPython 自己的，sys.monitoring 把它们暴露成 <span class="codespan">PY_YIELD</span> 和 <span class="codespan">PY_RESUME</span> 事件<sup id="fnref:sys-monitoring:3"><a href="#fn:sys-monitoring" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>。所以 asyncio 协程的每一次暂停和恢复，对 CPython 来说都是可见的。</p>
 
-<p><span class="codespan">sys.monitoring</span> 站在 code object 和解释器事件上。它把低层事件做成可组合接口，给调试器、coverage、profiler 留出了更低成本的实现空间。它解决的是 CPython 事件插桩成本和协作问题。</p>
+<p>这导致 trace 工具看到的内容也不一样：</p>
 
-<p><span class="codespan">greenlet.settrace()</span> 站在 greenlet 调度边界上。它记录从哪个 greenlet 切到哪个 greenlet，适合 gevent 这类基于 greenlet 的运行时。它解决的是同一 OS 线程里多组栈互相切换后的归属问题。</p>
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>gevent</th>
+      <th>asyncio</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>调度切换位置</td>
+      <td>C/汇编层（<span class="codespan">slp_switch</span>）</td>
+      <td>字节码层（<span class="codespan">YIELD_VALUE</span> / <span class="codespan">SEND</span> / <span class="codespan">RESUME</span>）</td>
+    </tr>
+    <tr>
+      <td>CPython 是否感知</td>
+      <td>不感知</td>
+      <td>感知（<span class="codespan">PY_YIELD</span> / <span class="codespan">PY_RESUME</span>）</td>
+    </tr>
+    <tr>
+      <td><span class="codespan">sys.settrace</span> 看到的栈</td>
+      <td>错乱交叠</td>
+      <td>干净的协程栈</td>
+    </tr>
+    <tr>
+      <td>需要额外接口标记调度边</td>
+      <td>需要 <span class="codespan">greenlet.settrace</span></td>
+      <td>不需要</td>
+    </tr>
+    <tr>
+      <td>协程暂停时 frame</td>
+      <td>整段 C 栈被拷走</td>
+      <td>frame 仍在，<span class="codespan">gen_frame_state = SUSPENDED</span></td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
-<p>asyncio 的 Task API 站在 coroutine 调度边界上。它把当前 Task、全部 Task、挂起栈、创建上下文暴露出来。它解决的是 event loop 内部多个 coroutine 轮流执行时的身份问题。</p>
+<p>第二张图把这种分层差异画出来：</p>
 
-<p>做运行时观测时，把“线程”当成唯一执行上下文，很容易埋下误判。在线程模型里，这个假设大多够用；进入 gevent 或 asyncio 后，一个线程里会出现多个逻辑执行流。frame 事件依然真实，调用树、耗时归因、请求归属却需要额外的调度信息。</p>
+<p><figure>
+          <picture>
+            
+            
+            <img src="/images/peeka/suspend-point-comparison.png" alt="gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份" width= height= />
+          </picture>
+          <figcaption><i class='icon-pencil'></i>gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -> 字节码层 CALL gevent.sleep -> C 扩展层 greenlet.switch() -> 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -> 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -> frame 仍存活且 gen_frame_state = SUSPENDED -> event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份</figcaption>
+        </figure></p>
 
-<p>判断接口之前，先看观测对象：</p>
+<p>asyncio 缺的不是 frame 完整性，是 <strong>Task 身份</strong>。事件本身正确，问题是工具需要把每次 frame 事件归到「哪个 Task」名下。<span class="codespan">asyncio.current_task()</span> 就够用：</p>
 
-<p>如果对象是源码行、函数进入退出、异常传播，frame 或 monitoring 事件就够接近。<br />
-如果对象是 gevent 里的请求、连接、任务切换，就要接上 greenlet trace。<br />
-如果对象是 asyncio 里的请求、后台任务、取消传播，就要接上 Task 和 contextvars。</p>
+<div  class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">sys</span><span class="p">,</span> <span class="n">asyncio</span>
 
-<p>选对边界以后，追踪接口才会变成工具。边界选错时，越精细的事件反而越容易制造假象。</p>
+<span class="k">def</span> <span class="nf">py_trace</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">frame</span><span class="p">.</span><span class="n">f_code</span><span class="p">.</span><span class="n">co_name</span> <span class="o">==</span> <span class="sh">"</span><span class="s">task</span><span class="sh">"</span> <span class="ow">and</span> <span class="n">event</span> <span class="ow">in</span> <span class="p">(</span><span class="sh">"</span><span class="s">call</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">return</span><span class="sh">"</span><span class="p">):</span>
+        <span class="n">task</span> <span class="o">=</span> <span class="n">asyncio</span><span class="p">.</span><span class="nf">current_task</span><span class="p">()</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">task</span><span class="p">.</span><span class="nf">get_name</span><span class="p">()</span> <span class="k">if</span> <span class="n">task</span> <span class="k">else</span> <span class="sh">"</span><span class="s">-</span><span class="sh">"</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">  [py:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s">] </span><span class="si">{</span><span class="n">event</span><span class="si">:</span><span class="mi">6</span><span class="si">}</span><span class="s">  task(</span><span class="si">{</span><span class="n">frame</span><span class="p">.</span><span class="n">f_locals</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">?</span><span class="sh">'</span><span class="p">)</span><span class="si">}</span><span class="s">)</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">py_trace</span>
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">task</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> start</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">--&gt; </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s"> done</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="n">py_trace</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="p">.</span><span class="nf">gather</span><span class="p">(</span>
+        <span class="n">asyncio</span><span class="p">.</span><span class="nf">create_task</span><span class="p">(</span><span class="nf">task</span><span class="p">(</span><span class="sh">"</span><span class="s">A</span><span class="sh">"</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="sh">"</span><span class="s">A</span><span class="sh">"</span><span class="p">),</span>
+        <span class="n">asyncio</span><span class="p">.</span><span class="nf">create_task</span><span class="p">(</span><span class="nf">task</span><span class="p">(</span><span class="sh">"</span><span class="s">B</span><span class="sh">"</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="sh">"</span><span class="s">B</span><span class="sh">"</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">sys</span><span class="p">.</span><span class="nf">settrace</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+<span class="n">asyncio</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="nf">main</span><span class="p">())</span>
+</code></pre></div></div>
+
+<p>输出：</p>
+
+<div  class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [py:A] call    task(A)
+--&gt; A start
+  [py:A] return  task(A)
+  [py:B] call    task(B)
+--&gt; B start
+  [py:B] return  task(B)
+  [py:A] call    task(A)
+--&gt; A done
+  [py:A] return  task(A)
+  [py:B] call    task(B)
+--&gt; B done
+  [py:B] return  task(B)
+</code></pre></div></div>
+
+<p><span class="codespan">await</span> 那一刻被解释器当成 PY_YIELD（在 <span class="codespan">sys.settrace</span> 接口下表现为 <span class="codespan">return</span>），resume 时再触发一次 <span class="codespan">call</span>。事件数比 gevent 例子还多一倍，但 <span class="codespan">current_task()</span> 始终给出正确归属，每条事件前面都有清楚的 Task 标签，整段事件流不会出现归属错位。</p>
+
+<p>如果还需要更多上下文，标准库提供了：</p>
+
+<ul>
+  <li><span class="codespan">asyncio.all_tasks()</span> 列出 loop 里所有未完成 Task</li>
+  <li><span class="codespan">Task.get_stack()</span> / <span class="codespan">Task.print_stack()</span> 看挂起 Task 的当前栈</li>
+  <li><span class="codespan">Task.get_coro()</span> 拿到底层 coroutine</li>
+  <li><span class="codespan">Task.get_context()</span> 取 Task 绑定的 <span class="codespan">contextvars.Context</span><sup id="fnref:asyncio-task"><a href="#fn:asyncio-task" class="footnote" rel="footnote" role="doc-noteref">12</a></sup></li>
+</ul>
+
+<p>asyncio 里另一层常用的工具是 <span class="codespan">contextvars</span>。请求 ID、trace ID 这种逻辑上下文放线程局部变量会在 Task 之间互相污染，ContextVar 沿 Task 上下文传播，刚好对应 asyncio 的并发单位。<sup id="fnref:contextvars"><a href="#fn:contextvars" class="footnote" rel="footnote" role="doc-noteref">13</a></sup></p>
+
+<hr />
+
+<h2 id="6-四种接口的对照">6. 四种接口的对照</h2>
+
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>接口</th>
+      <th>站在哪个边界</th>
+      <th>看到的</th>
+      <th>看不到的</th>
+      <th>典型用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="codespan">sys.settrace</span></td>
+      <td>CPython frame</td>
+      <td>call / line / return / exception</td>
+      <td>greenlet switch、asyncio Task 身份、C 函数</td>
+      <td>debugger、coverage、教学工具</td>
+    </tr>
+    <tr>
+      <td><span class="codespan">sys.monitoring</span></td>
+      <td>code object 事件</td>
+      <td><span class="codespan">PY_START</span> / <span class="codespan">PY_RETURN</span> / <span class="codespan">PY_YIELD</span> / <span class="codespan">PY_RESUME</span> / <span class="codespan">LINE</span> / <span class="codespan">RAISE</span> 等</td>
+      <td>同上，但常态成本更低</td>
+      <td>profiler、低开销 coverage</td>
+    </tr>
+    <tr>
+      <td><span class="codespan">greenlet.settrace</span></td>
+      <td>greenlet 调度边</td>
+      <td>switch、throw 及 <span class="codespan">(origin, target)</span></td>
+      <td>frame 内部细节</td>
+      <td>gevent 请求归属、阻塞检测</td>
+    </tr>
+    <tr>
+      <td>asyncio Task API</td>
+      <td>coroutine 调度身份</td>
+      <td><span class="codespan">current_task</span> / <span class="codespan">all_tasks</span> / <span class="codespan">Task.get_stack</span> 等</td>
+      <td>frame 事件本身</td>
+      <td>asyncio 请求归属、挂起诊断</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>接口和接口之间不是替代关系。在 gevent 应用里做请求级 profiler，frame 事件来自 <span class="codespan">sys.settrace</span> 或 <span class="codespan">sys.monitoring</span>，调度边来自 <span class="codespan">greenlet.settrace</span>，运行时状态来自 gevent 自带的 monitor thread 和 <span class="codespan">gevent.util.print_run_info()</span>。在 asyncio 应用里换成 frame 事件加 <span class="codespan">asyncio.current_task()</span> 加 <span class="codespan">contextvars</span>。</p>
+
+<p>把「线程」当作唯一执行上下文，在纯线程模型里基本够用；遇到 gevent 或 asyncio，一个 OS 线程里同时跑着多条逻辑执行流，单看 frame 事件容易把它们的调用栈混在一起。这时要按观测对象选接口：追请求归属，接 <span class="codespan">greenlet.settrace</span> 或 <span class="codespan">asyncio.current_task()</span>；查阻塞，用 gevent monitor thread 或 <span class="codespan">Task.get_stack()</span>。</p>
 
 <hr />
 
 <div class="footnotes" role="doc-endnotes">
   <ol>
     <li id="fn:sys-settrace">
-      <p>Python 文档：<span class="codespan">sys.settrace()</span>，https://docs.python.org/3/library/sys.html#sys.settrace <a href="#fnref:sys-settrace" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:sys-settrace:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
-    </li>
-    <li id="fn:sys-monitoring">
-      <p>Python 文档：<span class="codespan">sys.monitoring</span>，https://docs.python.org/3/library/sys.monitoring.html <a href="#fnref:sys-monitoring" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:sys-monitoring:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
-    </li>
-    <li id="fn:pep-669">
-      <p>PEP 669: Low Impact Monitoring for CPython，https://peps.python.org/pep-0669/ <a href="#fnref:pep-669" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:pep-669:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
+      <p>Python 文档：<span class="codespan">sys.settrace()</span>，<a href="https://docs.python.org/3/library/sys.html#sys.settrace">https://docs.python.org/3/library/sys.html#sys.settrace</a> <a href="#fnref:sys-settrace" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:threading-trace">
-      <p>Python 文档：<span class="codespan">threading.settrace()</span>，https://docs.python.org/3/library/threading.html#threading.settrace；<span class="codespan">threading.settrace_all_threads()</span>，https://docs.python.org/3/library/threading.html#threading.settrace_all_threads <a href="#fnref:threading-trace" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>Python 文档：<span class="codespan">threading.settrace()</span> / <span class="codespan">threading.settrace_all_threads()</span>，<a href="https://docs.python.org/3/library/threading.html#threading.settrace">https://docs.python.org/3/library/threading.html#threading.settrace</a> <a href="#fnref:threading-trace" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:sys-monitoring">
+      <p>Python 文档：<span class="codespan">sys.monitoring</span>，<a href="https://docs.python.org/3/library/sys.monitoring.html">https://docs.python.org/3/library/sys.monitoring.html</a>。<span class="codespan">PY_RESUME</span> 定义："Resumption of a Python function (for generator and coroutine functions), except for throw() calls."；<span class="codespan">PY_YIELD</span>："Yield from a Python function (occurs immediately before the yield…" <a href="#fnref:sys-monitoring" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:sys-monitoring:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a> <a href="#fnref:sys-monitoring:2" class="reversefootnote" role="doc-backlink">&#8617;<sup>3</sup></a> <a href="#fnref:sys-monitoring:3" class="reversefootnote" role="doc-backlink">&#8617;<sup>4</sup></a></p>
+    </li>
+    <li id="fn:pep-669">
+      <p>PEP 669: Low Impact Monitoring for CPython，<a href="https://peps.python.org/pep-0669/">https://peps.python.org/pep-0669/</a> <a href="#fnref:pep-669" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:gevent-intro">
-      <p>gevent 文档：Introduction，https://docs.gevent.org/intro.html <a href="#fnref:gevent-intro" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>gevent 文档：Introduction，<a href="https://docs.gevent.org/intro.html">https://docs.gevent.org/intro.html</a> <a href="#fnref:gevent-intro" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:greenlet-concepts">
-      <p>greenlet 文档：greenlet Concepts，https://greenlet.readthedocs.io/en/latest/greenlet.html <a href="#fnref:greenlet-concepts" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>greenlet 文档：greenlet Concepts，<a href="https://greenlet.readthedocs.io/en/latest/greenlet.html">https://greenlet.readthedocs.io/en/latest/greenlet.html</a> <a href="#fnref:greenlet-concepts" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:greenlet-source">
+      <p>greenlet 源码：<span class="codespan">src/greenlet/greenlet.cpp</span> 注释「A PyGreenlet is a range of C stack addresses that must be saved and restored」；栈拷贝实现见 <span class="codespan">src/greenlet/TStackState.cpp</span>；汇编切换见 <span class="codespan">src/greenlet/platform/switch_amd64_unix.h</span>。 <a href="#fnref:greenlet-source" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:greenlet-tracing">
-      <p>greenlet 文档：Tracing And Profiling，https://greenlet.readthedocs.io/en/stable/tracing.html <a href="#fnref:greenlet-tracing" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>greenlet 文档：Tracing And Profiling，<a href="https://greenlet.readthedocs.io/en/stable/tracing.html">https://greenlet.readthedocs.io/en/stable/tracing.html</a> <a href="#fnref:greenlet-tracing" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:gevent-monitoring">
-      <p>gevent 文档：Monitoring and Debugging gevent Applications，https://www.gevent.org/monitoring.html <a href="#fnref:gevent-monitoring" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>gevent 文档：Monitoring and Debugging gevent Applications，<a href="https://www.gevent.org/monitoring.html">https://www.gevent.org/monitoring.html</a> <a href="#fnref:gevent-monitoring" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:cpython-generators">
+      <p>CPython InternalDocs：generators，<a href="https://github.com/python/cpython/blob/main/InternalDocs/generators.md">https://github.com/python/cpython/blob/main/InternalDocs/generators.md</a> <a href="#fnref:cpython-generators" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:dis-resume">
+      <p>Python 文档：<span class="codespan">dis</span> 模块，<span class="codespan">RESUME (context)</span> 与 context = 3 (After an await expression)，<a href="https://docs.python.org/3/library/dis.html#opcode-RESUME">https://docs.python.org/3/library/dis.html#opcode-RESUME</a> <a href="#fnref:dis-resume" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:asyncio-task">
-      <p>Python 文档：Coroutines and Tasks，https://docs.python.org/3/library/asyncio-task.html <a href="#fnref:asyncio-task" class="reversefootnote" role="doc-backlink">&#8617;</a> <a href="#fnref:asyncio-task:1" class="reversefootnote" role="doc-backlink">&#8617;<sup>2</sup></a></p>
+      <p>Python 文档：Coroutines and Tasks，<a href="https://docs.python.org/3/library/asyncio-task.html">https://docs.python.org/3/library/asyncio-task.html</a> <a href="#fnref:asyncio-task" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:contextvars">
-      <p>Python 文档：<span class="codespan">contextvars</span>，https://docs.python.org/3/library/contextvars.html <a href="#fnref:contextvars" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:asyncio-dev">
-      <p>Python 文档：Developing with asyncio，https://docs.python.org/3/library/asyncio-dev.html <a href="#fnref:asyncio-dev" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:sys-coroutine-origin">
-      <p>Python 文档：<span class="codespan">sys.set_coroutine_origin_tracking_depth()</span>，https://docs.python.org/3/library/sys.html#sys.set_coroutine_origin_tracking_depth <a href="#fnref:sys-coroutine-origin" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+      <p>Python 文档：<span class="codespan">contextvars</span>，<a href="https://docs.python.org/3/library/contextvars.html">https://docs.python.org/3/library/contextvars.html</a> <a href="#fnref:contextvars" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
 </div>

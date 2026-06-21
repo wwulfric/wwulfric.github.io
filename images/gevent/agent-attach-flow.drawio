@@ -1,0 +1,69 @@
+<mxfile host="app.diagrams.net" agent="manual" version="24.0.0">
+  <diagram id="agent-attach-flow" name="agent-attach-flow">
+    <mxGraphModel dx="1400" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tool" value="诊断工具（外部 CLI）" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="430" y="40" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="attach-edge" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;" edge="1" parent="1" source="tool" target="injector-frame">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attach-lbl" value="attach(pid)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="560" y="100" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="injector-frame" value="注入手段（任选其一）" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;fontColor=#1F2937;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="150" y="130" width="800" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="inj-gdb" value="GDB" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="190" y="170" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="inj-lldb" value="LLDB" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="370" y="170" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="inj-dlopen" value="dlopen" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="550" y="170" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="inj-pep" value="PEP 768" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="730" y="170" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="exec-edge" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="injector-frame" target="proc-frame">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="exec-lbl" value="execute agent script" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="555" y="260" width="160" height="20" as="geometry" />
+        </mxCell>
+        <!-- PROC -->
+        <mxCell id="proc-frame" value="目标 Python 进程（agent 在内部执行）" style="rounded=1;arcSize=5;absoluteArcSize=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#1F2937;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=11;fontStyle=1;fontColor=#1F2937;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="80" y="290" width="940" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="agent" value="agent&#10;（已注入 / 开始执行）" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="430" y="330" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-edge" style="endArrow=classic;html=1;strokeColor=#1F2937;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="sock">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-edge-lbl" value="bind / listen" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="560" y="402" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="sock" value="/tmp/agent_&lt;session&gt;.sock" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#B45309;strokeWidth=1.5;fontFamily=Courier New;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="395" y="540" width="310" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="client" value="诊断工具 client" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1F6FEB;strokeWidth=1.5;fontFamily=Noto Sans CJK SC,Helvetica;fontSize=12;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="430" y="650" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="sock-client-edge" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#B45309;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="client">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sock-client-lbl" value="Unix socket 跨进程双向通信" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="675" y="608" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="inside-lbl" value="↑ 进程边界（socket 一脚在内、一脚在外）" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontStyle=2;fontFamily=Noto Sans CJK SC,Helvetica;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="708" y="566" width="280" height="18" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

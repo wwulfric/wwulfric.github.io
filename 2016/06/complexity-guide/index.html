@@ -121,7 +121,7 @@
 <p>本书深入浅出的介绍了复杂学科的历史背景、研究内容和挑战，是一本相当优秀的科普读物。从复杂学科产生原因讲起，依次介绍了复杂学科的一些较为成功的模型，比如元胞自动机，小世界网络，无尺度网络，随机布尔网络等。</p>
 
 <p><figure>
-          <img src="/images/complexity.jpg" alt="复杂" title="复杂" loading="lazy" decoding="async" />
+          <img src="/images/complexity.webp" alt="复杂" title="复杂" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>复杂</figcaption>
         </figure></p>
 
@@ -148,7 +148,7 @@
 <p>当然事实上我们并不能做到，量子力学的发展否定了拉普拉斯的假设，我们无法同时准确的知道一个粒子的当前位置和速度。后来统计物理另辟新径，不关心各个分子具体的位置、速度和未来的变化，而去预测大量分子整体上的平均位置和速度，从而较好的解释了很多热学现象。</p>
 
 <p><figure>
-          <img src="/images/kepler-newton-laplace.png" alt="开普勒-牛顿-拉普拉斯" title="开普勒-牛顿-拉普拉斯" loading="lazy" decoding="async" />
+          <img src="/images/kepler-newton-laplace.webp" alt="开普勒-牛顿-拉普拉斯" title="开普勒-牛顿-拉普拉斯" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>开普勒-牛顿-拉普拉斯</figcaption>
         </figure></p>
 
@@ -180,7 +180,7 @@
 <p>一些爱好者简化了元胞自动机的规则，发展了很多有趣的实验和游戏(<a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">康威生命游戏</a>)。但却一直没能找到合理解释元胞自动机工作原理的理论。克鲁奇菲尔德提出可以按照研究动力系统行为的「信息处理结构」来分析遗传算法演化出的元胞自动机。在这种思想下，元胞自动机状态的改变在宏观上的表现被具象化为粒子的碰撞、湮灭和延续<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>，在一定程度上可以解释元胞自动机的原理<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>。</p>
 
 <p><figure>
-          <img src="/images/cellar-auto.png" alt="简化版元胞自动机" title="简化版元胞自动机" loading="lazy" decoding="async" />
+          <img src="/images/cellar-auto.webp" alt="简化版元胞自动机" title="简化版元胞自动机" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>简化版元胞自动机</figcaption>
         </figure></p>
 
@@ -207,7 +207,7 @@
 <p>虽然后来的学者针对这个实验提出了诸多质疑，六度分隔也被认为并不可信，但是小世界的概念已深入人心。这些网络问题吸引了大批复杂系统研究者，关于网络科学的各种发现迅速涌现。邓肯·瓦特和斯托加茨率先从数学上定义了小世界网络的概念。在元胞自动机模型中，每个节点只和附近的一些节点有关。但在小世界网络模型中，我们选取部分连接，打断并重新连接。重连后的网络与原来的规则网络的连接数一样多，但是两个节点的平均路径长度大大下降。即小世界网络拥有这样的特性：网络只有少量的长程连接，相对于节点数量来说平均路径却很短。如下图所示，每条边的长度都相同，左边是邻点相接的普通网络，右边是部分边打断重连的小世界网络，右边网络的两点之间平均距离要小于左边的网络。而且，节点数越多，这种效果越明显<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>。（后续研究表明这种随机重连的方法有局限性<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">5</a></sup>）</p>
 
 <p><figure>
-          <img src="/images/small-world.png" alt="小世界" title="小世界" loading="lazy" decoding="async" />
+          <img src="/images/small-world.webp" alt="小世界" title="小世界" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>小世界</figcaption>
         </figure></p>
 
@@ -220,7 +220,7 @@
 <p>两位学者的论文引发了网络科学研究的热潮，科学家们在现实世界中发现了越来越多的小世界网络，比如美国西部电网，电影明星表演圈等等。然而进一步的研究表明，根据瓦特和斯托加茨提出的规则所生成的网络与许多真实世界网络的度分布并不一样。易知，小世界模型的节点的度分布较为平均，而很多真实网络并非如此：显然，作为个体，是有程度上的差异的。以我们熟悉的万维网为例，像谷歌这样的网站，它的入度必然远远超过大部分普通网站。一些团体的研究表明，入度为 $k​$ 的网页数量正比于 $k^{-2}​$。当我们在这个函数中截取不同的尺度时，我们惊奇的发现，截取到的图形几乎一模一样，在不同尺度下，图形具有自相似性（如下图所示）。也就是说，从表现上来看，这样的网络是无尺度的，这样的网络也自然的被称为无尺度网络。在数学上，无尺度网络就是连接度为幂律分布的网络，即入度为 $k​$ 的节点数量正比于 $k^{d}​$。指数 $d​$ 就是这种分布的关键。</p>
 
 <p><figure>
-          <img src="/images/scale-free.png" alt="无尺度网络" title="无尺度网络" loading="lazy" decoding="async" />
+          <img src="/images/scale-free.webp" alt="无尺度网络" title="无尺度网络" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>无尺度网络</figcaption>
         </figure></p>
 
@@ -375,6 +375,8 @@
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

@@ -139,7 +139,7 @@
 <p>大多数竞争性神经序列转换模型都具有编码器-解码器结构[5, 2, 35]。其中，编码器将符号表示的输入序列(x1,…,xn)映射到一系列连续表示z = (z1,…,zn)。给定z，解码器随后生成一个符号输出序列(y1, …, ym)，每次生成一个元素。在每个步骤中，该模型是自回归的[10]，在生成下一个符号时消耗先前生成的符号作为额外的输入。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-encoder-decoder.webp" alt="图1：Transformer 模型架构" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图1：Transformer 模型架构</figcaption>
         </figure></p>
 
@@ -156,7 +156,7 @@
 <p>注意力函数可以描述为将一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。输出是值的加权和，其中分配给每个值的权重是由查询与相应键的兼容性函数计算的。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-attention2.webp" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。</figcaption>
         </figure></p>
 
@@ -214,7 +214,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)\]
 <p>由于我们的模型不包含循环和卷积，为了使模型能够利用序列的顺序，我们必须注入有关序列中标记的相对或绝对位置的一些信息。为此，在编码器和解码器堆栈底部的输入嵌入中添加“位置编码”。位置编码与嵌入具有相同的维度dmodel，因此可以将它们相加。有许多位置编码的选择，可以是可学习的或固定的[9]。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-table1.webp" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。</figcaption>
         </figure></p>
 
@@ -367,6 +367,8 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

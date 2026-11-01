@@ -125,7 +125,7 @@
 <p>从验证方式上看，二次验证可以通过短信验证或 APP 验证（Google Authenticator）。对于短信验证，优点是操作方便，不需安装额外的 APP；缺点是实时性较差，依赖短信，有被窃听的风险。APP 方式正好相反。</p>
 
 <p><figure>
-          <img src="/images/google_authenticator.png" alt="google authenticator" title="google authenticator" loading="lazy" decoding="async" />
+          <img src="/images/google_authenticator.webp" alt="google authenticator" title="google authenticator" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>google authenticator</figcaption>
         </figure></p>
 
@@ -136,7 +136,7 @@
 <p>Google Authenticator 的二次验证也是使用的 OTP。其核心原理是：服务器和客户端（一般是<span class="codespan">Google Authenticator</span>app）保存同一份密钥，客户端根据该密钥和当前时间戳计算得到 6 位数字，发到服务器，服务器根据同样的算法得到 6 位数字。做比较之后判断客户端传来的数字是否合法。详述如下<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>：</p>
 
 <p><figure>
-          <img src="/images/google_authenticator_view.png" alt="Google Authenticator View" title="Google Authenticator View" loading="lazy" decoding="async" />
+          <img src="/images/google_authenticator_view.webp" alt="Google Authenticator View" title="Google Authenticator View" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>Google Authenticator View</figcaption>
         </figure></p>
 
@@ -155,7 +155,7 @@
 <p>TOTP 还有个边界问题，如下图所示。当在 OA 时刻发起短信验证请求，在理想情况下，我们只有在 OA 时间段发起验证，验证才能成功。也就是说，用户的有效输入时间在 T（当发起时刻靠近 O 时）到 0 之间（当发起时刻靠近 A），这意味着，用户有一定的概率验证几乎必然失败（发起时刻靠近 A，考虑到 OTP 获取延迟和用户输入延迟），这显然是不合理的。</p>
 
 <p><figure>
-          <img src="/images/R-otp.png" alt="otp verification" title="otp verification" loading="lazy" decoding="async" />
+          <img src="/images/R-otp.webp" alt="otp verification" title="otp verification" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>otp verification</figcaption>
         </figure></p>
 
@@ -260,6 +260,8 @@
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

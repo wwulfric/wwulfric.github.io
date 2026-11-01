@@ -130,7 +130,7 @@
 <p>不同的工具对这三个问题给出了不同的答案。下面这张表把三代方案对应到这三个子问题上：</p>
 
 <p><figure>
-          <img src="/images/peeka/three-generations-matrix.png" alt="三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题" loading="lazy" decoding="async" />
+          <img src="/images/peeka/three-generations-matrix.webp" alt="三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题</figcaption>
         </figure></p>
 
@@ -205,7 +205,7 @@
 <p>因此，pyrasite 的三条 GDB 命令（<span class="codespan">call PyGILState_Ensure()</span>、<span class="codespan">call PyRun_SimpleString(...)</span>、<span class="codespan">call PyGILState_Release($1)</span>）各自独立地经历这 6 步。每次 <span class="codespan">call</span> 都是一次完整的「保存 -&gt; 设置 -&gt; 执行 -&gt; 恢复」循环。</p>
 
 <p><figure>
-          <img src="/images/peeka/gdb-call-cycle.png" alt="单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环" loading="lazy" decoding="async" />
+          <img src="/images/peeka/gdb-call-cycle.webp" alt="单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环</figcaption>
         </figure></p>
 
@@ -255,7 +255,7 @@
 <p>把这些危险窗口放回时间线上看，每次 GDB attach 都是一次随机抽样：</p>
 
 <p><figure>
-          <img src="/images/peeka/random-pause-risk.png" alt="pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口" loading="lazy" decoding="async" />
+          <img src="/images/peeka/random-pause-risk.webp" alt="pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口</figcaption>
         </figure></p>
 
@@ -272,7 +272,7 @@
 <p>这条路径上会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 <span class="codespan">peeka_spawn_agent(port)</span>；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。</p>
 
 <p><figure>
-          <img src="/images/peeka/dlopen-pthread-timeline.png" alt="第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输" loading="lazy" decoding="async" />
+          <img src="/images/peeka/dlopen-pthread-timeline.webp" alt="第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输</figcaption>
         </figure></p>
 
@@ -351,7 +351,7 @@ continue
 <p><span class="codespan">Py_AddPendingCall(&amp;PyCallable_Check, 0)</span> 会把 <span class="codespan">PyCallable_Check</span> 放进 pending-call 队列，等待 CPython eval loop 在下一个检查点调用它。这个安排用于覆盖一种常见情况：目标进程正在跑纯 Python tight loop，短时间内不触发新的 <span class="codespan">malloc</span> 或 <span class="codespan">PyMem_Malloc</span>。<span class="codespan">b PyCallable_Check</span> 在最终 <span class="codespan">continue</span> 之前设好后，pending call 触发时就能命中断点。因此源码里把 <span class="codespan">Py_AddPendingCall</span> 放在 <span class="codespan">b malloc</span> 之前并不矛盾。</p>
 
 <p><figure>
-          <img src="/images/peeka/pending-call-fallback.png" alt="pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令" loading="lazy" decoding="async" />
+          <img src="/images/peeka/pending-call-fallback.webp" alt="pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令</figcaption>
         </figure></p>
 
@@ -366,7 +366,7 @@ continue
 </ul>
 
 <p><figure>
-          <img src="/images/peeka/breakpoint-layers.png" alt="CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口" loading="lazy" decoding="async" />
+          <img src="/images/peeka/breakpoint-layers.webp" alt="CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口</figcaption>
         </figure></p>
 
@@ -538,7 +538,7 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <p>外部进程一次性写完几个内存槽就返回，目标线程在下一次回到 eval loop 时才真正消费这次请求：</p>
 
 <p><figure>
-          <img src="/images/peeka/pep768-timeline.png" alt="PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本" loading="lazy" decoding="async" />
+          <img src="/images/peeka/pep768-timeline.webp" alt="PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本</figcaption>
         </figure></p>
 
@@ -982,6 +982,8 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

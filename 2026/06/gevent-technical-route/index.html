@@ -213,7 +213,7 @@ monkey patch
 <p>generator 和 greenlet 的区别如图：</p>
 
 <p><figure>
-          <img src="/images/gevent/yield-vs-greenlet.png" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" loading="lazy" decoding="async" />
+          <img src="/images/gevent/yield-vs-greenlet.webp" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去</figcaption>
         </figure></p>
 
@@ -236,7 +236,7 @@ monkey patch
 <p>gevent 文档对自己的定义一句话：基于 coroutine 的 Python 网络库，使用 greenlet，在 libev 或 libuv event loop 之上提供高层同步 API。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>分开看是三层：</p>
 
 <p><figure>
-          <img src="/images/gevent/gevent-three-layers.png" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" loading="lazy" decoding="async" />
+          <img src="/images/gevent/gevent-three-layers.webp" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal</figcaption>
         </figure></p>
 
@@ -251,7 +251,7 @@ monkey patch
 <p>把上面的模型放进一个具体调用。业务代码是开头那段，conn 是 gevent socket，fd 上当前没有数据：</p>
 
 <p><figure>
-          <img src="/images/gevent/recv-path.png" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" loading="lazy" decoding="async" />
+          <img src="/images/gevent/recv-path.webp" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据</figcaption>
         </figure></p>
 
@@ -457,6 +457,8 @@ OS thread 2
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

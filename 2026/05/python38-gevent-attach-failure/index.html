@@ -144,7 +144,7 @@
 <p>一个 attach agent 的最小流程可以画成这样：</p>
 
 <p><figure>
-          <img src="/images/gevent/agent-attach-flow.png" alt="attach agent 的注入链路与控制 socket 的跨进程通信" loading="lazy" decoding="async" />
+          <img src="/images/gevent/agent-attach-flow.webp" alt="attach agent 的注入链路与控制 socket 的跨进程通信" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>attach agent 的注入链路与控制 socket 的跨进程通信</figcaption>
         </figure></p>
 
@@ -247,7 +247,7 @@
 <p>把这条链路展开看，可以更清楚地看到问题出在哪一层、外部诊断工具又看到了什么：</p>
 
 <p><figure>
-          <img src="/images/gevent/agent-blocking-stack.png" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" loading="lazy" decoding="async" />
+          <img src="/images/gevent/agent-blocking-stack.webp" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时</figcaption>
         </figure></p>
 
@@ -353,7 +353,7 @@ Impossible to call blocking function in the event loop callback
 <p>上面这几处替换——<span class="codespan">socket</span> 换 <span class="codespan">_socket</span>、<span class="codespan">threading.Thread</span> 换 <span class="codespan">_thread.start_new_thread</span>、用 <span class="codespan">monkey.get_original()</span> 兜底——做的其实是同一件事：把 agent 控制面从「被 patch 的 Python 高层 API」退到「Python C 扩展暴露的底层原语」。如下图所示：</p>
 
 <p><figure>
-          <img src="/images/gevent/api-layers.png" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" loading="lazy" decoding="async" />
+          <img src="/images/gevent/api-layers.webp" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch</figcaption>
         </figure></p>
 
@@ -459,7 +459,7 @@ Impossible to call blocking function in the event loop callback
 <p>完整调用树要求 tracing backend 持续跟住目标函数内部的 call / return 事件。gevent 会在同一个 OS thread 里切换不同 greenlet，trace 拿到的是这个 OS thread 上的事件流，中间可能夹着别的 greenlet 的 frame：</p>
 
 <p><figure>
-          <img src="/images/gevent/gevent-trace-timeline.png" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" loading="lazy" decoding="async" />
+          <img src="/images/gevent/gevent-trace-timeline.webp" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 下 trace 事件流被另一个 greenlet 穿插的示意图</figcaption>
         </figure></p>
 
@@ -505,7 +505,7 @@ Impossible to call blocking function in the event loop callback
 <p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。它能看到「现在正在跑的 greenlet」，看不到所有挂起的 greenlet。</p>
 
 <p><figure>
-          <img src="/images/gevent/top-sampling-blindspot.png" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" loading="lazy" decoding="async" />
+          <img src="/images/gevent/top-sampling-blindspot.webp" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比</figcaption>
         </figure></p>
 
@@ -662,6 +662,8 @@ Impossible to call blocking function in the event loop callback
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

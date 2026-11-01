@@ -167,7 +167,7 @@
 <p>总的来说，在微调过程中，我们仅需要额外的参数$W_y$以及分隔符 token 的嵌入（在第 3.3 节中描述）。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/gpt1.jpg" alt="图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/gpt1.webp" alt="图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层</figcaption>
         </figure></p>
 
@@ -229,14 +229,14 @@
 <p>表 2 详细展示了我们的模型在不同 NLI 任务中与之前最先进方法的各种对比结果。在五个数据集中的四个上，我们的方法明显优于基准线，相较于之前的最佳结果，在 MNLI 上绝对提升达到 1.5%，在 SciTail 上绝对提升达到 5%，在 QNLI 上绝对提升达到 5.8%，在 SNLI 上绝对提升达到 0.6%。这证明了我们的模型在处理多句子推理和应对语言歧义方面的优势。在 RTE（一个较小的数据集，包含 2490 个示例）上，我们取得了 56% 的准确率，低于多任务双向 LSTM 模型报告的 61.7%。鉴于我们的方法在更大的 NLI 数据集上的强大性能，很可能我们的模型也将从多任务训练中受益，但我们目前尚未探讨这一点。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table2.jpg" alt="表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table2.webp" alt="表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标</figcaption>
         </figure></p>
 
 <p>问题回答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的 RACE 数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与 CNN [19] 或 SQuaD [47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了 Story Cloze Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在 Story Cloze 上最高提高了 8.9%，在 RACE 上整体提高了 5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table3.jpg" alt="表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table3.webp" alt="表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成</figcaption>
         </figure></p>
 
@@ -245,7 +245,7 @@
 <p>最后，我们在两个不同的文本分类任务上进行评估。语言可接受性语料库（CoLA）[65] 包含了关于句子是否符合语法规则的专家评判，用以测试训练模型的固有语言偏差。另一方面，斯坦福情感树库（SST-2）[54] 是一个标准的二分类任务。我们的模型在 CoLA 上获得了 45.4 分，这比先前最好的结果 35.0 有显著提高，展示了我们模型所学到的固有语言偏差。在 SST-2 上，模型也取得了 91.3% 的准确率，与最佳结果相当。我们在 GLUE 基准测试上也获得了 72.8 的总分，明显优于先前最好的 68.9。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table4.jpg" alt="表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table4.webp" alt="表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）</figcaption>
         </figure></p>
 
@@ -256,7 +256,7 @@
 <p>迁移层数的影响：我们观察了从无监督预训练向有监督目标任务迁移不同数量层数的影响。图 2（左）描绘了我们在 MultiNLI 和 RACE 上的方法性能，作为迁移层数量的函数。我们观察到标准结果，即迁移嵌入可以提高性能，每个 Transformer 层都能进一步带来好处，对于 MultiNLI 的完全转移，可以提高 9%。这表明预训练模型中的每一层都包含解决目标任务的有用功能。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/gpt1-2.jpg" alt="图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/gpt1-2.webp" alt="图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化</figcaption>
         </figure></p>
 
@@ -458,6 +458,8 @@
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

@@ -154,7 +154,7 @@
 <p>把这件事画出来就是这张图：</p>
 
 <p><figure>
-          <img src="/images/peeka/frame-stack.png" alt="Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main" loading="lazy" decoding="async" />
+          <img src="/images/peeka/frame-stack.webp" alt="Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>Python frame 栈结构示意。左侧三层调用 main -> handle -> query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -> 上溯到 handle -> 继续上溯到 main</figcaption>
         </figure></p>
 
@@ -326,7 +326,7 @@
 <p>把事件流和真实归属画在同一张时间轴上：</p>
 
 <p><figure>
-          <img src="/images/peeka/gevent-trace-chaos.png" alt="gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知" loading="lazy" decoding="async" />
+          <img src="/images/peeka/gevent-trace-chaos.webp" alt="gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -> call task(B) -> return task(A) -> return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知</figcaption>
         </figure></p>
 
@@ -444,7 +444,7 @@
 <p>第二张图把这种分层差异画出来：</p>
 
 <p><figure>
-          <img src="/images/peeka/suspend-point-comparison.png" alt="gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份" loading="lazy" decoding="async" />
+          <img src="/images/peeka/suspend-point-comparison.webp" alt="gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -> 字节码层 CALL gevent.sleep -> C 扩展层 greenlet.switch() -> 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -> 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -> frame 仍存活且 gen_frame_state = SUSPENDED -> event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份</figcaption>
         </figure></p>
 
@@ -719,6 +719,8 @@
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

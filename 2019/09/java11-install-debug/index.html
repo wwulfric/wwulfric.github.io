@@ -132,7 +132,7 @@
 <p>从 jdk 10 开始，源码不再分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错需要重试)，而是直接下载整个源码包，如下图示。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-download.png" alt="jdk11 download" title="jdk11 download" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-download.webp" alt="jdk11 download" title="jdk11 download" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 download</figcaption>
         </figure></p>
 
@@ -224,7 +224,7 @@ Build performance summary:
 <p>增加 SDK，配置 classpath 和 sourcepath。配置好 sourcepath 便可以正常查看代码了。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-classpath.png" alt="jdk11 classpath" title="jdk11 classpath" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-classpath.webp" alt="jdk11 classpath" title="jdk11 classpath" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 classpath</figcaption>
         </figure></p>
 
@@ -233,14 +233,14 @@ Build performance summary:
 <p>如果使用的是 $BUILD/jdk，由于这是 exploded image jdk，不包含源码，所以需要分别加入 classpath 和 sourcepath，sourcepath 即下载的 openjdk 下的 src 目录。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-sourcepath.png" alt="jdk11 sourcepath" title="jdk11 sourcepath" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-sourcepath.webp" alt="jdk11 sourcepath" title="jdk11 sourcepath" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 sourcepath</figcaption>
         </figure></p>
 
 <p>其他需要修改的配置不在赘述，如下图示。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-ide-conf.png" alt="jdk11 ide conf" title="jdk11 ide conf" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-ide-conf.webp" alt="jdk11 ide conf" title="jdk11 ide conf" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 ide conf</figcaption>
         </figure></p>
 
@@ -253,7 +253,7 @@ Build performance summary:
 <p>首先导入源码。使用 New Cmake Project from Sources，这样可以自动创建 CMakeLists.txt 文件。然后按照引导即可导入源码。你可以导入 src/hotspot，也可以整个导入 src。</p>
 
 <p><figure>
-          <img src="/images/java/clion-debug-jvm.png" alt="clion debug jvm" title="clion debug jvm" loading="lazy" decoding="async" />
+          <img src="/images/java/clion-debug-jvm.webp" alt="clion debug jvm" title="clion debug jvm" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>clion debug jvm</figcaption>
         </figure></p>
 
@@ -262,14 +262,14 @@ Build performance summary:
 <p>导入成功，reload CMakeLists.txt 之后，会自动生成一个 debug configuration。下面配置 debug configuration。如图所示，将 executable 改为你的 java 二进制文件，然后在 program arguments 里设置程序参数。我们先设置为 -version。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-debug1.png" alt="jdk11 debug1" title="jdk11 debug1" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-debug1.webp" alt="jdk11 debug1" title="jdk11 debug1" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 debug1</figcaption>
         </figure></p>
 
 <p>此时我们在<span class="codespan">share/prims/jni.cpp</span>文件上打一个断点，然后执行 debug，就可以看到效果了。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-debug2.png" alt="jdk11 debug2" title="jdk11 debug2" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-debug2.webp" alt="jdk11 debug2" title="jdk11 debug2" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 debug2</figcaption>
         </figure></p>
 
@@ -379,6 +379,8 @@ Build performance summary:
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
     
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d0a896cbe3f14b6c8f12d0d1a1294618"}'></script>
+
 
   </body>
 

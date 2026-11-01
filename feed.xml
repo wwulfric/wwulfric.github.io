@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="zh-CN"><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://www.wulfric.me/feed.xml" rel="self" type="application/atom+xml" /><link href="https://www.wulfric.me/" rel="alternate" type="text/html" hreflang="zh-CN" /><updated>2026-11-01T15:44:11+00:00</updated><id>https://www.wulfric.me/feed.xml</id><title type="html">Storm Spirit</title><subtitle>这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="zh-CN"><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://www.wulfric.me/feed.xml" rel="self" type="application/atom+xml" /><link href="https://www.wulfric.me/" rel="alternate" type="text/html" hreflang="zh-CN" /><updated>2026-11-01T15:44:29+00:00</updated><id>https://www.wulfric.me/feed.xml</id><title type="html">Storm Spirit</title><subtitle>这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。
 </subtitle><author><name>wulfric</name></author><entry><title type="html">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</title><link href="https://www.wulfric.me/2026/06/gevent-technical-route/" rel="alternate" type="text/html" title="gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch" /><published>2026-06-07T00:00:00+00:00</published><updated>2026-06-07T00:00:00+00:00</updated><id>https://www.wulfric.me/2026/06/gevent-technical-route</id><content type="html" xml:base="https://www.wulfric.me/2026/06/gevent-technical-route/"><![CDATA[<p>协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。</p>
 
 <p>Python 里最常见的两个协程库是 asyncio 和 gevent。asyncio 用 <span class="codespan">async</span>/<span class="codespan">await</span> 语法把暂停点写进代码，协程由事件循环调度，暂停和恢复发生在 Python 字节码层。gevent 走的是另一条路：它对外保留同步 API 的外观，底层用 greenlet 保存一整段调用栈，再用一个特殊的 Hub greenlet 跑 event loop 做调度。这条技术路线可以画成这样：</p>
@@ -113,7 +113,7 @@ monkey patch
 <p>generator 和 greenlet 的区别如图：</p>
 
 <p><figure>
-          <img src="/images/gevent/yield-vs-greenlet.png" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" loading="lazy" decoding="async" />
+          <img src="/images/gevent/yield-vs-greenlet.webp" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去</figcaption>
         </figure></p>
 
@@ -136,7 +136,7 @@ monkey patch
 <p>gevent 文档对自己的定义一句话：基于 coroutine 的 Python 网络库，使用 greenlet，在 libev 或 libuv event loop 之上提供高层同步 API。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>分开看是三层：</p>
 
 <p><figure>
-          <img src="/images/gevent/gevent-three-layers.png" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" loading="lazy" decoding="async" />
+          <img src="/images/gevent/gevent-three-layers.webp" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal</figcaption>
         </figure></p>
 
@@ -151,7 +151,7 @@ monkey patch
 <p>把上面的模型放进一个具体调用。业务代码是开头那段，conn 是 gevent socket，fd 上当前没有数据：</p>
 
 <p><figure>
-          <img src="/images/gevent/recv-path.png" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" loading="lazy" decoding="async" />
+          <img src="/images/gevent/recv-path.webp" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据</figcaption>
         </figure></p>
 
@@ -299,7 +299,7 @@ OS thread 2
 <p>把这件事画出来就是这张图：</p>
 
 <p><figure>
-          <img src="/images/peeka/frame-stack.png" alt="Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main" loading="lazy" decoding="async" />
+          <img src="/images/peeka/frame-stack.webp" alt="Python frame 栈结构示意。左侧三层调用 main -&gt; handle -&gt; query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -&gt; 上溯到 handle -&gt; 继续上溯到 main" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>Python frame 栈结构示意。左侧三层调用 main -> handle -> query 的代码；中间对应三个 frame 对象，每个 frame 标注 f_code.co_name、f_lineno、f_locals、f_back，f_back 指针自下而上把三层 frame 串成链表；右侧用红色虚线箭头展示异常 traceback 沿 f_back 反向上溯：query 抛出 ValueError -> 上溯到 handle -> 继续上溯到 main</figcaption>
         </figure></p>
 
@@ -471,7 +471,7 @@ OS thread 2
 <p>把事件流和真实归属画在同一张时间轴上：</p>
 
 <p><figure>
-          <img src="/images/peeka/gevent-trace-chaos.png" alt="gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知" loading="lazy" decoding="async" />
+          <img src="/images/peeka/gevent-trace-chaos.webp" alt="gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -&gt; call task(B) -&gt; return task(A) -&gt; return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 下 sys.settrace 看到的事件流与两个 greenlet 真实执行轨迹的对照。上方 settrace 泳道按时间从左到右记录 call task(A) -> call task(B) -> return task(A) -> return task(B)；中间 greenlet A 真实轨迹是 task A 执行至 sleep(0)、挂起、恢复并返回；下方 greenlet B 真实轨迹是未开始、task B 执行至 sleep(0)、挂起、恢复并返回；三条橙色 switch 竖虚线标出汇编层的栈切换，CPython 不感知</figcaption>
         </figure></p>
 
@@ -589,7 +589,7 @@ OS thread 2
 <p>第二张图把这种分层差异画出来：</p>
 
 <p><figure>
-          <img src="/images/peeka/suspend-point-comparison.png" alt="gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份" loading="lazy" decoding="async" />
+          <img src="/images/peeka/suspend-point-comparison.webp" alt="gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -&gt; 字节码层 CALL gevent.sleep -&gt; C 扩展层 greenlet.switch() -&gt; 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -&gt; 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -&gt; frame 仍存活且 gen_frame_state = SUSPENDED -&gt; event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 与 asyncio 暂停点对比。上半 gevent：Python 层 gevent.sleep(0) -> 字节码层 CALL gevent.sleep -> C 扩展层 greenlet.switch() -> 汇编层 slp_switch memcpy 栈，红色突出暂停发生在汇编层；下方写明 sys.monitoring 没有相关事件，补救手段是 greenlet.settrace。下半 asyncio：Python 层 await asyncio.sleep(0) -> 字节码层 SEND/YIELD_VALUE（暂停发生在此处） -> frame 仍存活且 gen_frame_state = SUSPENDED -> event loop 选下个 Task 再 SEND 恢复；下方写明 sys.monitoring 暴露 PY_YIELD / PY_RESUME，工具只需用 asyncio.current_task() 给事件打 Task 身份</figcaption>
         </figure></p>
 
@@ -790,7 +790,7 @@ OS thread 2
 <p>一个 attach agent 的最小流程可以画成这样：</p>
 
 <p><figure>
-          <img src="/images/gevent/agent-attach-flow.png" alt="attach agent 的注入链路与控制 socket 的跨进程通信" loading="lazy" decoding="async" />
+          <img src="/images/gevent/agent-attach-flow.webp" alt="attach agent 的注入链路与控制 socket 的跨进程通信" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>attach agent 的注入链路与控制 socket 的跨进程通信</figcaption>
         </figure></p>
 
@@ -893,7 +893,7 @@ OS thread 2
 <p>把这条链路展开看，可以更清楚地看到问题出在哪一层、外部诊断工具又看到了什么：</p>
 
 <p><figure>
-          <img src="/images/gevent/agent-blocking-stack.png" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" loading="lazy" decoding="async" />
+          <img src="/images/gevent/agent-blocking-stack.webp" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时</figcaption>
         </figure></p>
 
@@ -999,7 +999,7 @@ Impossible to call blocking function in the event loop callback
 <p>上面这几处替换——<span class="codespan">socket</span> 换 <span class="codespan">_socket</span>、<span class="codespan">threading.Thread</span> 换 <span class="codespan">_thread.start_new_thread</span>、用 <span class="codespan">monkey.get_original()</span> 兜底——做的其实是同一件事：把 agent 控制面从「被 patch 的 Python 高层 API」退到「Python C 扩展暴露的底层原语」。如下图所示：</p>
 
 <p><figure>
-          <img src="/images/gevent/api-layers.png" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" loading="lazy" decoding="async" />
+          <img src="/images/gevent/api-layers.webp" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch</figcaption>
         </figure></p>
 
@@ -1105,7 +1105,7 @@ Impossible to call blocking function in the event loop callback
 <p>完整调用树要求 tracing backend 持续跟住目标函数内部的 call / return 事件。gevent 会在同一个 OS thread 里切换不同 greenlet，trace 拿到的是这个 OS thread 上的事件流，中间可能夹着别的 greenlet 的 frame：</p>
 
 <p><figure>
-          <img src="/images/gevent/gevent-trace-timeline.png" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" loading="lazy" decoding="async" />
+          <img src="/images/gevent/gevent-trace-timeline.webp" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 下 trace 事件流被另一个 greenlet 穿插的示意图</figcaption>
         </figure></p>
 
@@ -1151,7 +1151,7 @@ Impossible to call blocking function in the event loop callback
 <p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。它能看到「现在正在跑的 greenlet」，看不到所有挂起的 greenlet。</p>
 
 <p><figure>
-          <img src="/images/gevent/top-sampling-blindspot.png" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" loading="lazy" decoding="async" />
+          <img src="/images/gevent/top-sampling-blindspot.webp" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比</figcaption>
         </figure></p>
 
@@ -1228,7 +1228,7 @@ Impossible to call blocking function in the event loop callback
 <p>不同的工具对这三个问题给出了不同的答案。下面这张表把三代方案对应到这三个子问题上：</p>
 
 <p><figure>
-          <img src="/images/peeka/three-generations-matrix.png" alt="三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题" loading="lazy" decoding="async" />
+          <img src="/images/peeka/three-generations-matrix.webp" alt="三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>三代进程注入方案分别如何回答「进入地址空间、安全执行、时机选择」这三个子问题</figcaption>
         </figure></p>
 
@@ -1303,7 +1303,7 @@ Impossible to call blocking function in the event loop callback
 <p>因此，pyrasite 的三条 GDB 命令（<span class="codespan">call PyGILState_Ensure()</span>、<span class="codespan">call PyRun_SimpleString(...)</span>、<span class="codespan">call PyGILState_Release($1)</span>）各自独立地经历这 6 步。每次 <span class="codespan">call</span> 都是一次完整的「保存 -&gt; 设置 -&gt; 执行 -&gt; 恢复」循环。</p>
 
 <p><figure>
-          <img src="/images/peeka/gdb-call-cycle.png" alt="单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环" loading="lazy" decoding="async" />
+          <img src="/images/peeka/gdb-call-cycle.webp" alt="单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>单次 GDB call 在目标进程内的 6 步循环，以及 pyrasite 三条 call 命令对应的三次独立循环</figcaption>
         </figure></p>
 
@@ -1353,7 +1353,7 @@ Impossible to call blocking function in the event loop callback
 <p>把这些危险窗口放回时间线上看，每次 GDB attach 都是一次随机抽样：</p>
 
 <p><figure>
-          <img src="/images/peeka/random-pause-risk.png" alt="pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口" loading="lazy" decoding="async" />
+          <img src="/images/peeka/random-pause-risk.webp" alt="pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>pyrasite 的 GDB attach 时刻在目标进程时间线上随机落点，多数落在正常区，少数撞进 malloc / GC / 持有 GIL 等危险窗口</figcaption>
         </figure></p>
 
@@ -1370,7 +1370,7 @@ Impossible to call blocking function in the event loop callback
 <p>这条路径上会短暂存在三个进程：用户启动的 peeka/memray 控制端进程、控制端临时启动的 GDB/LLDB 子进程、被 attach 的目标 Python 进程。GDB/LLDB 子进程只负责 ptrace、dlopen 和调用 <span class="codespan">peeka_spawn_agent(port)</span>；agent 代码的传输发生在控制端进程和目标进程中新建的 pthread 之间。</p>
 
 <p><figure>
-          <img src="/images/peeka/dlopen-pthread-timeline.png" alt="第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输" loading="lazy" decoding="async" />
+          <img src="/images/peeka/dlopen-pthread-timeline.webp" alt="第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>第二代方案三个进程的时序：GDB/LLDB 子进程在 detach 后退出，控制端和目标进程里的 agent 线程通过 TCP 反向连接完成脚本传输</figcaption>
         </figure></p>
 
@@ -1449,7 +1449,7 @@ continue
 <p><span class="codespan">Py_AddPendingCall(&amp;PyCallable_Check, 0)</span> 会把 <span class="codespan">PyCallable_Check</span> 放进 pending-call 队列，等待 CPython eval loop 在下一个检查点调用它。这个安排用于覆盖一种常见情况：目标进程正在跑纯 Python tight loop，短时间内不触发新的 <span class="codespan">malloc</span> 或 <span class="codespan">PyMem_Malloc</span>。<span class="codespan">b PyCallable_Check</span> 在最终 <span class="codespan">continue</span> 之前设好后，pending call 触发时就能命中断点。因此源码里把 <span class="codespan">Py_AddPendingCall</span> 放在 <span class="codespan">b malloc</span> 之前并不矛盾。</p>
 
 <p><figure>
-          <img src="/images/peeka/pending-call-fallback.png" alt="pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令" loading="lazy" decoding="async" />
+          <img src="/images/peeka/pending-call-fallback.webp" alt="pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>pending call 兜底 tight loop 场景：普通业务下 C 函数频繁触发立刻命中断点；纯 Python tight loop 下没有新的 malloc/PyMem_*，被动断点等不到命中；GDB 主动塞 PyCallable_Check 进 pending-call 队列，eval loop 下一个检查点触发，进入 PyCallable_Check 后命中断点，执行同一组 dlopen + spawn agent 命令</figcaption>
         </figure></p>
 
@@ -1464,7 +1464,7 @@ continue
 </ul>
 
 <p><figure>
-          <img src="/images/peeka/breakpoint-layers.png" alt="CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口" loading="lazy" decoding="async" />
+          <img src="/images/peeka/breakpoint-layers.webp" alt="CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>CPython 分配栈与 peeka 的断点覆盖：左侧自上而下为用户 Python 代码、CPython 运行时、CPython 内存 API（PyMem_*）、pymalloc/arena 管理、libc allocator（malloc/free）、内核 sbrk/mmap；右侧三组断点分别指向 CPython 运行时层、CPython 内存 API 层、libc allocator 层，覆盖三个不同抽象层次的 C 函数入口</figcaption>
         </figure></p>
 
@@ -1636,7 +1636,7 @@ p ((int(*)(int))$spawn)($port) ? "FAILURE" : "SUCCESS"
 <p>外部进程一次性写完几个内存槽就返回，目标线程在下一次回到 eval loop 时才真正消费这次请求：</p>
 
 <p><figure>
-          <img src="/images/peeka/pep768-timeline.png" alt="PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本" loading="lazy" decoding="async" />
+          <img src="/images/peeka/pep768-timeline.webp" alt="PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>PEP 768 的两段式时序：阶段 A 外部进程同步写入 PyThreadState 的 script_path / pending_call / eval_breaker，阶段 B 解释器在下一个安全检查点检测到标志位并执行脚本</figcaption>
         </figure></p>
 
@@ -2347,7 +2347,7 @@ for any Next.js tasks.
 <p>问题是：内联回答问题会变得混乱。所以 <span class="codespan">/answer</span> 读取智能体的最后一个响应，提取所有问题，并将它们重新格式化为一个漂亮的输入框。</p>
 
 <p><figure>
-          <img src="/images/pi/pi-answer.png" alt="/answer 扩展显示问题对话框" loading="lazy" decoding="async" />
+          <img src="/images/pi/pi-answer.webp" alt="/answer 扩展显示问题对话框" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>/answer 扩展显示问题对话框</figcaption>
         </figure></p>
 
@@ -2364,7 +2364,7 @@ for any Next.js tasks.
 <p>UI 是根据 Codex 建模的，它提供了易于审查的提交、差异、未提交的更改或远程 PR。提示词关注我关心的事情，所以我得到了我想要的提示（例如：我让它指出新添加的依赖项）。</p>
 
 <p><figure>
-          <img src="/images/pi/pi-review.png" alt="/review 扩展显示审查预设选项" loading="lazy" decoding="async" />
+          <img src="/images/pi/pi-review.webp" alt="/review 扩展显示审查预设选项" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>/review 扩展显示审查预设选项</figcaption>
         </figure></p>
 
@@ -4676,7 +4676,7 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 <p>最近的研究结果提示了将语言推理与交互决策制定相结合的自主系统的可能性。一方面，经过适当提示的大型语言模型（LLMs）已经展示出具有新兴能力，可以在算术、常识和符号推理任务中执行几个推理步骤，从问题中推导出答案（Wei等，2022）。然而，这种“思维链”推理是一个静态的黑盒子，因为模型使用自己的内部表示来生成思维，而没有与外部世界联系，这限制了其反应性推理或更新知识的能力。这可能会导致像事实幻觉和推理过程中的错误传播等问题（图1（1b））。另一方面，最近的研究探索了预训练语言模型在交互环境中规划和行动的应用（Ahn等，2022; Nakano等，2021; Yao等，2020; Huang等，2022a），重点是通过语言先验来预测行动。这些方法通常将多模态观察转换为文本，使用语言模型生成特定领域的行动或计划，然后使用控制器选择或执行它们。然而，它们没有利用语言模型对高层次目标进行抽象推理或维护工作记忆以支持行动，除了Huang等人（2022b）在当前状态下执行有限形式的语言推理以重申空间事实。除了这种简单的与几个块交互的具体任务外，还没有研究如何以协同的方式将推理和行动结合起来进行一般任务解决，以及这种组合是否与单独推理或行动相比带来系统性的优势。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/ReAct-figure1.png" alt="图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/ReAct-figure1.webp" alt="图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图1：（1）比较4种提示方法，（a）标准，（b）思维链（CoT，仅推理），（c）仅行动，（d）ReAct（推理+行动），解决HotpotQA（Yang等，2018）问题。 （2）比较（a）仅行动和（b）ReAct提示以解决AlfWorld（Shridhar等，2020b）游戏。在这两个领域中，我们省略了提示中的上下文示例，并仅显示模型（行动、思维）和环境（观察）生成的任务解决轨迹。</figcaption>
         </figure></p>
 
@@ -4720,12 +4720,12 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 <p>ReAct Prompting: 对于HotpotQA和FEVER，我们从训练集中随机选择了6个和3个案例，并手动编写了ReAct格式的轨迹，用作提示中的少量样本。与图1（d）类似，每个轨迹由多个思考-行动-观察步骤（即密集思考）组成，其中自由形式的思考用于各种目的。具体而言，我们使用一些思考来分解问题（“我需要搜索x，找到y，然后找到z”），从维基百科观察中提取信息（“x始于1844年”，“该段落没有提到x”），进行常识（“x不是y，所以z必须是…”）或算术推理（“1844 &lt; 1989”），指导搜索重构（“也许我可以搜索/查找x”），并综合最终答案（“…所以答案是x”）。更多详细信息请参见附录C。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/ReAct-table1.png" alt="表1：PaLM-540B在HotpotQA和FEVER上的提示结果" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/ReAct-table1.webp" alt="表1：PaLM-540B在HotpotQA和FEVER上的提示结果" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表1：PaLM-540B在HotpotQA和FEVER上的提示结果</figcaption>
         </figure></p>
 
 <p><figure>
-          <img src="/images/chatgpt/ReAct-figure2.png" alt="图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/ReAct-figure2.webp" alt="图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图2：PaLM-540B在使用不同数量的CoT-SC样本时的提示结果</figcaption>
         </figure></p>
 
@@ -4768,7 +4768,7 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 <p>大多数竞争性神经序列转换模型都具有编码器-解码器结构[5, 2, 35]。其中，编码器将符号表示的输入序列(x1,…,xn)映射到一系列连续表示z = (z1,…,zn)。给定z，解码器随后生成一个符号输出序列(y1, …, ym)，每次生成一个元素。在每个步骤中，该模型是自回归的[10]，在生成下一个符号时消耗先前生成的符号作为额外的输入。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-encoder-decoder.png" alt="图1：Transformer 模型架构" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-encoder-decoder.webp" alt="图1：Transformer 模型架构" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图1：Transformer 模型架构</figcaption>
         </figure></p>
 
@@ -4785,7 +4785,7 @@ $ 是通过采样预测产生的经验CDF， $\hat{F}(z)$ 是指示函数。虽�
 <p>注意力函数可以描述为将一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。输出是值的加权和，其中分配给每个值的权重是由查询与相应键的兼容性函数计算的。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-attention2.png" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-attention2.webp" alt="图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图2：(左) 缩放点积注意力 (右) 多头注意力由多个并行运行的注意层组成。</figcaption>
         </figure></p>
 
@@ -4843,7 +4843,7 @@ where \ head_i=Attention(QW_i^Q,KW_i^K,VW_i^V)\]
 <p>由于我们的模型不包含循环和卷积，为了使模型能够利用序列的顺序，我们必须注入有关序列中标记的相对或绝对位置的一些信息。为此，在编码器和解码器堆栈底部的输入嵌入中添加“位置编码”。位置编码与嵌入具有相同的维度dmodel，因此可以将它们相加。有许多位置编码的选择，可以是可学习的或固定的[9]。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/Transformer-table1.png" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/Transformer-table1.webp" alt="表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表1：不同层类型的最大路径长度、每层复杂度和最小顺序操作数。n是序列长度，d是表示维度，k是卷积的内核大小，r是受限自注意力中邻域的大小。</figcaption>
         </figure></p>
 
@@ -5010,7 +5010,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 <p>总的来说，在微调过程中，我们仅需要额外的参数$W_y$以及分隔符 token 的嵌入（在第 3.3 节中描述）。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/gpt1.jpg" alt="图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/gpt1.webp" alt="图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图 1: (左侧) 这项工作中用到的 transformer  结构和训练目标。（右侧）微调阶段，在不同任务上的输入变换。我们将所有结构化的输出转换成可以被我们的预训练模型处理的 token 序列，然后在最后添加一层线性+softmax 层</figcaption>
         </figure></p>
 
@@ -5072,14 +5072,14 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 <p>表 2 详细展示了我们的模型在不同 NLI 任务中与之前最先进方法的各种对比结果。在五个数据集中的四个上，我们的方法明显优于基准线，相较于之前的最佳结果，在 MNLI 上绝对提升达到 1.5%，在 SciTail 上绝对提升达到 5%，在 QNLI 上绝对提升达到 5.8%，在 SNLI 上绝对提升达到 0.6%。这证明了我们的模型在处理多句子推理和应对语言歧义方面的优势。在 RTE（一个较小的数据集，包含 2490 个示例）上，我们取得了 56% 的准确率，低于多任务双向 LSTM 模型报告的 61.7%。鉴于我们的方法在更大的 NLI 数据集上的强大性能，很可能我们的模型也将从多任务训练中受益，但我们目前尚未探讨这一点。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table2.jpg" alt="表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table2.webp" alt="表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 2：自然语言推理任务的实验结果，将我们的模型与当前最先进的方法进行比较。5x 表示 5 个模型的集成。所有数据集都使用准确率作为评估指标</figcaption>
         </figure></p>
 
 <p>问题回答和常识推理：另一个涉及单句和多句推理的任务是问答。我们采用了最近发布的 RACE 数据集[30]，该数据集包含了来自初中和高中考试的英文段落及相关问题。与 CNN [19] 或 SQuaD [47]等其他数据集相比，这个语料库包含了更多的推理类型问题，为我们的模型提供了极佳的评估，因为我们的模型经过训练能够处理长距离的上下文。此外，我们还评估了 Story Cloze Test[40]，这个测试要求从两个选项中为多句故事选择正确的结尾。在这些任务上，我们的模型再次明显优于先前的最佳结果——在 Story Cloze 上最高提高了 8.9%，在 RACE 上整体提高了 5.7%。这证明了我们的模型在有效处理长距离上下文方面具有很强的能力。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table3.jpg" alt="表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table3.webp" alt="表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 3：在问答和常识推理方面的结果，将我们的模型与当前最先进的方法进行比较。9x 表示 9 个模型的集成</figcaption>
         </figure></p>
 
@@ -5088,7 +5088,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 <p>最后，我们在两个不同的文本分类任务上进行评估。语言可接受性语料库（CoLA）[65] 包含了关于句子是否符合语法规则的专家评判，用以测试训练模型的固有语言偏差。另一方面，斯坦福情感树库（SST-2）[54] 是一个标准的二分类任务。我们的模型在 CoLA 上获得了 45.4 分，这比先前最好的结果 35.0 有显著提高，展示了我们模型所学到的固有语言偏差。在 SST-2 上，模型也取得了 91.3% 的准确率，与最佳结果相当。我们在 GLUE 基准测试上也获得了 72.8 的总分，明显优于先前最好的 68.9。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/GPT1-table4.jpg" alt="表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/GPT1-table4.webp" alt="表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>表 4：语义相似性和分类结果，将我们的模型与当前最先进的方法进行比较。本表中所有任务评估均使用 GLUE 基准测试进行。（mc= Mathews 相关系数，acc=准确率，pc=Pearson 相关系数）</figcaption>
         </figure></p>
 
@@ -5099,7 +5099,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 <p>迁移层数的影响：我们观察了从无监督预训练向有监督目标任务迁移不同数量层数的影响。图 2（左）描绘了我们在 MultiNLI 和 RACE 上的方法性能，作为迁移层数量的函数。我们观察到标准结果，即迁移嵌入可以提高性能，每个 Transformer 层都能进一步带来好处，对于 MultiNLI 的完全转移，可以提高 9%。这表明预训练模型中的每一层都包含解决目标任务的有用功能。</p>
 
 <p><figure>
-          <img src="/images/chatgpt/gpt1-2.jpg" alt="图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化" loading="lazy" decoding="async" />
+          <img src="/images/chatgpt/gpt1-2.webp" alt="图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>图 2：（左）将从预训练语言模型迁移的层数逐渐增加对 RACE 和 MultiNLI 的影响。（右）图表显示了 LM 预训练更新作为函数的不同任务零样本性能的演变。任务性能在随机猜测基线和使用单一模型的当前最先进技术之间归一化</figcaption>
         </figure></p>
 
@@ -5223,7 +5223,7 @@ PE_{(pos,2i+1)}=cos(pos/10000^{2i/d_{model}})\]
 <p>从 jdk 10 开始，源码不再分散在不同的仓库中，所以只需要 clone 单独的 repository 即可<sup id="fnref:1:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。我选择是 <a href="http://hg.openjdk.java.net/jdk-updates/jdk11u">jdk11u</a>，而且不是通过 hg clone 的方式(比较慢，经常出错需要重试)，而是直接下载整个源码包，如下图示。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-download.png" alt="jdk11 download" title="jdk11 download" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-download.webp" alt="jdk11 download" title="jdk11 download" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 download</figcaption>
         </figure></p>
 
@@ -5315,7 +5315,7 @@ Build performance summary:
 <p>增加 SDK，配置 classpath 和 sourcepath。配置好 sourcepath 便可以正常查看代码了。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-classpath.png" alt="jdk11 classpath" title="jdk11 classpath" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-classpath.webp" alt="jdk11 classpath" title="jdk11 classpath" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 classpath</figcaption>
         </figure></p>
 
@@ -5324,14 +5324,14 @@ Build performance summary:
 <p>如果使用的是 $BUILD/jdk，由于这是 exploded image jdk，不包含源码，所以需要分别加入 classpath 和 sourcepath，sourcepath 即下载的 openjdk 下的 src 目录。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-sourcepath.png" alt="jdk11 sourcepath" title="jdk11 sourcepath" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-sourcepath.webp" alt="jdk11 sourcepath" title="jdk11 sourcepath" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 sourcepath</figcaption>
         </figure></p>
 
 <p>其他需要修改的配置不在赘述，如下图示。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-ide-conf.png" alt="jdk11 ide conf" title="jdk11 ide conf" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-ide-conf.webp" alt="jdk11 ide conf" title="jdk11 ide conf" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 ide conf</figcaption>
         </figure></p>
 
@@ -5344,7 +5344,7 @@ Build performance summary:
 <p>首先导入源码。使用 New Cmake Project from Sources，这样可以自动创建 CMakeLists.txt 文件。然后按照引导即可导入源码。你可以导入 src/hotspot，也可以整个导入 src。</p>
 
 <p><figure>
-          <img src="/images/java/clion-debug-jvm.png" alt="clion debug jvm" title="clion debug jvm" loading="lazy" decoding="async" />
+          <img src="/images/java/clion-debug-jvm.webp" alt="clion debug jvm" title="clion debug jvm" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>clion debug jvm</figcaption>
         </figure></p>
 
@@ -5353,14 +5353,14 @@ Build performance summary:
 <p>导入成功，reload CMakeLists.txt 之后，会自动生成一个 debug configuration。下面配置 debug configuration。如图所示，将 executable 改为你的 java 二进制文件，然后在 program arguments 里设置程序参数。我们先设置为 -version。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-debug1.png" alt="jdk11 debug1" title="jdk11 debug1" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-debug1.webp" alt="jdk11 debug1" title="jdk11 debug1" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 debug1</figcaption>
         </figure></p>
 
 <p>此时我们在<span class="codespan">share/prims/jni.cpp</span>文件上打一个断点，然后执行 debug，就可以看到效果了。</p>
 
 <p><figure>
-          <img src="/images/java/jdk11-debug2.png" alt="jdk11 debug2" title="jdk11 debug2" loading="lazy" decoding="async" />
+          <img src="/images/java/jdk11-debug2.webp" alt="jdk11 debug2" title="jdk11 debug2" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>jdk11 debug2</figcaption>
         </figure></p>
 
@@ -5459,7 +5459,7 @@ Build performance summary:
 <p>增长战略的工作内容有：重新梳理用户需求，整理出用户故事地图，并建立用户画像，分清客户的行业背景，使用习惯、痛点等的差异。使用敏捷开发，全面优化产品的每个阶段（导流，留存，沉淀等等）。</p>
 
 <p><figure>
-          <img src="/images/R-aarrr-model.png" alt="AARRR 模型" loading="lazy" decoding="async" />
+          <img src="/images/R-aarrr-model.webp" alt="AARRR 模型" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>AARRR 模型</figcaption>
         </figure></p>
 

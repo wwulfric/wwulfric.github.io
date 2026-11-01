@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>一些命令行效率工具</title>
-  <meta name="description" content="Zsh
-">
-  <meta name="keywords" content="zsh,oh-my-zsh,autojump,proxychains,ag,htop,ccat">
-  <link rel="canonical" href="https://wulfric.me/2015/08/zsh/">
+  
+  <title>一些命令行效率工具 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="一些命令行效率工具" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="提升命令行效率的工具合集：Zsh 的补全、别名和跳转，oh-my-zsh 的主题与插件，以及 autojump、proxychains、ag、htop 和 ccat。" />
+<meta name="twitter:description" property="og:description" content="提升命令行效率的工具合集：Zsh 的补全、别名和跳转，oh-my-zsh 的主题与插件，以及 autojump、proxychains、ag、htop 和 ccat。" />
+<link rel="canonical" href="https://www.wulfric.me/2015/08/zsh/" />
+<meta property="og:url" content="https://www.wulfric.me/2015/08/zsh/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2015-08-13T20:08:00+00:00" />
+<meta property="article:modified_time" content="2015-08-13T20:08:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="一些命令行效率工具" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2015-08-13T20:08:00+00:00","datePublished":"2015-08-13T20:08:00+00:00","description":"提升命令行效率的工具合集：Zsh 的补全、别名和跳转，oh-my-zsh 的主题与插件，以及 autojump、proxychains、ag、htop 和 ccat。","headline":"一些命令行效率工具","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2015/08/zsh/"},"url":"https://www.wulfric.me/2015/08/zsh/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2015</div>
     </div>
-    <h1 class="post-title">一些命令行效率工具</h1>
+    <h1 class="post-title" data-pagefind-meta="title">一些命令行效率工具</h1>
   </header>
 
   
@@ -70,8 +87,22 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2015 年（约 11 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <h2 id="zsh">Zsh</h2>
 
 <p>Zsh 也许是目前最好用的 shell，是 bash 替代品中较为优秀的一个。这里列举了 zsh 的一些优点：<a href="https://www-s.acm.illinois.edu/workshops/zsh/why.html">为什么要使用 zsh</a>。</p>
@@ -87,22 +118,14 @@ chsh <span class="nt">-s</span> <span class="sb">`</span>which zsh<span class="s
 <p>zsh 的命令补全功能非常强大，可以补齐路径，补齐命令，补齐参数等。（请问你记住 tar 的所有参数了吗😃，只要 <span class="codespan">tar -</span>加 tab 键，再也不用 <a href="https://zh.wikipedia.org/zh/RTFM">rtfm</a> 了😂）</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-zsh-autocomplete.png" alt="zsh auto complete" title="zsh auto complete" width= height= />
-          </picture>
+          <img src="/images/R-zsh-autocomplete.png" alt="zsh auto complete" title="zsh auto complete" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>zsh auto complete</figcaption>
         </figure></p>
 
 <p>按下 tab 键显示出所有待选项后，再按一次 tab 键，即进入选择模式，进入选择模式后，按 tab 切向下一个选项，按 shift+tab 键切向上一个选项，ctrl+f/b/n/p 可以向前后左右切换。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-zsh-tab-tab.png" alt="zsh tab 切换" title="zsh tab 切换" width= height= />
-          </picture>
+          <img src="/images/R-zsh-tab-tab.png" alt="zsh tab 切换" title="zsh tab 切换" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>zsh tab 切换</figcaption>
         </figure></p>
 
@@ -226,11 +249,7 @@ proxychains4 brew cask <span class="nb">install </span>xxx
 </code></pre></div></div>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/proxychain.png" alt="proxychains" title="proxychains" width= height= />
-          </picture>
+          <img src="/images/proxychain.png" alt="proxychains" title="proxychains" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>proxychains</figcaption>
         </figure></p>
 
@@ -260,11 +279,7 @@ socks5 	127.0.0.1 1080
 <p><a href="http://hisham.hm/htop/">htop</a> 是一款运行于 Linux 系统监控与进程管理软件，用于取代 Unix 下传统的 top。与 top 只提供最消耗资源的进程列表不同，htop 提供所有进程的列表，并且使用彩色标识出处理器、swap 和内存状态。<sup id="fnref:htop-wiki"><a href="#fn:htop-wiki" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/htop.png" alt="htop" title="htop" width= height= />
-          </picture>
+          <img src="/images/htop.png" alt="htop" title="htop" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>htop</figcaption>
         </figure></p>
 
@@ -283,11 +298,7 @@ socks5 	127.0.0.1 1080
 <p><a href="https://github.com/jingweno/ccat">ccat</a> 是上色的<span class="codespan">cat</span>，在 cat 的基础上提供了语法高亮。可通过<span class="codespan">brew install ccat</span>安装。目前已支持<span class="codespan">ruby</span>, <span class="codespan">python</span>, <span class="codespan">javascript</span>, <span class="codespan">java</span>, <span class="codespan">c</span>, <span class="codespan">go</span>。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-ccat.png" alt="ccat" title="ccat" width= height= />
-          </picture>
+          <img src="/images/R-ccat.png" alt="ccat" title="ccat" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>ccat</figcaption>
         </figure></p>
 
@@ -319,33 +330,32 @@ socks5 	127.0.0.1 1080
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- zsh, oh-my-zsh, autojump, proxychains, ag, htop, ccat -->
 
-    <a class='tag' href="/tags/zsh">
+    <a class='tag' href="/tags/zsh/">
       zsh
     </a>
 
-    <a class='tag' href="/tags/oh-my-zsh">
+    <a class='tag' href="/tags/oh-my-zsh/">
       oh-my-zsh
     </a>
 
-    <a class='tag' href="/tags/autojump">
+    <a class='tag' href="/tags/autojump/">
       autojump
     </a>
 
-    <a class='tag' href="/tags/proxychains">
+    <a class='tag' href="/tags/proxychains/">
       proxychains
     </a>
 
-    <a class='tag' href="/tags/ag">
+    <a class='tag' href="/tags/ag/">
       ag
     </a>
 
-    <a class='tag' href="/tags/htop">
+    <a class='tag' href="/tags/htop/">
       htop
     </a>
 
-    <a class='tag' href="/tags/ccat">
+    <a class='tag' href="/tags/ccat/">
       ccat
     </a>
 
@@ -360,24 +370,39 @@ socks5 	127.0.0.1 1080
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2015/08/iterm2/"><small>← 上一篇（更早）</small>你应该知道的 iTerm2 使用方法--MAC终端工具</a>
+    
+    
+      <a class="post-nav-next" href="/2015/08/git-tools/"><small>下一篇（更新）→</small>git 工具介绍</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -393,36 +418,8 @@ socks5 	127.0.0.1 1080
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

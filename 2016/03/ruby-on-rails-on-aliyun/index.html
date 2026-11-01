@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>Ruby on Rails 开发和生产环境搭建</title>
-  <meta name="description" content="准备搭生产环境做一些玩具（ubuntu ruby rails nginx passenger mina postgresql），参考了阿里云，linode 和 digital ocean。DO 两三百的延迟实在不能忍受，ping 了下阿里只有 2ms，那就选这个吧！
-">
-  <meta name="keywords" content="ubuntu,ruby,rbenv,nginx,passenger,mina,rails,postgresql">
-  <link rel="canonical" href="https://wulfric.me/2016/03/ruby-on-rails-on-aliyun/">
+  
+  <title>Ruby on Rails 开发和生产环境搭建 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Ruby on Rails 开发和生产环境搭建" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="在阿里云 Ubuntu 上搭建 Rails 生产环境：SSH 安全配置、rbenv、Passenger with Nginx、PostgreSQL，以及用 Mina 从本地部署应用。" />
+<meta name="twitter:description" property="og:description" content="在阿里云 Ubuntu 上搭建 Rails 生产环境：SSH 安全配置、rbenv、Passenger with Nginx、PostgreSQL，以及用 Mina 从本地部署应用。" />
+<link rel="canonical" href="https://www.wulfric.me/2016/03/ruby-on-rails-on-aliyun/" />
+<meta property="og:url" content="https://www.wulfric.me/2016/03/ruby-on-rails-on-aliyun/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2016-03-21T16:37:00+00:00" />
+<meta property="article:modified_time" content="2016-03-21T16:37:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="Ruby on Rails 开发和生产环境搭建" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2016-03-21T16:37:00+00:00","datePublished":"2016-03-21T16:37:00+00:00","description":"在阿里云 Ubuntu 上搭建 Rails 生产环境：SSH 安全配置、rbenv、Passenger with Nginx、PostgreSQL，以及用 Mina 从本地部署应用。","headline":"Ruby on Rails 开发和生产环境搭建","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2016/03/ruby-on-rails-on-aliyun/"},"url":"https://www.wulfric.me/2016/03/ruby-on-rails-on-aliyun/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2016</div>
     </div>
-    <h1 class="post-title">Ruby on Rails 开发和生产环境搭建</h1>
+    <h1 class="post-title" data-pagefind-meta="title">Ruby on Rails 开发和生产环境搭建</h1>
   </header>
 
   
@@ -70,16 +87,26 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2016 年（约 10 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>准备搭生产环境做一些玩具（ubuntu ruby rails nginx passenger mina postgresql），参考了阿里云，linode 和 digital ocean。DO 两三百的延迟实在不能忍受，ping 了下阿里只有 2ms，那就选这个吧！</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/aliyun-youhuima.jpg" alt="使用优惠码可以打九折 dj7mxg" title="aliyun-youhuima" width= height= />
-          </picture>
+          <img src="/images/aliyun-youhuima.jpg" alt="使用优惠码可以打九折 dj7mxg" title="aliyun-youhuima" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>使用优惠码可以打九折 dj7mxg</figcaption>
         </figure></p>
 
@@ -328,37 +355,36 @@ production:
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- ubuntu, ruby, rbenv, nginx, passenger, mina, rails, postgresql -->
 
-    <a class='tag' href="/tags/ubuntu">
+    <a class='tag' href="/tags/ubuntu/">
       ubuntu
     </a>
 
-    <a class='tag' href="/tags/ruby">
+    <a class='tag' href="/tags/ruby/">
       ruby
     </a>
 
-    <a class='tag' href="/tags/rbenv">
+    <a class='tag' href="/tags/rbenv/">
       rbenv
     </a>
 
-    <a class='tag' href="/tags/nginx">
+    <a class='tag' href="/tags/nginx/">
       nginx
     </a>
 
-    <a class='tag' href="/tags/passenger">
+    <a class='tag' href="/tags/passenger/">
       passenger
     </a>
 
-    <a class='tag' href="/tags/mina">
+    <a class='tag' href="/tags/mina/">
       mina
     </a>
 
-    <a class='tag' href="/tags/rails">
+    <a class='tag' href="/tags/rails/">
       rails
     </a>
 
-    <a class='tag' href="/tags/postgresql">
+    <a class='tag' href="/tags/postgresql/">
       postgresql
     </a>
 
@@ -373,24 +399,52 @@ production:
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2016/02/unfollow-instagram/"><small>← 上一篇（更早）</small>批量取关 instagram 好友</a>
+    
+    
+      <a class="post-nav-next" href="/2016/05/jekyll-octopress-blog/"><small>下一篇（更新）→</small>jekyll 和 octopress 博客程序的选择</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+  <section class="related-posts">
+    <h2>相关文章</h2>
+    <ul>
+      
+        <li><a href="/2016/09/active-job-action-cable-in-rails/">Rails 应用生产环境利用  Active Job 和 Action Cable 实现消息推送</a></li>
+      
+        <li><a href="/2017/03/macos-jenv/">Mac OS 使用 jenv 管理 java 版本</a></li>
+      
+        <li><a href="/2014/03/sync-in-remote-and-local/">服务器和本地的文件同步</a></li>
+      
+    </ul>
+  </section>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -406,36 +460,8 @@ production:
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

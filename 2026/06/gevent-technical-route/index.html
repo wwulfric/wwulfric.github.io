@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</title>
-  <meta name="description" content="协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。
-">
-  <meta name="keywords" content="python,gevent,greenlet,coroutine">
-  <link rel="canonical" href="https://wulfric.me/2026/06/gevent-technical-route/">
+  
+  <title>gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="从 yield 只能暂停一层 frame 讲起，看 greenlet 如何搬走整段调用栈，Hub 如何调度，monkey patch 又如何让同步代码变成协作式 I/O。" />
+<meta name="twitter:description" property="og:description" content="从 yield 只能暂停一层 frame 讲起，看 greenlet 如何搬走整段调用栈，Hub 如何调度，monkey patch 又如何让同步代码变成协作式 I/O。" />
+<link rel="canonical" href="https://www.wulfric.me/2026/06/gevent-technical-route/" />
+<meta property="og:url" content="https://www.wulfric.me/2026/06/gevent-technical-route/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-06-07T00:00:00+00:00" />
+<meta property="article:modified_time" content="2026-06-07T00:00:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2026-06-07T00:00:00+00:00","datePublished":"2026-06-07T00:00:00+00:00","description":"从 yield 只能暂停一层 frame 讲起，看 greenlet 如何搬走整段调用栈，Hub 如何调度，monkey patch 又如何让同步代码变成协作式 I/O。","headline":"gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2026/06/gevent-technical-route/"},"url":"https://www.wulfric.me/2026/06/gevent-technical-route/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</h1>
+    <h1 class="post-title" data-pagefind-meta="title">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</h1>
   </header>
 
   
@@ -70,8 +87,18 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。</p>
 
 <p>Python 里最常见的两个协程库是 asyncio 和 gevent。asyncio 用 <span class="codespan">async</span>/<span class="codespan">await</span> 语法把暂停点写进代码，协程由事件循环调度，暂停和恢复发生在 Python 字节码层。gevent 走的是另一条路：它对外保留同步 API 的外观，底层用 greenlet 保存一整段调用栈，再用一个特殊的 Hub greenlet 跑 event loop 做调度。这条技术路线可以画成这样：</p>
@@ -186,11 +213,7 @@ monkey patch
 <p>generator 和 greenlet 的区别如图：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/yield-vs-greenlet.png" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" width= height= />
-          </picture>
+          <img src="/images/gevent/yield-vs-greenlet.png" alt="generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>generator 只暂停一个 frame，需要把 yield 一层一层往外抛；greenlet 把整段调用栈一起搬走，深层函数也能直接 switch 出去</figcaption>
         </figure></p>
 
@@ -213,11 +236,7 @@ monkey patch
 <p>gevent 文档对自己的定义一句话：基于 coroutine 的 Python 网络库，使用 greenlet，在 libev 或 libuv event loop 之上提供高层同步 API。<sup id="fnref:gevent-intro"><a href="#fn:gevent-intro" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>分开看是三层：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/gevent-three-layers.png" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" width= height= />
-          </picture>
+          <img src="/images/gevent/gevent-three-layers.png" alt="业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>业务 greenlet 跑用户代码，Hub greenlet 是调度中心，event loop 负责等 fd、timer、signal</figcaption>
         </figure></p>
 
@@ -232,11 +251,7 @@ monkey patch
 <p>把上面的模型放进一个具体调用。业务代码是开头那段，conn 是 gevent socket，fd 上当前没有数据：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/recv-path.png" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" width= height= />
-          </picture>
+          <img src="/images/gevent/recv-path.png" alt="greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>greenlet A 调 conn.recv() 时没数据，注册 reader 后挂起切回 Hub；Hub 等 epoll 拿到 fd ready 后再切回 greenlet A，recv 返回数据</figcaption>
         </figure></p>
 
@@ -348,21 +363,20 @@ OS thread 2
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- python, gevent, greenlet, coroutine -->
 
-    <a class='tag' href="/tags/python">
+    <a class='tag' href="/tags/python/">
       python
     </a>
 
-    <a class='tag' href="/tags/gevent">
+    <a class='tag' href="/tags/gevent/">
       gevent
     </a>
 
-    <a class='tag' href="/tags/greenlet">
+    <a class='tag' href="/tags/greenlet/">
       greenlet
     </a>
 
-    <a class='tag' href="/tags/coroutine">
+    <a class='tag' href="/tags/coroutine/">
       coroutine
     </a>
 
@@ -377,24 +391,56 @@ OS thread 2
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
+  <aside class="series-box">
+    本文是专题《<a href="/series/python-runtime-gevent/">Python 运行时与 gevent</a>》第 4/4 篇
+    <br><a href="/2026/05/python-runtime-tracing-boundaries/">← Python 运行时观测的四条边界：frame、code object、greenlet、task</a>
+    
+  </aside>
 
-       if (typeof LivereTower === 'function') { return; }
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2026/05/python-runtime-tracing-boundaries/"><small>← 上一篇（更早）</small>Python 运行时观测的四条边界：frame、code object、greenlet、task</a>
+    
+    
+  </nav>
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+  <section class="related-posts">
+    <h2>相关文章</h2>
+    <ul>
+      
+        <li><a href="/2026/05/python-runtime-tracing-boundaries/">Python 运行时观测的四条边界：frame、code object、greenlet、task</a></li>
+      
+        <li><a href="/2026/05/python38-gevent-attach-failure/">gevent monkey patch 对 profiling 工具的影响</a></li>
+      
+        <li><a href="/2026/04/python-process-injection/">理解 Python 进程注入：从 ptrace 到 PEP 768</a></li>
+      
+    </ul>
+  </section>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -410,36 +456,8 @@ OS thread 2
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

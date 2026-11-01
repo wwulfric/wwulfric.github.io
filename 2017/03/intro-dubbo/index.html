@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>dubbo 简介与 dubbo demo 运行</title>
-  <meta name="description" content="dubbo是阿里巴巴推出的分布式服务治理框架，是国内实现微服务较为常见的框架。关于微服务的介绍可以参见原文，infoq 文章，dubbo 架构设计详解。
-">
-  <meta name="keywords" content="分布式,微服务,dubbo,zookeeper,dubbo-admin,dubbo-monitor,dubbo-demo">
-  <link rel="canonical" href="https://wulfric.me/2017/03/intro-dubbo/">
+  
+  <title>dubbo 简介与 dubbo demo 运行 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="dubbo 简介与 dubbo demo 运行" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="介绍 Dubbo 的架构和调用关系，并手把手跑通当当 dubbox 的 demo：启动 ZooKeeper、provider 和 consumer，再部署 dubbo-admin 和监控面板。" />
+<meta name="twitter:description" property="og:description" content="介绍 Dubbo 的架构和调用关系，并手把手跑通当当 dubbox 的 demo：启动 ZooKeeper、provider 和 consumer，再部署 dubbo-admin 和监控面板。" />
+<link rel="canonical" href="https://www.wulfric.me/2017/03/intro-dubbo/" />
+<meta property="og:url" content="https://www.wulfric.me/2017/03/intro-dubbo/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-03-01T18:40:00+00:00" />
+<meta property="article:modified_time" content="2017-03-01T18:40:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="dubbo 简介与 dubbo demo 运行" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2017-03-01T18:40:00+00:00","datePublished":"2017-03-01T18:40:00+00:00","description":"介绍 Dubbo 的架构和调用关系，并手把手跑通当当 dubbox 的 demo：启动 ZooKeeper、provider 和 consumer，再部署 dubbo-admin 和监控面板。","headline":"dubbo 简介与 dubbo demo 运行","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2017/03/intro-dubbo/"},"url":"https://www.wulfric.me/2017/03/intro-dubbo/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2017</div>
     </div>
-    <h1 class="post-title">dubbo 简介与 dubbo demo 运行</h1>
+    <h1 class="post-title" data-pagefind-meta="title">dubbo 简介与 dubbo demo 运行</h1>
   </header>
 
   
@@ -70,18 +87,28 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2017 年（约 9 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>dubbo是阿里巴巴推出的分布式服务治理框架，是国内实现微服务较为常见的框架。关于微服务的介绍可以参见<a href="http://martinfowler.com/articles/microservices.html">原文</a>，<a href="http://www.infoq.com/cn/articles/basis-frameworkto-implement-micro-service">infoq 文章</a>，<a href="http://shiyanjun.cn/archives/325.html">dubbo 架构设计详解</a>。</p>
 
 <p>dubbo 的架构图如下<sup id="fnref:dubbo-architecture"><a href="#fn:dubbo-architecture" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" width= height= />
-          </picture>
+          <img src="/images/dubbo/dubbo-architecture.png" alt="dubbo 架构" title="dubbo 架构" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>dubbo 架构</figcaption>
         </figure></p>
 
@@ -147,11 +174,7 @@ server.1<span class="o">=</span>localhost:2287:3387
 <p>Demo 在 dubbo-demo 文件夹下，因为前面在 dubbox 下执行过 mvn install，都已经打包好了，这里可以直接执行来启动 demo provider, consumer，如下图所示。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/R-dubbo-demo-consumer.png" alt="dubbo demo consumer" title="dubbo demo consumer" width= height= />
-          </picture>
+          <img src="/images/dubbo/R-dubbo-demo-consumer.png" alt="dubbo demo consumer" title="dubbo demo consumer" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>dubbo demo consumer</figcaption>
         </figure></p>
 
@@ -205,11 +228,7 @@ dubbo.admin.guest.password<span class="o">=</span>guest
 <p>重启 tomcat，打开 http://localhost:8080/dubbo-admin-2.8.4，输入帐号密码即可看到 dubbo-admin 的管理页面。上面运行的 provider 和 consumer demo 在服务治理下。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/dubbo-admin.png" alt="dubbo admin" title="dubbo admin" width= height= />
-          </picture>
+          <img src="/images/dubbo/dubbo-admin.png" alt="dubbo admin" title="dubbo admin" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>dubbo admin</figcaption>
         </figure></p>
 
@@ -249,11 +268,7 @@ STDOUT: logs/stdout.log
 <p>即执行成功，打开 http://localhost:8083/ 即可看到监控面板。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/dubbo/dubbo-monitor.png" alt="dubbo monitor" title="dubbo monitor" width= height= />
-          </picture>
+          <img src="/images/dubbo/dubbo-monitor.png" alt="dubbo monitor" title="dubbo monitor" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>dubbo monitor</figcaption>
         </figure></p>
 
@@ -288,33 +303,32 @@ STDOUT: logs/stdout.log
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- 分布式, 微服务, dubbo, zookeeper, dubbo-admin, dubbo-monitor, dubbo-demo -->
 
-    <a class='tag' href="/tags/分布式">
+    <a class='tag' href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">
       分布式
     </a>
 
-    <a class='tag' href="/tags/微服务">
+    <a class='tag' href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">
       微服务
     </a>
 
-    <a class='tag' href="/tags/dubbo">
+    <a class='tag' href="/tags/dubbo/">
       dubbo
     </a>
 
-    <a class='tag' href="/tags/zookeeper">
+    <a class='tag' href="/tags/zookeeper/">
       zookeeper
     </a>
 
-    <a class='tag' href="/tags/dubbo-admin">
+    <a class='tag' href="/tags/dubbo-admin/">
       dubbo-admin
     </a>
 
-    <a class='tag' href="/tags/dubbo-monitor">
+    <a class='tag' href="/tags/dubbo-monitor/">
       dubbo-monitor
     </a>
 
-    <a class='tag' href="/tags/dubbo-demo">
+    <a class='tag' href="/tags/dubbo-demo/">
       dubbo-demo
     </a>
 
@@ -329,24 +343,50 @@ STDOUT: logs/stdout.log
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2016/10/writing-tools/"><small>← 上一篇（更早）</small>我的写作工具</a>
+    
+    
+      <a class="post-nav-next" href="/2017/03/dubbo-demo-test/"><small>下一篇（更新）→</small>一个简单的 dubbo 服务</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+  <section class="related-posts">
+    <h2>相关文章</h2>
+    <ul>
+      
+        <li><a href="/2017/03/dubbo-demo-test/">一个简单的 dubbo 服务</a></li>
+      
+        <li><a href="/2017/04/jrebel/">使用 jrebel 远程部署开发环境的 dubbo 服务</a></li>
+      
+    </ul>
+  </section>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -362,36 +402,8 @@ STDOUT: logs/stdout.log
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

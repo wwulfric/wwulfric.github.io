@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>Jekyll 博客的一些优化插件与配置</title>
-  <meta name="description" content="在停用了一段时间后，最终还是回归博客写作了。之前使用的是 Octopress，现在换成更简单的 Jekyll。本文记录了搭建 Jekyll 博客的一些优化细节和搜集到的一些有趣的插件。
-">
-  <meta name="keywords" content="jekyll,compress,highlight,fontawesome,colorscheme,font">
-  <link rel="canonical" href="https://wulfric.me/2014/09/jekyll-plugs/">
+  
+  <title>Jekyll 博客的一些优化插件与配置 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Jekyll 博客的一些优化插件与配置" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="从 Octopress 换到 Jekyll 后的折腾记录：分支与 submodule 组织、静态资源压缩、图片尺寸处理、代码高亮、配色和字体的选择。" />
+<meta name="twitter:description" property="og:description" content="从 Octopress 换到 Jekyll 后的折腾记录：分支与 submodule 组织、静态资源压缩、图片尺寸处理、代码高亮、配色和字体的选择。" />
+<link rel="canonical" href="https://www.wulfric.me/2014/09/jekyll-plugs/" />
+<meta property="og:url" content="https://www.wulfric.me/2014/09/jekyll-plugs/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2014-09-17T01:01:00+00:00" />
+<meta property="article:modified_time" content="2014-09-17T01:01:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="Jekyll 博客的一些优化插件与配置" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2014-09-17T01:01:00+00:00","datePublished":"2014-09-17T01:01:00+00:00","description":"从 Octopress 换到 Jekyll 后的折腾记录：分支与 submodule 组织、静态资源压缩、图片尺寸处理、代码高亮、配色和字体的选择。","headline":"Jekyll 博客的一些优化插件与配置","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2014/09/jekyll-plugs/"},"url":"https://www.wulfric.me/2014/09/jekyll-plugs/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2014</div>
     </div>
-    <h1 class="post-title">Jekyll 博客的一些优化插件与配置</h1>
+    <h1 class="post-title" data-pagefind-meta="title">Jekyll 博客的一些优化插件与配置</h1>
   </header>
 
   
@@ -70,8 +87,22 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2014 年（约 12 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>在停用了一段时间后，最终还是回归博客写作了。之前使用的是 Octopress，现在换成更简单的 Jekyll。本文记录了搭建 Jekyll 博客的一些优化细节和搜集到的一些有趣的插件。</p>
 
 <h2 id="工作方式">工作方式</h2>
@@ -141,11 +172,7 @@
 <p>对于网页的配色（color scheme），我在<a href="https://kuler.adobe.com/main-cxcedar-color-theme-4237607/">这个方案</a>的基础上做了些修改，得到了<a href="https://kuler.adobe.com/Copy-of-the-main-cxcedar-color-theme-4361434/">我的 color scheme</a>。这五种颜色分别用作链接色、重要标题背景色、mark 背景色、强调色和主文字颜色。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-colorscheme.png" alt="color scheme" title="color scheme" width= height= />
-          </picture>
+          <img src="/images/R-colorscheme.png" alt="color scheme" title="color scheme" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>color scheme</figcaption>
         </figure></p>
 
@@ -156,11 +183,7 @@
 <p>最终的样式如图所示：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-preview.png" alt="Preview" title="Preview" width= height= />
-          </picture>
+          <img src="/images/R-preview.png" alt="Preview" title="Preview" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>Preview</figcaption>
         </figure></p>
 
@@ -193,29 +216,28 @@
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- jekyll, compress, highlight, fontawesome, colorscheme, font -->
 
-    <a class='tag' href="/tags/jekyll">
+    <a class='tag' href="/tags/jekyll/">
       jekyll
     </a>
 
-    <a class='tag' href="/tags/compress">
+    <a class='tag' href="/tags/compress/">
       compress
     </a>
 
-    <a class='tag' href="/tags/highlight">
+    <a class='tag' href="/tags/highlight/">
       highlight
     </a>
 
-    <a class='tag' href="/tags/fontawesome">
+    <a class='tag' href="/tags/fontawesome/">
       fontawesome
     </a>
 
-    <a class='tag' href="/tags/colorscheme">
+    <a class='tag' href="/tags/colorscheme/">
       colorscheme
     </a>
 
-    <a class='tag' href="/tags/font">
+    <a class='tag' href="/tags/font/">
       font
     </a>
 
@@ -230,24 +252,52 @@
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2014/09/design-of-sms-verification/"><small>← 上一篇（更早）</small>短信验证的设计</a>
+    
+    
+      <a class="post-nav-next" href="/2014/09/music-player/"><small>下一篇（更新）→</small>Linux PC 网易云音乐下载方案</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+  <section class="related-posts">
+    <h2>相关文章</h2>
+    <ul>
+      
+        <li><a href="/2015/01/jekyll-with-tiny-search/">（已废弃）为 Jekyll 博客添加微搜索</a></li>
+      
+        <li><a href="/2016/05/jekyll-octopress-blog/">jekyll 和 octopress 博客程序的选择</a></li>
+      
+        <li><a href="/2016/10/writing-tools/">我的写作工具</a></li>
+      
+    </ul>
+  </section>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -263,36 +313,8 @@
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

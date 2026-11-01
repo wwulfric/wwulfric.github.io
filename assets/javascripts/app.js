@@ -9,18 +9,6 @@
   }
 
   function init() {
-    // 默认 comments 隐藏，get comment 按钮可以 toggle 状态
-    var get_comment = document.getElementById('get-comment');
-    if (get_comment) {
-      get_comment.addEventListener('click', function() {
-        // 通过添加和删除 comments-hide 类名实现
-        var comments = document.getElementById('comments');
-        if (comments) {
-          comments.classList.toggle('comments-hide');
-        }
-      });
-    }
-
     // footnote 鼠标经过的时候显示详情
     var footnotes = document.getElementsByClassName('footnote');
     // 取 footnote 上的 href，然后拿到对应的 innerText
@@ -90,7 +78,7 @@
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
           // Close mobile TOC after clicking
-          if (window.innerWidth <= 1200) {
+          if (window.innerWidth <= 1400) {
             tocSidebar.classList.remove('toc-open');
           }
         }
@@ -139,7 +127,7 @@
 
     // Close TOC when clicking outside on mobile
     document.addEventListener('click', function(e) {
-      if (window.innerWidth <= 1200 &&
+      if (window.innerWidth <= 1400 &&
           tocSidebar.classList.contains('toc-open') &&
           !tocSidebar.contains(e.target) &&
           !tocToggle.contains(e.target)) {

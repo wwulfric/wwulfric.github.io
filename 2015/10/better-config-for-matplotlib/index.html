@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>python 数学绘图工具 matplotlib 的优化配置</title>
-  <meta name="description" content="matplotlib 是 python 下的 2D 数学绘图工具，仿 matlab 编写而成，功能强大，是 python 数值计算库中非常重要的一员。安装很简单，pip install matplotlib 即可。如果安装时遇到什么问题，一般是依赖没有安装完全，按照错误提示一路安装过去便是，参照 Installing — Matplotlib。强烈建议同时安装 ipython: pip install "ipython[notebook]"。ipython 的依赖关系较多，请耐心查看文档，所依赖的一些非 python 的程序可以通过系统的包管理工具安装，比如 brew install zeromq。
-">
-  <meta name="keywords" content="ipython,matplotlib,matlab,retina,中文,ggplot">
-  <link rel="canonical" href="https://wulfric.me/2015/10/better-config-for-matplotlib/">
+  
+  <title>python 数学绘图工具 matplotlib 的优化配置 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="python 数学绘图工具 matplotlib 的优化配置" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="优化 matplotlib 的使用体验：替换默认配色、在 ipython notebook 中内联显示和支持 retina，以及新版内置的 ggplot 样式和 viridis 配色。" />
+<meta name="twitter:description" property="og:description" content="优化 matplotlib 的使用体验：替换默认配色、在 ipython notebook 中内联显示和支持 retina，以及新版内置的 ggplot 样式和 viridis 配色。" />
+<link rel="canonical" href="https://www.wulfric.me/2015/10/better-config-for-matplotlib/" />
+<meta property="og:url" content="https://www.wulfric.me/2015/10/better-config-for-matplotlib/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2015-10-19T23:37:00+00:00" />
+<meta property="article:modified_time" content="2015-10-19T23:37:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="python 数学绘图工具 matplotlib 的优化配置" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2015-10-19T23:37:00+00:00","datePublished":"2015-10-19T23:37:00+00:00","description":"优化 matplotlib 的使用体验：替换默认配色、在 ipython notebook 中内联显示和支持 retina，以及新版内置的 ggplot 样式和 viridis 配色。","headline":"python 数学绘图工具 matplotlib 的优化配置","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2015/10/better-config-for-matplotlib/"},"url":"https://www.wulfric.me/2015/10/better-config-for-matplotlib/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2015</div>
     </div>
-    <h1 class="post-title">python 数学绘图工具 matplotlib 的优化配置</h1>
+    <h1 class="post-title" data-pagefind-meta="title">python 数学绘图工具 matplotlib 的优化配置</h1>
   </header>
 
   
@@ -70,16 +87,26 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2015 年（约 11 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>matplotlib 是 python 下的 2D 数学绘图工具，仿 matlab 编写而成，功能强大，是 python 数值计算库中非常重要的一员。安装很简单，<span class="codespan">pip install matplotlib</span> 即可。如果安装时遇到什么问题，一般是依赖没有安装完全，按照错误提示一路安装过去便是，参照 <a href="http://matplotlib.org/users/installing.html">Installing — Matplotlib</a>。强烈建议同时安装 ipython: <span class="codespan">pip install "ipython[notebook]"</span>。ipython 的依赖关系较多，请耐心查看<a href="http://ipython.readthedocs.org/en/stable/">文档</a>，所依赖的一些非 python 的程序可以通过系统的包管理工具安装，比如 <span class="codespan">brew install zeromq</span>。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="http://jakevdp.github.com/figures/xkcd_version.png" alt="ipython xkcd" title="ipython xkcd" width= height= />
-          </picture>
+          <img src="http://jakevdp.github.com/figures/xkcd_version.png" alt="ipython xkcd" title="ipython xkcd" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>ipython xkcd</figcaption>
         </figure></p>
 
@@ -99,11 +126,7 @@ fontList.cache matplotlibrc   tex.cache
 <p>一位女程序员 <a href="https://github.com/olgabot">olgabot (Olga Botvinnik)</a> 表示不能忍，于是写了一个库改善 matplotlib 的配色: <a href="https://github.com/olgabot/prettyplotlib">olgabot/prettyplotlib</a>。我颤抖着进入她的主页，然后跪着看完了她的 CV: MIT 本科双学位（数学和生物），生物信息学博士，玩的了设计，写的了代码，还能做俄-英的医疗口译……好吧，我们还是继续说配色的事情。对于 python 和 R 语言在数值计算领域孰优孰劣的争论中，其中一种观点就是，matplotlib 的配色和 ggplot 相比，太哔丑了。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/shuo-de-hao-you-dao-li.jpg" alt="" width= height= />
-          </picture>
+          <img src="/images/shuo-de-hao-you-dao-li.jpg" alt="" loading="lazy" decoding="async" />
           
         </figure></p>
 
@@ -134,11 +157,7 @@ fontList.cache matplotlibrc   tex.cache
 </code></pre></div></div>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="http://matplotlib.org/_images/plot_ggplot.png" alt="ggplot" width= height= />
-          </picture>
+          <img src="http://matplotlib.org/_images/plot_ggplot.png" alt="ggplot" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>ggplot</figcaption>
         </figure></p>
 
@@ -172,29 +191,28 @@ fontList.cache matplotlibrc   tex.cache
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- ipython, matplotlib, matlab, retina, 中文, ggplot -->
 
-    <a class='tag' href="/tags/ipython">
+    <a class='tag' href="/tags/ipython/">
       ipython
     </a>
 
-    <a class='tag' href="/tags/matplotlib">
+    <a class='tag' href="/tags/matplotlib/">
       matplotlib
     </a>
 
-    <a class='tag' href="/tags/matlab">
+    <a class='tag' href="/tags/matlab/">
       matlab
     </a>
 
-    <a class='tag' href="/tags/retina">
+    <a class='tag' href="/tags/retina/">
       retina
     </a>
 
-    <a class='tag' href="/tags/中文">
+    <a class='tag' href="/tags/%E4%B8%AD%E6%96%87/">
       中文
     </a>
 
-    <a class='tag' href="/tags/ggplot">
+    <a class='tag' href="/tags/ggplot/">
       ggplot
     </a>
 
@@ -209,24 +227,39 @@ fontList.cache matplotlibrc   tex.cache
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2015/09/learn-programming/"><small>← 上一篇（更早）</small>对于编程入门的一些建议</a>
+    
+    
+      <a class="post-nav-next" href="/2015/12/alfred-dash/"><small>下一篇（更新）→</small>Alfred 和 dash 介绍</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -242,36 +275,8 @@ fontList.cache matplotlibrc   tex.cache
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

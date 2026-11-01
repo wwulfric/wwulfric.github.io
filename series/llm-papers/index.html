@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#9C0">
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  
+  <title>LLM 经典论文精读 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="LLM 经典论文精读" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="从 Transformer 到 ReAct，用五篇论文看大语言模型怎么走到今天。" />
+<meta name="twitter:description" property="og:description" content="从 Transformer 到 ReAct，用五篇论文看大语言模型怎么走到今天。" />
+<link rel="canonical" href="https://www.wulfric.me/series/llm-papers/" />
+<meta property="og:url" content="https://www.wulfric.me/series/llm-papers/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="LLM 经典论文精读" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","author":{"@type":"Person","name":"wulfric"},"description":"从 Transformer 到 ReAct，用五篇论文看大语言模型怎么走到今天。","headline":"LLM 经典论文精读","image":"https://www.wulfric.me/assets/images/og-default.png","url":"https://www.wulfric.me/series/llm-papers/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      
+<div class='header-header'>
+  <a class="site-title" href="/">
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
+  </a>
+</div>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="series-page">
+  <h1 class="series-title">LLM 经典论文精读</h1>
+  <p class="series-meta">已完结 · 5 篇</p>
+  <p>这个系列是几篇奠基论文的中文翻译，适合想读原始论文、又希望先有中文对照的读者。 阅读顺序按思路的发展排列，不按发布时间：先看 Transformer 这个架构起点，再看 GPT 三代如何从“预训练加微调”走到“零样本”和“少样本”，最后看 ReAct 如何让模型从生成文本走向推理和行动。 其中 GPT-2、GPT-3 和 ReAct 是节选，保留了摘要、导言和结论等部分。</p>
+  <ol class="series-list">
+    
+      <li>
+        <a href="/2023/04/Transformer-ch/">Transformer 论文翻译：Attention is All you Need</a>
+        <p>Transformer 论文《Attention is All You Need》中文翻译：完全基于注意力、去掉循环和卷积的架构，覆盖缩放点积注意力、多头注意力和位置编码。</p>
+      </li>
+    
+      <li>
+        <a href="/2023/04/gpt1-ch/">GPT1 论文翻译：Improving Language Understanding by Generative Pre-Training</a>
+        <p>GPT-1 论文中文翻译：先用 BooksCorpus 做无监督生成式预训练，再做判别式微调，用同一个 Transformer 刷新 12 个语言理解任务中 9 个的最好成绩。</p>
+      </li>
+    
+      <li>
+        <a href="/2023/04/gpt2-ch/">GPT2 论文翻译：Language Models are Unsupervised Multitask Learners</a>
+        <p>GPT-2 论文节选翻译：15 亿参数的语言模型只靠 WebText 训练，不做微调也能开始完成问答、翻译和摘要，以及这种零样本能力的局限。</p>
+      </li>
+    
+      <li>
+        <a href="/2023/04/gpt3-ch/">GPT3 论文翻译：Language Models are Few-Shot Learners</a>
+        <p>GPT-3 论文节选翻译：1750 亿参数的语言模型无需微调，只靠文本中的少量示例就能完成新任务，并能写出人类难以分辨的新闻。</p>
+      </li>
+    
+      <li>
+        <a href="/2023/05/ReAct-ch/">ReAct 论文翻译：Synergizing Reasoning and Acting in Language Models</a>
+        <p>ReAct 论文节选翻译：让大语言模型交替生成推理和行动，借助维基百科 API 减少幻觉，并在决策任务上超过模仿学习和强化学习方法。</p>
+      </li>
+    
+  </ol>
+</div>
+
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2026. All rights reserved.
+</footer>
+
+
+    </div>
+    <script defer src="/assets/javascripts/app.js"></script>
+    
+
+  </body>
+
+</html>

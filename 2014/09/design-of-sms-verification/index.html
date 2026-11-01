@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>短信验证的设计</title>
-  <meta name="description" content="在业务中，为安全起见，常常需要二次验证。其流程一般为，密码验证之后，需要再次输入一个一次性的密码（一般为位数较短的数字），才能完成验证。二次验证一般需要同时验证设备的唯一性。
-">
-  <meta name="keywords" content="otp,二次验证">
-  <link rel="canonical" href="https://wulfric.me/2014/09/design-of-sms-verification/">
+  
+  <title>短信验证的设计 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="短信验证的设计" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="二次验证该用短信还是 App？从 HOTP、TOTP 的原理讲起，分析验证码有效期的选择和时间片边界问题，以及验证前 N 个时间片的解决办法。" />
+<meta name="twitter:description" property="og:description" content="二次验证该用短信还是 App？从 HOTP、TOTP 的原理讲起，分析验证码有效期的选择和时间片边界问题，以及验证前 N 个时间片的解决办法。" />
+<link rel="canonical" href="https://www.wulfric.me/2014/09/design-of-sms-verification/" />
+<meta property="og:url" content="https://www.wulfric.me/2014/09/design-of-sms-verification/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2014-09-01T01:05:00+00:00" />
+<meta property="article:modified_time" content="2014-09-01T01:05:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="短信验证的设计" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2014-09-01T01:05:00+00:00","datePublished":"2014-09-01T01:05:00+00:00","description":"二次验证该用短信还是 App？从 HOTP、TOTP 的原理讲起，分析验证码有效期的选择和时间片边界问题，以及验证前 N 个时间片的解决办法。","headline":"短信验证的设计","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2014/09/design-of-sms-verification/"},"url":"https://www.wulfric.me/2014/09/design-of-sms-verification/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
     <script>
@@ -47,16 +58,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -65,7 +80,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -75,7 +92,7 @@
       </div>
       <div class='year pull-left'>2014</div>
     </div>
-    <h1 class="post-title">短信验证的设计</h1>
+    <h1 class="post-title" data-pagefind-meta="title">短信验证的设计</h1>
   </header>
 
   
@@ -87,18 +104,28 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2014 年（约 12 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>在业务中，为安全起见，常常需要二次验证。其流程一般为，密码验证之后，需要再次输入一个一次性的密码（一般为位数较短的数字），才能完成验证。二次验证一般需要同时验证设备的唯一性。</p>
 
 <p>从验证方式上看，二次验证可以通过短信验证或 APP 验证（Google Authenticator）。对于短信验证，优点是操作方便，不需安装额外的 APP；缺点是实时性较差，依赖短信，有被窃听的风险。APP 方式正好相反。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/google_authenticator.png" alt="google authenticator" title="google authenticator" width= height= />
-          </picture>
+          <img src="/images/google_authenticator.png" alt="google authenticator" title="google authenticator" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>google authenticator</figcaption>
         </figure></p>
 
@@ -109,11 +136,7 @@
 <p>Google Authenticator 的二次验证也是使用的 OTP。其核心原理是：服务器和客户端（一般是<span class="codespan">Google Authenticator</span>app）保存同一份密钥，客户端根据该密钥和当前时间戳计算得到 6 位数字，发到服务器，服务器根据同样的算法得到 6 位数字。做比较之后判断客户端传来的数字是否合法。详述如下<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/google_authenticator_view.png" alt="Google Authenticator View" title="Google Authenticator View" width= height= />
-          </picture>
+          <img src="/images/google_authenticator_view.png" alt="Google Authenticator View" title="Google Authenticator View" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>Google Authenticator View</figcaption>
         </figure></p>
 
@@ -132,11 +155,7 @@
 <p>TOTP 还有个边界问题，如下图所示。当在 OA 时刻发起短信验证请求，在理想情况下，我们只有在 OA 时间段发起验证，验证才能成功。也就是说，用户的有效输入时间在 T（当发起时刻靠近 O 时）到 0 之间（当发起时刻靠近 A），这意味着，用户有一定的概率验证几乎必然失败（发起时刻靠近 A，考虑到 OTP 获取延迟和用户输入延迟），这显然是不合理的。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-otp.png" alt="otp verification" title="otp verification" width= height= />
-          </picture>
+          <img src="/images/R-otp.png" alt="otp verification" title="otp verification" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>otp verification</figcaption>
         </figure></p>
 
@@ -172,13 +191,12 @@
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- otp, 二次验证 -->
 
-    <a class='tag' href="/tags/otp">
+    <a class='tag' href="/tags/otp/">
       otp
     </a>
 
-    <a class='tag' href="/tags/二次验证">
+    <a class='tag' href="/tags/%E4%BA%8C%E6%AC%A1%E9%AA%8C%E8%AF%81/">
       二次验证
     </a>
 
@@ -193,24 +211,39 @@
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2014/04/gitconfig-and-gitignore/"><small>← 上一篇（更早）</small>Git 配置：gitconfig 和 gitignore</a>
+    
+    
+      <a class="post-nav-next" href="/2014/09/jekyll-plugs/"><small>下一篇（更新）→</small>Jekyll 博客的一些优化插件与配置</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -226,36 +259,8 @@
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

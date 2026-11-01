@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>gevent monkey patch 对 profiling 工具的影响</title>
-  <meta name="description" content="上一篇文章中，我们提到了几个常见的 python 进程诊断工具。其中提到的 peeka 就属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 watch、trace、top 等命令再通过这个通道执行。它更接近运行时诊断工具，而不是离线性能分析器。
-">
-  <meta name="keywords" content="python,gevent,debug">
-  <link rel="canonical" href="https://wulfric.me/2026/05/python38-gevent-attach-failure/">
+  
+  <title>gevent monkey patch 对 profiling 工具的影响 | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="gevent monkey patch 对 profiling 工具的影响" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="为什么 attach agent 在 gevent 进程里报初始化超时？用 _socket 和 _thread 绕开 monkey patch 修复控制面，并说明 trace、top 在 gevent 下的观测盲区。" />
+<meta name="twitter:description" property="og:description" content="为什么 attach agent 在 gevent 进程里报初始化超时？用 _socket 和 _thread 绕开 monkey patch 修复控制面，并说明 trace、top 在 gevent 下的观测盲区。" />
+<link rel="canonical" href="https://www.wulfric.me/2026/05/python38-gevent-attach-failure/" />
+<meta property="og:url" content="https://www.wulfric.me/2026/05/python38-gevent-attach-failure/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-05-08T00:00:00+00:00" />
+<meta property="article:modified_time" content="2026-05-08T00:00:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="gevent monkey patch 对 profiling 工具的影响" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2026-05-08T00:00:00+00:00","datePublished":"2026-05-08T00:00:00+00:00","description":"为什么 attach agent 在 gevent 进程里报初始化超时？用 _socket 和 _thread 绕开 monkey patch 修复控制面，并说明 trace、top 在 gevent 下的观测盲区。","headline":"gevent monkey patch 对 profiling 工具的影响","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2026/05/python38-gevent-attach-failure/"},"url":"https://www.wulfric.me/2026/05/python38-gevent-attach-failure/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title">gevent monkey patch 对 profiling 工具的影响</h1>
+    <h1 class="post-title" data-pagefind-meta="title">gevent monkey patch 对 profiling 工具的影响</h1>
   </header>
 
   
@@ -70,8 +87,18 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>上一篇文章中，我们提到了几个常见的 python 进程诊断工具。其中提到的 <a href="https://github.com/peeka-project/peeka">peeka</a> 就属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 <span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 等命令再通过这个通道执行。它更接近运行时诊断工具，而不是离线性能分析器。</p>
 
 <p>运行时诊断工具可以分成控制面和数据面两层：</p>
@@ -117,11 +144,7 @@
 <p>一个 attach agent 的最小流程可以画成这样：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/agent-attach-flow.png" alt="attach agent 的注入链路与控制 socket 的跨进程通信" width= height= />
-          </picture>
+          <img src="/images/gevent/agent-attach-flow.png" alt="attach agent 的注入链路与控制 socket 的跨进程通信" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>attach agent 的注入链路与控制 socket 的跨进程通信</figcaption>
         </figure></p>
 
@@ -224,11 +247,7 @@
 <p>把这条链路展开看，可以更清楚地看到问题出在哪一层、外部诊断工具又看到了什么：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/agent-blocking-stack.png" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" width= height= />
-          </picture>
+          <img src="/images/gevent/agent-blocking-stack.png" alt="调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>调用栈走到 gevent.event.Event.wait() 时抛 BlockingSwitchOutError，外部诊断工具最终超时</figcaption>
         </figure></p>
 
@@ -334,11 +353,7 @@ Impossible to call blocking function in the event loop callback
 <p>上面这几处替换——<span class="codespan">socket</span> 换 <span class="codespan">_socket</span>、<span class="codespan">threading.Thread</span> 换 <span class="codespan">_thread.start_new_thread</span>、用 <span class="codespan">monkey.get_original()</span> 兜底——做的其实是同一件事：把 agent 控制面从「被 patch 的 Python 高层 API」退到「Python C 扩展暴露的底层原语」。如下图所示：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/api-layers.png" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" width= height= />
-          </picture>
+          <img src="/images/gevent/api-layers.png" alt="原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>原方案走 socket / threading 高层 API（会被 monkey patch 替换），新方案退到 _socket / _thread 底层原语绕开 patch</figcaption>
         </figure></p>
 
@@ -444,11 +459,7 @@ Impossible to call blocking function in the event loop callback
 <p>完整调用树要求 tracing backend 持续跟住目标函数内部的 call / return 事件。gevent 会在同一个 OS thread 里切换不同 greenlet，trace 拿到的是这个 OS thread 上的事件流，中间可能夹着别的 greenlet 的 frame：</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/gevent-trace-timeline.png" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" width= height= />
-          </picture>
+          <img src="/images/gevent/gevent-trace-timeline.png" alt="gevent 下 trace 事件流被另一个 greenlet 穿插的示意图" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>gevent 下 trace 事件流被另一个 greenlet 穿插的示意图</figcaption>
         </figure></p>
 
@@ -494,11 +505,7 @@ Impossible to call blocking function in the event loop callback
 <p><span class="codespan">sys._current_frames()</span> 返回的是每个 OS thread 当前正在执行的 frame。它能看到「现在正在跑的 greenlet」，看不到所有挂起的 greenlet。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/gevent/top-sampling-blindspot.png" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" width= height= />
-          </picture>
+          <img src="/images/gevent/top-sampling-blindspot.png" alt="普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>普通线程程序与 gevent 程序下 frame sampling 的覆盖范围对比</figcaption>
         </figure></p>
 
@@ -563,17 +570,16 @@ Impossible to call blocking function in the event loop callback
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- python, gevent, debug -->
 
-    <a class='tag' href="/tags/python">
+    <a class='tag' href="/tags/python/">
       python
     </a>
 
-    <a class='tag' href="/tags/gevent">
+    <a class='tag' href="/tags/gevent/">
       gevent
     </a>
 
-    <a class='tag' href="/tags/debug">
+    <a class='tag' href="/tags/debug/">
       debug
     </a>
 
@@ -588,24 +594,58 @@ Impossible to call blocking function in the event loop callback
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
+  <aside class="series-box">
+    本文是专题《<a href="/series/python-runtime-gevent/">Python 运行时与 gevent</a>》第 2/4 篇
+    <br><a href="/2026/04/python-process-injection/">← 理解 Python 进程注入：从 ptrace 到 PEP 768</a>
+    <br><a href="/2026/05/python-runtime-tracing-boundaries/">Python 运行时观测的四条边界：frame、code object、greenlet、task →</a>
+  </aside>
 
-       if (typeof LivereTower === 'function') { return; }
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2026/04/python-process-injection/"><small>← 上一篇（更早）</small>理解 Python 进程注入：从 ptrace 到 PEP 768</a>
+    
+    
+      <a class="post-nav-next" href="/2026/05/python-runtime-tracing-boundaries/"><small>下一篇（更新）→</small>Python 运行时观测的四条边界：frame、code object、greenlet、task</a>
+    
+  </nav>
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+  <section class="related-posts">
+    <h2>相关文章</h2>
+    <ul>
+      
+        <li><a href="/2026/05/python-runtime-tracing-boundaries/">Python 运行时观测的四条边界：frame、code object、greenlet、task</a></li>
+      
+        <li><a href="/2026/06/gevent-technical-route/">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</a></li>
+      
+        <li><a href="/2026/04/python-process-injection/">理解 Python 进程注入：从 ptrace 到 PEP 768</a></li>
+      
+    </ul>
+  </section>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -621,36 +661,8 @@ Impossible to call blocking function in the event loop callback
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

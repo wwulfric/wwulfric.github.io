@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class='borderbox'>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#9C0">
+
+  <!-- google verify and baidu verify -->
+  <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
+  <meta name="baidu-site-verification" content="9nNaof1vhh" />
+
+  
+  <title>Python 运行时与 gevent | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Python 运行时与 gevent" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="从进程注入到 gevent 内核，弄清线上 Python 进程诊断的边界。" />
+<meta name="twitter:description" property="og:description" content="从进程注入到 gevent 内核，弄清线上 Python 进程诊断的边界。" />
+<link rel="canonical" href="https://www.wulfric.me/series/python-runtime-gevent/" />
+<meta property="og:url" content="https://www.wulfric.me/series/python-runtime-gevent/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="Python 运行时与 gevent" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","author":{"@type":"Person","name":"wulfric"},"description":"从进程注入到 gevent 内核，弄清线上 Python 进程诊断的边界。","headline":"Python 运行时与 gevent","image":"https://www.wulfric.me/assets/images/og-default.png","url":"https://www.wulfric.me/series/python-runtime-gevent/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
+  <link rel="stylesheet" href="/assets/stylesheets/main.css">
+  
+</head>
+
+
+  <body>
+    <div class='content'>
+      
+<div class='header-header'>
+  <a class="site-title" href="/">
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
+  </a>
+</div>
+<nav class='header-nav'>
+  <a class="page-link" href="/">HOME</a>
+  /
+  <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
+  /
+  <a class="page-link" href="/feed.xml">FEED</a>
+  /
+  <a class="page-link" href="/about/">ABOUT</a>
+</nav>
+
+
+      <div class='main'>
+        <div class="series-page">
+  <h1 class="series-title">Python 运行时与 gevent</h1>
+  <p class="series-meta">连载中 · 4 篇</p>
+  <p>这个系列来自开发 Python 运行时诊断工具 peeka 的经验，适合需要排查线上 Python 服务、或者想理解 gevent 底层的读者。先看外部工具如何进入一个正在运行的进程，再看 gevent 为什么会让诊断工具卡住， 然后梳理 Python 各层观测接口的边界，最后回到 gevent 本身，看它的技术路线是怎么一步步走出来的。</p>
+  <ol class="series-list">
+    
+      <li>
+        <a href="/2026/04/python-process-injection/">理解 Python 进程注入：从 ptrace 到 PEP 768</a>
+        <p>不重启线上 Python 进程，如何把诊断代码送进去？梳理 pyrasite 的 GDB 调用、memray/peeka 的 dlopen + pthread，以及 Python 3.14 的 PEP 768。</p>
+      </li>
+    
+      <li>
+        <a href="/2026/05/python38-gevent-attach-failure/">gevent monkey patch 对 profiling 工具的影响</a>
+        <p>为什么 attach agent 在 gevent 进程里报初始化超时？用 _socket 和 _thread 绕开 monkey patch 修复控制面，并说明 trace、top 在 gevent 下的观测盲区。</p>
+      </li>
+    
+      <li>
+        <a href="/2026/05/python-runtime-tracing-boundaries/">Python 运行时观测的四条边界：frame、code object、greenlet、task</a>
+        <p>按 frame、code object、greenlet、Task 四层，讲清 sys.settrace、sys.monitoring、greenlet.settrace 和 asyncio Task API 各能看到什么，以及 gevent 下的事件错位。</p>
+      </li>
+    
+      <li>
+        <a href="/2026/06/gevent-technical-route/">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</a>
+        <p>从 yield 只能暂停一层 frame 讲起，看 greenlet 如何搬走整段调用栈，Hub 如何调度，monkey patch 又如何让同步代码变成协作式 I/O。</p>
+      </li>
+    
+  </ol>
+</div>
+
+
+      </div>
+
+      <footer>
+  wulfric © 2013~2026. All rights reserved.
+</footer>
+
+
+    </div>
+    <script defer src="/assets/javascripts/app.js"></script>
+    
+
+  </body>
+
+</html>

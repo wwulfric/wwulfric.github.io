@@ -1,28 +1,39 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="zh-CN" class='borderbox'>
 
   <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#9C0">
-
-  <!-- Resource hints for performance -->
-  <link rel="preconnect" href="https://cdn-city.livere.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn-city.livere.com">
-
-  <link rel="alternate" hreflang="x-default" href="" />
 
   <!-- google verify and baidu verify -->
   <meta name="google-site-verification" content="joolptd8YEk3DYbnLzqB6hkhqyM0_UkEvB4XS6-Vfgc" />
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
-  <title>个人电子书自动发送到 kindle</title>
-  <meta name="description" content="kindle 有个send to kindle服务，可以把个人文档发送到 kindle 的服务器上。kindle 的内容包括：电子书（从亚马逊购入的书）、个人文档（个人电子书，通过send to kindle服务得到）、字典(在任何终端和 APP 里下载的字典)。
-">
-  <meta name="keywords" content="ifttt,kindle,dropbox,gmail,Klip.me">
-  <link rel="canonical" href="https://wulfric.me/2015/06/send-to-kindle/">
+  
+  <title>个人电子书自动发送到 kindle | Storm Spirit</title>
+  <!-- Begin Jekyll SEO tag v2.9.1 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="个人电子书自动发送到 kindle" />
+<meta name="author" content="wulfric" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="description" content="亚马逊中国的 send to kindle 用不了时，如何通过 Klip.me 或邮件推送电子书，并用 IFTTT 串联 Dropbox 和 Gmail，把发送过程自动化。" />
+<meta name="twitter:description" property="og:description" content="亚马逊中国的 send to kindle 用不了时，如何通过 Klip.me 或邮件推送电子书，并用 IFTTT 串联 Dropbox 和 Gmail，把发送过程自动化。" />
+<link rel="canonical" href="https://www.wulfric.me/2015/06/send-to-kindle/" />
+<meta property="og:url" content="https://www.wulfric.me/2015/06/send-to-kindle/" />
+<meta property="og:site_name" content="Storm Spirit" />
+<meta property="og:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2015-06-02T11:45:00+00:00" />
+<meta property="article:modified_time" content="2015-06-02T11:45:00+00:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
+<meta name="twitter:title" content="个人电子书自动发送到 kindle" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"wulfric"},"dateModified":"2015-06-02T11:45:00+00:00","datePublished":"2015-06-02T11:45:00+00:00","description":"亚马逊中国的 send to kindle 用不了时，如何通过 Klip.me 或邮件推送电子书，并用 IFTTT 串联 Dropbox 和 Gmail，把发送过程自动化。","headline":"个人电子书自动发送到 kindle","image":"https://www.wulfric.me/assets/images/og-default.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.wulfric.me/2015/06/send-to-kindle/"},"url":"https://www.wulfric.me/2015/06/send-to-kindle/"}</script>
+<!-- End Jekyll SEO tag -->
+
+  <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
   <link rel="stylesheet" href="/assets/stylesheets/main.css">
   
 </head>
@@ -30,16 +41,20 @@
 
   <body>
     <div class='content'>
-      <h1 class='header-header'>
-  
+      
+<div class='header-header'>
   <a class="site-title" href="/">
-    <span id='titile-first-part'>STORM</span><span id='titile-last-part'>SPIRIT </span>
+    <span id='title-first-part'>STORM</span><span id='title-last-part'>SPIRIT </span>
   </a>
-</h1>
+</div>
 <nav class='header-nav'>
   <a class="page-link" href="/">HOME</a>
   /
   <a class="page-link" href="/archive/">ARCHIVE</a>
+  /
+  <a class="page-link" href="/series/">SERIES</a>
+  /
+  <a class="page-link" href="/search/">SEARCH</a>
   /
   <a class="page-link" href="/feed.xml">FEED</a>
   /
@@ -48,7 +63,9 @@
 
 
       <div class='main'>
-        <div class="post typo">
+        
+
+<div class="post typo">
 
   <header class="post-header clearfix">
     <div class='date pull-left clearfix'>
@@ -58,7 +75,7 @@
       </div>
       <div class='year pull-left'>2015</div>
     </div>
-    <h1 class="post-title">个人电子书自动发送到 kindle</h1>
+    <h1 class="post-title" data-pagefind-meta="title">个人电子书自动发送到 kindle</h1>
   </header>
 
   
@@ -70,16 +87,26 @@
 
 
 
+  
+  
+    
+    
+    
+    
+    
+      <blockquote class="age-notice">
+        这篇文章写于 2015 年（约 11 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    
+  
 
-  <article class="post-content">
+
+
+  <article class="post-content" data-pagefind-body>
     <p>kindle 有个<span class="codespan">send to kindle</span>服务，可以把个人文档发送到 kindle 的服务器上。kindle 的内容包括：电子书（从亚马逊购入的书）、个人文档（个人电子书，通过<span class="codespan">send to kindle</span>服务得到）、字典(在任何终端和 APP 里下载的字典)。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-my_content.png" alt="我的内容" title="我的内容" width= height= />
-          </picture>
+          <img src="/images/R-my_content.png" alt="我的内容" title="我的内容" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>我的内容</figcaption>
         </figure></p>
 
@@ -88,42 +115,26 @@
 <p>一种方法是，通过 chrome 插件<span class="codespan">Klip.me</span>，另一种是手动给亚马逊 kindle 的对应邮箱发送文件。其原理都是，从 A 邮箱（用户个人邮箱，安全起见，需要在亚马逊官网填写注册这个邮箱，否则无法发送成功）往 B 邮箱（kindle 绑定邮箱，每个 kindle 设备和 kindle APP 都对应一个邮箱）发送个人文档，该个人文档就会被发送到 B 邮箱对应的 kindle 设备或 APP。举例来说，<span class="codespan">Klip.me</span>的原理就是，通过<span class="codespan">kindle@klip.me</span>A 邮箱发送文档到<span class="codespan">%s_%d@kindle.cn</span>B 邮箱。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-content_settings.png" alt="设备绑定邮箱" title="设备绑定邮箱" width= height= />
-          </picture>
+          <img src="/images/R-content_settings.png" alt="设备绑定邮箱" title="设备绑定邮箱" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>设备绑定邮箱</figcaption>
         </figure></p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-auth_email.png" alt="个人认证邮箱" title="个人认证邮箱" width= height= />
-          </picture>
+          <img src="/images/R-auth_email.png" alt="个人认证邮箱" title="个人认证邮箱" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>个人认证邮箱</figcaption>
         </figure></p>
 
 <p>我们还可以利用<span class="codespan">ifttt</span>将这一过程自动化。 登录<span class="codespan">ifttt</span>，激活<span class="codespan">dropbox</span>和<span class="codespan">gmail</span>，给<span class="codespan">dropbox</span>设置 trigger。当<span class="codespan">dropbox</span>的某个文件夹有文件添加时，触发<span class="codespan">ifttt</span>。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-ifttt_dropbox_gmail_triger.png" alt="ifttt-trigger" title="ifttt trigger" width= height= />
-          </picture>
+          <img src="/images/R-ifttt_dropbox_gmail_triger.png" alt="ifttt-trigger" title="ifttt trigger" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>ifttt-trigger</figcaption>
         </figure></p>
 
 <p><span class="codespan">ifttt</span> 触发后，执行<span class="codespan">gmail</span>的 action，将该文件通过<span class="codespan">gmail</span>邮箱发送到 kindle 邮箱。</p>
 
 <p><figure>
-          <picture>
-            
-            
-            <img src="/images/R-ifttt_dropbox_gmail_action.png" alt="ifttt-action" title="ifttt action" width= height= />
-          </picture>
+          <img src="/images/R-ifttt_dropbox_gmail_action.png" alt="ifttt-action" title="ifttt action" loading="lazy" decoding="async" />
           <figcaption><i class='icon-pencil'></i>ifttt-action</figcaption>
         </figure></p>
 
@@ -148,25 +159,24 @@
   <div id='additional' class='clearfix'>
     <div id="tags" class='pull-left'>
       <i class='icon-tags'></i>
-<!-- ifttt, kindle, dropbox, gmail, Klip.me -->
 
-    <a class='tag' href="/tags/ifttt">
+    <a class='tag' href="/tags/ifttt/">
       ifttt
     </a>
 
-    <a class='tag' href="/tags/kindle">
+    <a class='tag' href="/tags/kindle/">
       kindle
     </a>
 
-    <a class='tag' href="/tags/dropbox">
+    <a class='tag' href="/tags/dropbox/">
       dropbox
     </a>
 
-    <a class='tag' href="/tags/gmail">
+    <a class='tag' href="/tags/gmail/">
       gmail
     </a>
 
-    <a class='tag' href="/tags/Klip.me">
+    <a class='tag' href="/tags/Klip.me/">
       Klip.me
     </a>
 
@@ -181,24 +191,39 @@
   </div>
 
   
-    <div id="comments" class="comments-hide">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8yOTYwNC82MTcy">
-	<script type="text/javascript">
-   (function(d, s) {
-       var j, e = d.getElementsByTagName(s)[0];
 
-       if (typeof LivereTower === 'function') { return; }
+  
+  <nav class="post-nav" aria-label="上一篇和下一篇">
+    
+      <a class="post-nav-previous" href="/2015/05/github-pages-with-302/"><small>← 上一篇（更早）</small>github pages 302 redirect 跳转</a>
+    
+    
+      <a class="post-nav-next" href="/2015/08/homebrew/"><small>下一篇（更新）→</small>Homebrew--MAC下包管理工具和软件安装工具</a>
+    
+  </nav>
 
-       j = d.createElement(s);
-       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-       j.async = true;
-       j.defer = true;
 
-       e.parentNode.insertBefore(j, e);
-   })(document, 'script');
-	</script>
-<!-- <noscript> 为正常使用来必力评论功能请激活JavaScript</noscript> -->
-</div>
+
+
+
+  
+    <div id="comments">
+      <script src="https://giscus.app/client.js"
+        data-repo="wwulfric/wwulfric.github.io"
+        data-repo-id="R_kgDOAWsPCQ"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOAWsPCc4DKJnM"
+        data-mapping="pathname"
+        data-strict="1"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="light"
+        data-lang="zh-CN"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
 
     </div>
   
@@ -214,36 +239,8 @@
 
     </div>
     <script defer src="/assets/javascripts/app.js"></script>
-    <!-- <script type="text/javascript">
-var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
-document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F5df5db8eb71e11a9a0fc1df6ca607529' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script>
-(function(){
-  var bp = document.createElement('script');
-  var curProtocol = window.location.protocol.split(':')[0];
-  if (curProtocol === 'https') {
-    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-  }
-  else {
-    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-  }
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(bp, s);
-})();
-</script>
- -->
-    <!-- <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
 
-  ga('create', 'UA-54608037-1', 'auto');
-  ga('require', 'displayfeatures');
-  ga('send', 'pageview');
-</script>
- -->
   </body>
 
 </html>

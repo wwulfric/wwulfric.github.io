@@ -24,13 +24,14 @@ footer{
   font-size: 3em;
   text-align: center;
   padding: 0.7em 0 0.3em;
+  font-weight: 200;
   a{
-    #titile-first-part{
+    #title-first-part{
       padding: 0.3em 0.5em 0.1em 0.5em;
       border: 1px solid $main-color;
       @include normal-color();
     }
-    #titile-last-part{
+    #title-last-part{
       padding: 0.3em 0.5em 0.1em 0.5em;
       border: 1px solid $main-color;
       @include reverse-color();
@@ -41,6 +42,12 @@ footer{
     }
   }
 }
+@media screen and (max-width: 640px) {
+  .header-header{
+    font-size: 1.9em;
+  }
+}
+
 nav.header-nav{
   font-family: $font-google-mono;
   text-align: center;
@@ -58,9 +65,13 @@ nav.header-nav{
 }
 
 .archive{
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
   margin-top: 0.5em;
   .archive-date{
     font-family: $font-Georgia;
+    white-space: nowrap;
   }
   a{
     color: $main-color;
@@ -73,6 +84,9 @@ nav.header-nav{
 
 .sentence{
   margin-bottom: 2em;
+  p{
+    font-family: $font-kai;
+  }
   .author{
     margin-top: 1em;
   }
@@ -80,4 +94,115 @@ nav.header-nav{
 
 #title-404{
   color: $em-color;
+}
+
+// 首页通往文章列表的入口，沿用标题的黑白反色和等宽字体
+.post-entry{
+  margin-top: 3em;
+  border: 1px solid $main-color;
+  .post-entry-title{
+    font-family: $font-google-mono;
+    padding: 0.4em 1em;
+    @include reverse-color();
+  }
+  .post-entry-list{
+    padding: 0.6em 1em 0.8em;
+  }
+  .post-entry-all{
+    display: block;
+    font-family: $font-google-mono;
+    text-align: center;
+    padding: 0.5em 1em;
+    border-top: 1px solid $main-color;
+    @include normal-color();
+    &:hover{
+      @include reverse-color();
+    }
+  }
+}
+
+.archive-year{
+  font-size: 1.2em;
+  margin-top: 1.4em;
+  small{
+    font-weight: 400;
+    margin-left: 0.5em;
+  }
+}
+
+.tag-cloud{
+  margin-bottom: 1.5em;
+  a{
+    display: inline-block;
+    margin: 0 0.8em 0.4em 0;
+    color: $main-color;
+    border-bottom: 1px solid $border-color;
+    &:hover{
+      color: $link-hover-color;
+    }
+    small{
+      margin-left: 0.2em;
+    }
+  }
+}
+
+.tag-rest summary{
+  cursor: pointer;
+  margin-bottom: 0.8em;
+  color: $lighter-color;
+}
+
+#search{
+  --pagefind-ui-primary: #{$link-color};
+  --pagefind-ui-text: #{$main-color};
+  --pagefind-ui-border-radius: 0;
+  --pagefind-ui-font: #{$font-family};
+}
+
+.series-page{
+  .series-title{
+    font-size: 1.6em;
+  }
+  .series-meta{
+    color: $lighter-color;
+    font-size: 0.9em;
+  }
+  p{
+    margin-bottom: 0.8em;
+  }
+}
+
+.series-card{
+  padding: 0.8em 0 1em;
+  border-bottom: $normal-border;
+  h2{
+    font-size: 1.2em;
+    margin-bottom: 0.3em;
+  }
+  a{
+    color: $main-color;
+    &:hover{
+      color: $link-hover-color;
+    }
+  }
+}
+
+.series-list{
+  list-style: decimal;
+  margin: 1.5em 0 0 1.6em;
+  li{
+    margin-bottom: 1em;
+  }
+  a{
+    font-weight: 600;
+    color: $main-color;
+    &:hover{
+      color: $link-hover-color;
+    }
+  }
+  p{
+    margin: 0.2em 0 0;
+    color: $lighter-color;
+    font-size: 0.92em;
+  }
 }

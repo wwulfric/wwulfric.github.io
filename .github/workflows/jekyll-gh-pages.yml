@@ -23,21 +23,30 @@ jobs:
         # token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         path: ${{ github.workspace }}/_posts  # 下载到这个目录
 
-    - name: mv articles/images to sources
-      run: |
-        mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
-        sed -i 's#(images\/#(\/images\/#g' ${{ github.workspace }}/_posts/*.md
     - name: Setup Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.4'
         bundler-cache: true
+    - name: mv articles/images to sources
+      run: |
+        mv ${{ github.workspace }}/_posts/images/* ${{ github.workspace }}/images/
+        sed -i 's#(images\/#(\/images\/#g' ${{ github.workspace }}/_posts/*.md
+    - name: Convert images to WebP
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y webp
+        ruby .github/scripts/optimize_images.rb images _posts
     - name: Build jekyll
       run: bundle exec jekyll build
+      env:
+        JEKYLL_ENV: production
+    - name: Build search index
+      run: npx -y pagefind@1.6.0 --site _site
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./_site
         publish_branch: master  # 将生成的页面推送到 master 分支
-        keep_files: true  # 保留 master 分支中现有的文件on:
+        keep_files: false  # 删除或改名的页面不再残留在 master 分支on:

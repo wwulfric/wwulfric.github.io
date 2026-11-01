@@ -1,0 +1,13 @@
+{% unless page.evergreen or page.title contains '翻译' %}
+  {% if page.categories contains '技术' %}
+    {% assign written_at = page.updated | default: page.date %}
+    {% assign written_seconds = written_at | date: '%s' | plus: 0 %}
+    {% assign now_seconds = site.time | date: '%s' | plus: 0 %}
+    {% assign age_years = now_seconds | minus: written_seconds | divided_by: 31536000 %}
+    {% if age_years >= 3 %}
+      <blockquote class="age-notice">
+        这篇文章{% if page.updated %}更新{% else %}写{% endif %}于 {{ written_at | date: '%Y' }} 年（约 {{ age_years }} 年前），其中的工具和命令可能已有变化，请结合最新文档阅读。
+      </blockquote>
+    {% endif %}
+  {% endif %}
+{% endunless %}

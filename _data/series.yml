@@ -1,0 +1,28 @@
+- slug: llm-papers
+  title: LLM 经典论文精读
+  status: 已完结
+  summary: 从 Transformer 到 ReAct，用五篇论文看大语言模型怎么走到今天。
+  intro: >-
+    这个系列是几篇奠基论文的中文翻译，适合想读原始论文、又希望先有中文对照的读者。
+    阅读顺序按思路的发展排列，不按发布时间：先看 Transformer 这个架构起点，再看 GPT
+    三代如何从“预训练加微调”走到“零样本”和“少样本”，最后看 ReAct 如何让模型从生成文本走向推理和行动。
+    其中 GPT-2、GPT-3 和 ReAct 是节选，保留了摘要、导言和结论等部分。
+  posts:
+    - 2023-04-28-Transformer-ch
+    - 2023-04-05-gpt1-ch
+    - 2023-04-06-gpt2-ch
+    - 2023-04-27-gpt3-ch
+    - 2023-05-04-ReAct-ch
+- slug: python-runtime-gevent
+  title: Python 运行时与 gevent
+  status: 连载中
+  summary: 从进程注入到 gevent 内核，弄清线上 Python 进程诊断的边界。
+  intro: >-
+    这个系列来自开发 Python 运行时诊断工具 peeka 的经验，适合需要排查线上 Python 服务、或者想理解
+    gevent 底层的读者。先看外部工具如何进入一个正在运行的进程，再看 gevent 为什么会让诊断工具卡住，
+    然后梳理 Python 各层观测接口的边界，最后回到 gevent 本身，看它的技术路线是怎么一步步走出来的。
+  posts:
+    - 2026-04-19-python-process-injection
+    - 2026-05-08-python38-gevent-attach-failure
+    - 2026-05-27-python-runtime-tracing-boundaries
+    - 2026-06-07-gevent-technical-route

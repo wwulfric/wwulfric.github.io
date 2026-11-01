@@ -5,6 +5,7 @@
 @use "sass:color";
 
 $max-width: 840px;
+$text-width: 720px;
 
 $main-color : #333;
 $lighter-color: color.adjust($main-color, $lightness: 20%); //666
@@ -22,32 +23,14 @@ $em-color : #F0563D; // 用于红色强调
 
 $mark-color: #EFF1C2;
 
-// $font-family : "Helvetica Neue", "Helvetica", Arial, "Hiragino Sans GB", "WenQuanYi Micro Hei", SimSun, sans-serif;
-$font-family : "HelveticaNeue-Light","Helvetica Neue Light","Helvetica Neue",Helvetica,Arial,sans-serif;
-$font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monospace;
+$font-family : -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+$font-kai: "Kaiti SC", STKaiti, KaiTi, "Noto Serif CJK SC", serif;
+$font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
 $font-Georgia: Georgia, serif;
 $font-google-mono: "Cutive Mono", monospace;
-// $font-Italianno: 'Italianno', cursive;
 
-@mixin border-radius($radius) {
-  -webkit-border-radius: $radius;
-     -moz-border-radius: $radius;
-      -ms-border-radius: $radius;
-          border-radius: $radius;
-}
-
-@mixin square($property){
-	width: $property;
-	height: $property;
-}
-
-/* don't support so many browser */
 @mixin rotate($deg){
   transform:rotate($deg);
-  -ms-transform:rotate($deg); 	/* IE 9 */
-  -moz-transform:rotate($deg); 	/* Firefox */
-  -webkit-transform:rotate($deg); /* Safari 和 Chrome */
-  -o-transform:rotate($deg); 	/* Opera */
 }
 
 @mixin word-break(){
@@ -65,8 +48,6 @@ $font-google-mono: "Cutive Mono", monospace;
   color: $bg-color;
   background-color: $main-color;
 }
-
-.box { @include border-radius(10px); }
 
 $normal-border: 1px solid $border-color;
 $dashed-border: 1px dashed $border-color;

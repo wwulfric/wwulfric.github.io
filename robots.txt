@@ -1,2 +1,4 @@
 User-agent: *
 Disallow: /about/
+
+Sitemap: https://www.wulfric.me/sitemap.xml

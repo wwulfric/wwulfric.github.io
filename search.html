@@ -3,25 +3,13 @@ layout: page
 title: Search
 permalink: /search/
 ---
-<div id='search'>
-  <form><input type='text' id='ts-search-input'></form>
-  <div id='ts-results-container'></div>
-</div>
+<link href="/pagefind/pagefind-ui.css" rel="stylesheet">
+<div id='search'></div>
+<script src="/pagefind/pagefind-ui.js" onerror="document.getElementById('search').textContent = '搜索索引没有生成，部署后才可以使用。'"></script>
 <script>
-var option = {
-  engineKey: 'e743133f35a4830fe852',
-  resultContainingElement: '#ts-results-container',
-  renderStyle: 'inline'
-};
-(function(w,d,t,u,n,s,e){
-  s = d.createElement(t);
-  s.src = u;
-  s.async = 1;
-  w[n] = function(r){
-    w[n].opts = r;
-  };
-  e = d.getElementsByTagName(t)[0];
-  e.parentNode.insertBefore(s, e);
-})(window,document,'script','//tinysou-cdn.b0.upaiyun.com/ts.js','_ts');
-_ts(option);
+window.addEventListener('DOMContentLoaded', function() {
+  if (window.PagefindUI) {
+    new PagefindUI({ element: '#search', showSubResults: true, showImages: false });
+  }
+});
 </script>

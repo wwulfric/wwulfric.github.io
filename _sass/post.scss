@@ -39,9 +39,8 @@
         min-width: 300px; /* 设置最小宽度防止过度压缩 */
     }
     h2{
-      background-color: $header-color;
-      padding-left: 5px;
-      border: 1px groove $lighter-color;
+      border-left: 4px solid $header-color;
+      padding-left: 0.5em;
     }
     blockquote{
       p{
@@ -50,9 +49,6 @@
     }
     pre{
       @include word-break();
-    }
-    .comments-hide{
-      display: none;
     }
     .footnotes {
         margin-top: 4em;
@@ -78,7 +74,89 @@
     }
     figure{
       text-align: center;
+      margin-bottom: 1.8em;
       a{border: none;}
+    }
+    .post-title{
+      max-width: $text-width;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    // 正文收窄，代码、表格、图片保持全宽
+    .post-content > *{
+      max-width: $text-width;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .post-content > pre,
+    .post-content > div[class*="highlighter-"],
+    .post-content > .table-container,
+    .post-content > figure{
+      max-width: 100%;
+    }
+    .post-content > p:empty{
+      display: none;
+    }
+    .post-content blockquote{
+      font-family: $font-kai;
+    }
+    .age-notice{
+      max-width: $text-width;
+      margin: 0 auto 1.8em;
+      color: $lighter-color;
+      border-left-color: $header-color;
+    }
+    #by-nc-nd, #private, .post-nav, .related-posts, #comments, #additional{
+      max-width: $text-width;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .series-box{
+      max-width: $text-width;
+      margin: 2em auto 0;
+      padding: 0.8em 1em;
+      border: $normal-border;
+      border-left: 4px solid $header-color;
+      background: $darker-bg-color;
+    }
+    .post-nav{
+      display: flex;
+      justify-content: space-between;
+      gap: 2em;
+      margin-top: 2em;
+      a{
+        flex: 1 1 50%;
+        border: none;
+        color: $main-color;
+        &:hover{ color: $link-hover-color; }
+        small{ display: block; }
+      }
+      .post-nav-next{
+        text-align: right;
+        margin-left: auto;
+      }
+    }
+    .related-posts{
+      margin-top: 2em;
+      h2{
+        font-size: 1em;
+        border: none;
+        padding: 0;
+        margin: 0 0 0.4em;
+      }
+      ul{
+        list-style: none;
+        margin: 0;
+      }
+      li{ margin-bottom: 0.3em; }
+      a{
+        color: $main-color;
+        border-bottom: 1px solid $border-color;
+        &:hover{ color: $link-hover-color; }
+      }
+    }
+    #comments{
+      margin-top: 2em;
     }
   }
 }

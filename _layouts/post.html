@@ -1,6 +1,8 @@
 ---
 layout: default
 ---
+{% assign comments_enabled = false %}
+{% if page.comments and site.giscus.category_id != "" %}{% assign comments_enabled = true %}{% endif %}
 <div class="post typo">
 
   <header class="post-header clearfix">
@@ -11,12 +13,13 @@ layout: default
       </div>
       <div class='year pull-left'>{{ page.date | date: "%Y" }}</div>
     </div>
-    <h1 class="post-title">{{ page.title }}</h1>
+    <h1 class="post-title" data-pagefind-meta="title">{{ page.title }}</h1>
   </header>
 
   {% include cc.html %}
+  {% include age_notice.html %}
 
-  <article class="post-content">
+  <article class="post-content" data-pagefind-body>
     {{ content }}
   </article>
 
@@ -36,7 +39,7 @@ layout: default
     <div id="tags" class='pull-left'>
       {% include tags.html %}
     </div>
-    {% if page.comments %}
+    {% if comments_enabled %}
       <a class='pull-right' href="#comments" id="get-comment">
         <i class='icon-chat'></i>
         评论
@@ -44,9 +47,12 @@ layout: default
     {% endif %}
   </div>
 
-  {% if page.comments %}
-    <div id="comments" class="comments-hide">
-      {% include livere_comments.html %}
+  {% include series_card.html %}
+  {% include post_nav.html %}
+
+  {% if comments_enabled %}
+    <div id="comments">
+      {% include giscus_comments.html %}
     </div>
   {% endif %}
 

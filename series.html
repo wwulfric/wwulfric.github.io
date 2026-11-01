@@ -1,0 +1,15 @@
+---
+layout: page
+title: 专题
+permalink: /series/
+---
+
+<div class="series-page">
+  {% for series in site.data.series %}
+    <section class="series-card">
+      <h2><a href="{{ '/series/' | append: series.slug | append: '/' | relative_url }}">{{ series.title }}</a></h2>
+      <p>{{ series.summary }}</p>
+      <p class="series-meta">{{ series.status }} · {{ series.items | size }} 篇</p>
+    </section>
+  {% endfor %}
+</div>

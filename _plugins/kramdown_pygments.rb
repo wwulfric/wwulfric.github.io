@@ -1,16 +1,7 @@
-# This class is a plugin for kramdown, to make it use pygments instead of coderay
-# It has nothing to do with Jekyll, it is simply used by the custom converter below
+# Customizes kramdown's HTML output: scrollable tables, code blocks and figures
 module Kramdown
   module Converter
     class Html
-      begin
-        require 'json'
-        require 'net/http'
-      rescue LoadError
-        STDERR.puts 'You are missing a library required for syntax highlighting. Please run:'
-        raise FatalException.new("Missing dependency: Pygments")
-      end
-      
       alias_method :original_convert_table, :convert_table
       def convert_table(el, indent)
         table_html = original_convert_table(el, indent)
@@ -61,40 +52,13 @@ module Kramdown
       end
 
       def convert_img(el, indent)
-        src = el.attr['src']
-        if src['qiniu-wulfric']
-          image_info_uri = URI "#{src}?imageInfo"
-          image_info = JSON.parse(Net::HTTP.get image_info_uri)
-          width = image_info['width']
-          height = image_info['height']
-          unless src.match(/R-/).nil?
-            width /= 2
-            height /= 2
-          end
-          img_max_width = 720
-          if width > img_max_width
-            ratio = width.to_f / img_max_width
-            width = img_max_width
-            height = (height / ratio).to_i
-          end
-          # add water mark
-          # origin_webp = "#{src}-origin.webp"
-          article_webp = "#{src}-article.webp"
-          # origin_png = "#{src}-origin.png"
-          article_png = "#{src}-article.png"
-          webp_source = "<source srcset=\"#{article_webp}\" type=\"image/webp\">"
-          png_source = "<source srcset=\"#{article_png}\" type=\"image/png\">"
-          el.attr['src'] = article_png
-        end
-        unless el.attr['alt'].empty?
+        el.attr['loading'] = 'lazy'
+        el.attr['decoding'] = 'async'
+        unless el.attr['alt'].to_s.empty?
           figcaption = "<figcaption><i class='icon-pencil'></i>#{el.attr['alt']}</figcaption>"
         end
         "<figure>
-          <picture>
-            #{webp_source}
-            #{png_source}
-            <img#{html_attributes(el.attr)} width=#{width} height=#{height} />
-          </picture>
+          <img#{html_attributes(el.attr)} />
           #{figcaption}
         </figure>"
       end

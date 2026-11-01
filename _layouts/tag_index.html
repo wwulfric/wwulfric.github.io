@@ -3,8 +3,8 @@ layout: page
 ---
 
 {% for post in site.tags[page.tag] %}
-  <div class='archive clearfix'>
-    <a href='{{ post.url }}' class="pull-left archive-title">{{ post.title }}</a>
-    <span class='pull-right archive-date'>{{ post.date | date: "%F" }}</span>
+  <div class='archive'>
+    <a href='{{ post.url }}' class="archive-title">{{ post.title }}</a>
+    <span class='archive-date'>{{ post.date | date: "%F" }}</span>
   </div>
 {% endfor %}

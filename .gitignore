@@ -5,3 +5,4 @@ _deploy.sh
 .ruby-version
 .jekyll-metadata
 .python-version
+.jekyll-cache

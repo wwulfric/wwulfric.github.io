@@ -19,6 +19,12 @@ module Jekyll
 
       cat_name_title_prefix = site.config["#{cat_name}_title_prefix"] || "#{cat_name.capitalize}: "
       self.data['title'] = "#{cat_name_title_prefix}#{cat_value}"
+
+      # 只有一篇文章的标签页内容太薄，不让搜索引擎收录
+      if is_tag && site.tags[cat_value].size == 1
+        self.data['sitemap'] = false
+        self.data['noindex'] = true
+      end
     end
   end
 
@@ -44,8 +50,6 @@ module Jekyll
 
     def write_category_index(site, dir, category, is_tag)
       index = CategoryIndex.new(site, site.source, dir, category, is_tag)
-      index.render(site.layouts, site.site_payload)
-      index.write(site.dest)
       site.pages << index
     end
   end

@@ -1,0 +1,26 @@
+---
+layout: page
+title: 标签
+permalink: /tags/
+---
+
+<h2 class="archive-year">标签<small>{{ site.data.tag_stats | size }} 个</small></h2>
+
+<div class="tag-cloud">
+  {% for tag in site.data.tag_stats %}
+    {% if tag.count >= 3 %}
+      <a href="/tags/{{ tag.name | uri_escape }}/">{{ tag.name }}<small>{{ tag.count }}</small></a>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<details class="tag-rest">
+  <summary>其余标签</summary>
+  <div class="tag-cloud">
+    {% for tag in site.data.tag_stats %}
+      {% if tag.count < 3 %}
+        <a href="/tags/{{ tag.name | uri_escape }}/">{{ tag.name }}<small>{{ tag.count }}</small></a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</details>

@@ -1,13 +1,17 @@
-<h1 class='header-header'>
-  {% assign titles = site.title | split: ' ' %}
+{% assign titles = site.title | split: ' ' %}
+{% if page.url == "/" %}<h1 class='header-header'>{% else %}<div class='header-header'>{% endif %}
   <a class="site-title" href="{{ site.baseurl }}/">
-    <span id='titile-first-part'>{{ titles.first | upcase }}</span><span id='titile-last-part'>{{ titles.last | upcase }} </span>
+    <span id='title-first-part'>{{ titles.first | upcase }}</span><span id='title-last-part'>{{ titles.last | upcase }} </span>
   </a>
-</h1>
+{% if page.url == "/" %}</h1>{% else %}</div>{% endif %}
 <nav class='header-nav'>
   <a class="page-link" href="{{ "/" | prepend: site.baseurl }}">HOME</a>
   /
   <a class="page-link" href="{{ "/archive/" | prepend: site.baseurl }}">ARCHIVE</a>
+  /
+  <a class="page-link" href="{{ "/series/" | prepend: site.baseurl }}">SERIES</a>
+  /
+  <a class="page-link" href="{{ "/search/" | prepend: site.baseurl }}">SEARCH</a>
   /
   <a class="page-link" href="{{ "/feed.xml" | prepend: site.baseurl }}">FEED</a>
   /

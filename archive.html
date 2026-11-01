@@ -4,9 +4,20 @@ title: Blog Posts
 permalink: /archive/
 ---
 
-{% for post in site.posts %}
-  <div class='archive clearfix'>
-    <a href='{{ post.url }}' class="pull-left archive-title">{{ post.title }}</a>
-    <span class='pull-right archive-date'>{{ post.date | date: "%F" }}</span>
-  </div>
+<div class="tag-cloud">
+  {% for tag in site.data.tag_stats limit:13 %}
+    <a href="/tags/{{ tag.name | uri_escape }}/">{{ tag.name }}<small>{{ tag.count }}</small></a>
+  {% endfor %}
+  <a href="{{ '/tags/' | relative_url }}">全部标签 →</a>
+</div>
+
+{% assign years = site.posts | group_by_exp: "post", "post.date | date: '%Y'" %}
+{% for year in years %}
+  <h2 class="archive-year">{{ year.name }}<small>{{ year.size }} 篇</small></h2>
+  {% for post in year.items %}
+    <div class='archive'>
+      <a href='{{ post.url }}' class="archive-title">{{ post.title }}</a>
+      <span class='archive-date'>{{ post.date | date: "%F" }}</span>
+    </div>
+  {% endfor %}
 {% endfor %}

@@ -1,0 +1,17 @@
+---
+layout: page
+---
+
+<div class="series-page">
+  <h1 class="series-title">{{ page.series.title }}</h1>
+  <p class="series-meta">{{ page.series.status }} · {{ page.series.items | size }} 篇</p>
+  <p>{{ page.series.intro }}</p>
+  <ol class="series-list">
+    {% for item in page.series.items %}
+      <li>
+        <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
+        <p>{{ item.description }}</p>
+      </li>
+    {% endfor %}
+  </ol>
+</div>

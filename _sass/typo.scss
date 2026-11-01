@@ -5,16 +5,13 @@ html{
   color:$main-color;
   background:$bg-color;
   -webkit-text-size-adjust:100%;
-  -ms-text-size-adjust:100%;
   text-rendering:optimizelegibility;
   -moz-osx-font-smoothing: grayscale;
-  -webkit-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-size: 17px;
 }
 
-/* 如果你的项目仅支持 IE9+ | Chrome | Firefox 等，推荐在 <html> 中添加 .borderbox 这个 class */
 html.borderbox *, html.borderbox *:before, html.borderbox *:after {
-  -moz-box-sizing:border-box;
-  -webkit-box-sizing:border-box;
   box-sizing:border-box;
 }
 
@@ -24,30 +21,9 @@ body, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, code, form, fieldset,
   padding:0;
 }
 
-/* 重设 HTML5 标签, IE 需要在 js 中 createElement(TAG) */
-article, aside, details, figcaption, figure, footer, header, menu, nav, section{
-  display:block;
-}
-
-/* HTML5 媒体文件跟 img 保持一致 */
-audio, canvas, video{
-  display:inline-block;
-  *display:inline;
-  *zoom:1;
-}
-
 /* 要注意表单元素并不继承父级 font 的问题 */
 body, button, input, select, textarea{
   font:400 1em/1.8 $font-family;
-}
-
-/* 去除 IE6 input/button 多余的空白 */
-button, input{
-  *width:auto;
-  *overflow:visible;
-
-  /* 让 input 和 button 一样高 */
-  line-height:normal;
 }
 
 button::-moz-focus-inner,
@@ -64,7 +40,6 @@ table{
   font-size: .9em;
 }
 
-/* IE bug fixed: th 不继承 text-align */
 th{
   text-align:inherit;
 }
@@ -74,12 +49,6 @@ fieldset, img{
   border:0;
 }
 
-/* 解决 IE6-7 图片缩放锯齿问题 */
-img{
-  -ms-interpolation-mode:bicubic;
-}
-
-/* ie6 7 8(q) bug 显示为行内表现 */
 iframe{
   display:block;
 }
@@ -89,7 +58,6 @@ blockquote {
   position:relative;
   color: $main-color;
   background-color: $darker-bg-color;
-  font-weight:300;
   border: $normal-border;
   border-left:5px solid $border-color;
   padding:1em;
@@ -141,8 +109,8 @@ sub, sup{
   position:relative;
 }
 
-:root sub, :root sup{
-  vertical-align:baseline; /* for ie9 and other modern browsers */
+sub, sup{
+  vertical-align:baseline;
 }
 
 sup{
@@ -198,7 +166,6 @@ pre{
   border:$normal-border;
   padding:1em 1.5em;
   display:block;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* 一致化 horizontal rule */
@@ -206,9 +173,6 @@ hr{
   border:none;
   border-bottom: $dashed-border;
   margin-bottom:10px;
-  *color:pink; *filter:chroma(color=pink);
-  //height:10px;
-  *margin:-7px 0 2px;
 }
 
 /* 底部印刷体、版本等标记 */
@@ -235,10 +199,6 @@ strong, b{font-weight:bold;color:$em-color;}
   clear:both;
 }
 
-.clearfix{
-  zoom:1;
-}
-
 /* 强制文本换行 */
 .textwrap, .textwrap td, .textwrap th{
   word-wrap:break-word;
@@ -259,7 +219,7 @@ strong, b{font-weight:bold;color:$em-color;}
 }
 
 h1, h2, h3, h4, h5, h6{
-  font-weight:200;
+  font-weight:600;
   color:#000;
 }
 
@@ -271,23 +231,26 @@ h1, h2, h3, h4, h5, h6{
 }
 
 .typo h1, .typo-h1{
-  font-size:2em;
+  font-size:1.9em;
 }
 
 .typo h2, .typo-h2{
-  font-size:1.8em;
+  font-size:1.4em;
+  margin-top:1.6em;
 }
 
 .typo h3, .typo-h3{
-  font-size:1.6em;
+  font-size:1.2em;
+  margin-top:1.3em;
 }
 
 .typo h4, .typo-h4{
-  font-size:1.4em;
+  font-size:1.05em;
+  margin-top:1.2em;
 }
 
 .typo h5, .typo h6, .typo-h5, .typo-h6{
-  font-size:1.2em;
+  font-size:1em;
 }
 
 /* 在文章中，应该还原 ul 和 ol 的样式 */
@@ -344,9 +307,8 @@ h1, h2, h3, h4, h5, h6{
 }
 
 .typo-em, .typo em, legend, caption{
-  // color:$em-color;
-  font-style: italic;
-  font-weight:inherit;
+  font-style: normal;
+  font-weight:600;
 }
 
 /* 着重号，只能在少量（少于100个字符）且全是全角字符的情况下使用 */
@@ -360,6 +322,21 @@ h1, h2, h3, h4, h5, h6{
   width: 100%;
   overflow: hidden;
   content: "・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・・";
+}
+
+/* 中文排版：中西文自动间距、标点挤压、严格换行 */
+.typo{
+  text-autospace: normal;
+  text-spacing-trim: normal;
+  line-break: strict;
+  overflow-wrap: break-word;
+}
+.typo pre, .typo code{
+  text-autospace: no-autospace;
+}
+
+@media only screen and ( max-width:640px ){
+  html{ font-size: 16px; }
 }
 
 /* Responsive images */

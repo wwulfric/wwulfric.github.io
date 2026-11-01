@@ -1,0 +1,7 @@
+{% if page.series_info %}
+  <aside class="series-box">
+    本文是专题《<a href="{{ page.series_info.url | relative_url }}">{{ page.series_info.title }}</a>》第 {{ page.series_info.index }}/{{ page.series_info.total }} 篇
+    {% if page.series_info.previous %}<br><a href="{{ page.series_info.previous.url | relative_url }}">← {{ page.series_info.previous.title }}</a>{% endif %}
+    {% if page.series_info.next %}<br><a href="{{ page.series_info.next.url | relative_url }}">{{ page.series_info.next.title }} →</a>{% endif %}
+  </aside>
+{% endif %}

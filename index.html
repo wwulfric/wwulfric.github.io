@@ -10,8 +10,21 @@ layout: default
   </p>
 
   <span class='author pull-right'>
-    --- {{ sentence.author }}「{{ sentence.name }}」
+    --- {% if sentence.author %}{{ sentence.author }}{% endif %}「{{ sentence.name }}」
   </span>
 </div>
 
 {% endfor %}
+
+<section class="post-entry clearfix">
+  <div class="post-entry-title">$ ls -t posts | head -3</div>
+  <div class="post-entry-list">
+    {% for post in site.posts limit:3 %}
+      <div class='archive'>
+        <a href='{{ post.url }}' class="archive-title">{{ post.title }}</a>
+        <span class='archive-date'>{{ post.date | date: "%F" }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <a class="post-entry-all" href="{{ '/archive/' | relative_url }}">READ ALL {{ site.posts | size }} POSTS →</a>
+</section>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class='borderbox'>
+<html lang="{{ site.lang }}" class='borderbox'>
 
   {% include head.html %}
 
@@ -15,8 +15,7 @@
 
     </div>
     <script defer src="{{ '/assets/javascripts/app.js' | relative_url }}"></script>
-    <!-- {% include baidu_tongji.html %} -->
-    <!-- {% include google_analytics.html %} -->
+    {% include analytics.html %}
   </body>
 
 </html>

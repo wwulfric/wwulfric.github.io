@@ -5,7 +5,8 @@ permalink: /categories/
 ---
 
 {% for category in site.categories %}
-  <div class='category clearfix'>
-    <a href='{{ category[0] }}'>{{ category[0] }}</a>
+  <div class='archive'>
+    <a href='/categories/{{ category[0] | uri_escape }}/' class="archive-title">{{ category[0] }}</a>
+    <span class='archive-date'>{{ category[1] | size }} 篇</span>
   </div>
 {% endfor %}

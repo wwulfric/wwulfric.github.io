@@ -244,7 +244,7 @@ git push origin master
       reactionsEnabled: '0',
       emitMetadata: '0',
       inputPosition: 'bottom',
-      theme: 'light',
+      theme: location.origin + '/assets/stylesheets/giscus.css',
       lang: 'zh-CN'
     }).forEach(function(entry) { script.dataset[entry[0]] = entry[1]; });
     thread.appendChild(script);

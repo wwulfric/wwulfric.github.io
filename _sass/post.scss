@@ -77,72 +77,40 @@
       margin-bottom: 1.8em;
       a{border: none;}
     }
-    .post-title{
-      max-width: $text-width;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    // 正文收窄，代码、表格、图片保持全宽
-    .post-content > *{
-      max-width: $text-width;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .post-content > pre,
-    .post-content > div[class*="highlighter-"],
-    .post-content > .table-container,
-    .post-content > figure{
-      max-width: 100%;
-    }
     .post-content > p:empty{
       display: none;
     }
     .post-content blockquote{
-      font-family: $font-kai;
-    }
-    .age-notice{
-      max-width: $text-width;
-      margin: 0 auto 1.8em;
       color: $lighter-color;
-      border-left-color: $header-color;
+      background: none;
+      border: none;
+      border-left: 3px solid $border-color;
+      padding: 0 0 0 1em;
     }
-    #by-nc-nd, #private, .post-nav, .related-posts, #comments, #additional{
-      max-width: $text-width;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .series-box{
-      max-width: $text-width;
-      margin: 2em auto 0;
-      padding: 0.8em 1em;
-      border: $normal-border;
-      border-left: 4px solid $header-color;
-      background: $darker-bg-color;
-    }
-    .post-nav{
-      display: flex;
-      justify-content: space-between;
-      gap: 2em;
-      margin-top: 2em;
+    .post-note{
+      color: $lightest-color;
+      font-size: 0.85em;
+      margin-bottom: 0.3em;
       a{
-        flex: 1 1 50%;
-        border: none;
-        color: $main-color;
-        &:hover{ color: $link-hover-color; }
-        small{ display: block; }
-      }
-      .post-nav-next{
-        text-align: right;
-        margin-left: auto;
+        color: $lightest-color;
+        &:hover{ color: $lighter-color; }
       }
     }
-    .related-posts{
+    .post-content{
+      margin-top: 1.5em;
+    }
+    .post-next{
       margin-top: 2em;
       h2{
         font-size: 1em;
         border: none;
         padding: 0;
         margin: 0 0 0.4em;
+      }
+      .post-next-series{
+        color: $lightest-color;
+        font-size: 0.85em;
+        margin-bottom: 0.4em;
       }
       ul{
         list-style: none;
@@ -154,6 +122,7 @@
         border-bottom: 1px solid $border-color;
         &:hover{ color: $link-hover-color; }
       }
+      .post-next-series a{ color: $lightest-color; }
     }
     #comments{
       margin-top: 2em;
@@ -161,7 +130,8 @@
   }
 }
 
-@media screen and (max-width: $max-width) {
+// 日期悬挂在内容左侧，放不下时隐藏
+@media screen and (max-width: $max-width + 140px) {
     .main {
         max-width: 90%;
         margin: 0 auto;

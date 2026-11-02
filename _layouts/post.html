@@ -6,7 +6,7 @@ layout: default
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix'>
+    <div class='date pull-left clearfix' data-date="{{ page.date | date: '%F' }}" data-pagefind-meta="date[data-date]">
       <div class='day-month pull-left'>
         <div class='day'>{{ page.date | date: "%d" }}</div>
         <div class='month'>{{ page.date | date: "%b" | upcase }}</div>
@@ -36,18 +36,11 @@ layout: default
   </button>
 
   <div id='additional' class='clearfix'>
-    <div id="tags" class='pull-left'>
+    <div id="tags">
       {% include tags.html %}
     </div>
-    {% if comments_enabled %}
-      <a class='pull-right' href="#comments" id="get-comment">
-        <i class='icon-chat'></i>
-        评论
-      </a>
-    {% endif %}
   </div>
 
-  {% include series_card.html %}
   {% include post_nav.html %}
 
   {% if comments_enabled %}

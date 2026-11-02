@@ -4,8 +4,7 @@
 // $main-color : #2E313D; //333
 @use "sass:color";
 
-$max-width: 840px;
-$text-width: 720px;
+$max-width: 760px;
 
 $main-color : #333;
 $lighter-color: color.adjust($main-color, $lightness: 20%); //666
@@ -24,7 +23,7 @@ $em-color : #F0563D; // 用于红色强调
 $mark-color: #EFF1C2;
 
 $font-family : -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
-$font-kai: "Kaiti SC", STKaiti, KaiTi, "Noto Serif CJK SC", serif;
+$font-song: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
 $font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
 $font-Georgia: Georgia, serif;
 $font-google-mono: "Cutive Mono", monospace;

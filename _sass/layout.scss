@@ -85,7 +85,7 @@ nav.header-nav{
 .sentence{
   margin-bottom: 2em;
   p{
-    font-family: $font-kai;
+    font-family: $font-song;
   }
   .author{
     margin-top: 1em;
@@ -152,11 +152,34 @@ nav.header-nav{
   color: $lighter-color;
 }
 
-#search{
-  --pagefind-ui-primary: #{$link-color};
-  --pagefind-ui-text: #{$main-color};
-  --pagefind-ui-border-radius: 0;
-  --pagefind-ui-font: #{$font-family};
+.archive-search{
+  margin-bottom: 1.5em;
+  input{
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3em 0;
+    color: $main-color;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid $border-color;
+    border-radius: 0;
+    outline: none;
+    appearance: none;
+    &:focus{
+      border-bottom-color: $main-color;
+    }
+  }
+}
+
+.archive-search-status{
+  color: $lightest-color;
+  font-size: 0.85em;
+}
+
+.archive-excerpt{
+  color: $lighter-color;
+  font-size: 0.9em;
+  margin: 0.2em 0 1em;
 }
 
 .series-page{

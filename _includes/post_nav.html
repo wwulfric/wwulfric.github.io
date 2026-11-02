@@ -1,21 +1,19 @@
-{% if page.previous or page.next %}
-  <nav class="post-nav" aria-label="上一篇和下一篇">
-    {% if page.previous %}
-      <a class="post-nav-previous" href="{{ page.previous.url | relative_url }}"><small>← 上一篇（更早）</small>{{ page.previous.title }}</a>
+{% assign series = page.series_info %}
+{% if series or page.related_items.size > 0 %}
+  <section class="post-next">
+    <h2>继续阅读</h2>
+    {% if series %}
+      <p class="post-next-series">专题《<a href="{{ series.url | relative_url }}">{{ series.title }}</a>》第 {{ series.index }}/{{ series.total }} 篇</p>
+      <ul>
+        {% if series.previous %}<li>上一篇：<a href="{{ series.previous.url | relative_url }}">{{ series.previous.title }}</a></li>{% endif %}
+        {% if series.next %}<li>下一篇：<a href="{{ series.next.url | relative_url }}">{{ series.next.title }}</a></li>{% endif %}
+      </ul>
+    {% else %}
+      <ul>
+        {% for item in page.related_items %}
+          <li><a href="{{ item.url | relative_url }}">{{ item.title }}</a></li>
+        {% endfor %}
+      </ul>
     {% endif %}
-    {% if page.next %}
-      <a class="post-nav-next" href="{{ page.next.url | relative_url }}"><small>下一篇（更新）→</small>{{ page.next.title }}</a>
-    {% endif %}
-  </nav>
-{% endif %}
-
-{% if page.related_items and page.related_items.size > 0 %}
-  <section class="related-posts">
-    <h2>相关文章</h2>
-    <ul>
-      {% for item in page.related_items %}
-        <li><a href="{{ item.url | relative_url }}">{{ item.title }}</a></li>
-      {% endfor %}
-    </ul>
   </section>
 {% endif %}

@@ -1,15 +1,15 @@
 ---
-layout: page
-title: Search
+layout: null
 permalink: /search/
+sitemap: false
 ---
-<link href="/pagefind/pagefind-ui.css" rel="stylesheet">
-<div id='search'></div>
-<script src="/pagefind/pagefind-ui.js" onerror="document.getElementById('search').textContent = '搜索索引没有生成，部署后才可以使用。'"></script>
-<script>
-window.addEventListener('DOMContentLoaded', function() {
-  if (window.PagefindUI) {
-    new PagefindUI({ element: '#search', showSubResults: true, showImages: false });
-  }
-});
-</script>
+<!doctype html>
+<html lang="{{ site.lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="refresh" content="0; url=/archive/">
+  <title>Archive</title>
+</head>
+<body><a href="/archive/">搜索已移到 Archive 页</a></body>
+</html>

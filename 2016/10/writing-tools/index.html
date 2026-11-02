@@ -204,7 +204,26 @@ git push origin master
     <span class="toc-icon">&#9776;</span>
   </button>
 
-  <div id='additional' class='clearfix'>
+  
+
+  <section class="post-next">
+    <h2>继续阅读</h2>
+    <ul>
+      
+        
+          <li><a href="/2015/12/alfred-dash/">Alfred 和 dash 介绍</a></li>
+        
+          <li><a href="/2016/05/jekyll-octopress-blog/">jekyll 和 octopress 博客程序的选择</a></li>
+        
+          <li><a href="/2015/01/jekyll-with-tiny-search/">（已废弃）为 Jekyll 博客添加微搜索</a></li>
+        
+      
+    </ul>
+  </section>
+
+
+
+  <div id='additional'>
     <div id="tags">
       
     <a class='tag' href="/tags/scrivener/">
@@ -237,31 +256,14 @@ git push origin master
 
 
     </div>
+    
+      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
+    
   </div>
 
   
-
-  <section class="post-next">
-    <h2>继续阅读</h2>
-    <ul>
-      
-        
-          <li><a href="/2015/12/alfred-dash/">Alfred 和 dash 介绍</a></li>
-        
-          <li><a href="/2016/05/jekyll-octopress-blog/">jekyll 和 octopress 博客程序的选择</a></li>
-        
-          <li><a href="/2015/01/jekyll-with-tiny-search/">（已废弃）为 Jekyll 博客添加微搜索</a></li>
-        
-      
-    </ul>
-  </section>
-
-
-
-  
     <div id="comments">
-      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
-<div id="comments-thread" hidden></div>
+      <div id="comments-thread" hidden></div>
 <script>
 (function() {
   var toggle = document.getElementById('comments-toggle');

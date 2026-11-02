@@ -278,7 +278,24 @@ F: 同上，跳转在新标签页完成
     <span class="toc-icon">&#9776;</span>
   </button>
 
-  <div id='additional' class='clearfix'>
+  
+
+  <section class="post-next">
+    <h2>继续阅读</h2>
+    <ul>
+      
+        
+          <li><a href="/2016/05/editor-vim-emacs/">Vim、Emacs 和 IDE</a></li>
+        
+          <li><a href="/2013/09/github-and-academy/">学术型 github 畅想</a></li>
+        
+      
+    </ul>
+  </section>
+
+
+
+  <div id='additional'>
     <div id="tags">
       
     <a class='tag' href="/tags/chrome/">
@@ -311,29 +328,14 @@ F: 同上，跳转在新标签页完成
 
 
     </div>
+    
+      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
+    
   </div>
 
   
-
-  <section class="post-next">
-    <h2>继续阅读</h2>
-    <ul>
-      
-        
-          <li><a href="/2016/05/editor-vim-emacs/">Vim、Emacs 和 IDE</a></li>
-        
-          <li><a href="/2013/09/github-and-academy/">学术型 github 畅想</a></li>
-        
-      
-    </ul>
-  </section>
-
-
-
-  
     <div id="comments">
-      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
-<div id="comments-thread" hidden></div>
+      <div id="comments-thread" hidden></div>
 <script>
 (function() {
   var toggle = document.getElementById('comments-toggle');

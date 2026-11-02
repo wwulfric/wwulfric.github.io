@@ -180,21 +180,48 @@
 
   
     <div id="comments">
-      <script src="https://giscus.app/client.js"
-        data-repo="wwulfric/wwulfric.github.io"
-        data-repo-id="R_kgDOAWsPCQ"
-        data-category="Announcements"
-        data-category-id="DIC_kwDOAWsPCc4DKJnM"
-        data-mapping="pathname"
-        data-strict="1"
-        data-reactions-enabled="0"
-        data-emit-metadata="0"
-        data-input-position="bottom"
-        data-theme="light"
-        data-lang="zh-CN"
-        data-loading="lazy"
-        crossorigin="anonymous"
-        async>
+      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
+<div id="comments-thread" hidden></div>
+<script>
+(function() {
+  var toggle = document.getElementById('comments-toggle');
+  var thread = document.getElementById('comments-thread');
+  var loaded = false;
+
+  function setOpen(open) {
+    thread.hidden = !open;
+    toggle.setAttribute('aria-expanded', open);
+    if (!open || loaded) return;
+    loaded = true;
+    var script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    Object.entries({
+      repo: "wwulfric/wwulfric.github.io",
+      repoId: "R_kgDOAWsPCQ",
+      category: "Announcements",
+      categoryId: "DIC_kwDOAWsPCc4DKJnM",
+      mapping: 'pathname',
+      strict: '1',
+      reactionsEnabled: '0',
+      emitMetadata: '0',
+      inputPosition: 'bottom',
+      theme: 'light',
+      lang: 'zh-CN'
+    }).forEach(function(entry) { script.dataset[entry[0]] = entry[1]; });
+    thread.appendChild(script);
+  }
+
+  // 从评论链接进入，或 GitHub 登录后带 giscus 参数返回时，直接展开
+  function openFromUrl() {
+    if (location.hash === '#comments' || new URLSearchParams(location.search).has('giscus')) setOpen(true);
+  }
+
+  toggle.addEventListener('click', function() { setOpen(thread.hidden); });
+  window.addEventListener('hashchange', openFromUrl);
+  openFromUrl();
+})();
 </script>
 
     </div>

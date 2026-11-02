@@ -103,7 +103,12 @@
       }
     }
     .post-content{
-      margin-top: 1.5em;
+      margin-top: 1em;
+      padding-top: 1.5em;
+      border-top: $normal-border;
+      > :first-child{
+        margin-top: 0;
+      }
     }
     .post-next{
       margin-top: 4em;

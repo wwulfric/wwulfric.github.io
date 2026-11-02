@@ -65,7 +65,7 @@ main .gsc-right-header .BtnGroup-item--selected .btn {
   color: #333;
 }
 
-/* 输入框：只留底部一条细线 */
+/* 输入框：只留一圈浅色细框 */
 main .gsc-comment-box,
 main .gsc-comment-box-tabs,
 main .gsc-comment-box-main,
@@ -87,20 +87,25 @@ main .gsc-comment-box-bottom {
   padding-right: 0;
 }
 
-main .gsc-comment-box-textarea,
-main .gsc-comment-box-textarea:focus {
-  padding: 8px 0;
-  font-size: 15px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #ddd;
-  border-radius: 0;
-  outline: none;
+main .gsc-comment-box-write {
+  border: 1px solid #ddd;
+}
+
+main .gsc-comment-box-write:focus-within {
+  border-color: #999;
   box-shadow: none;
 }
 
+main .gsc-comment-box-textarea,
 main .gsc-comment-box-textarea:focus {
-  border-bottom-color: #333;
+  display: block;
+  padding: 8px 10px;
+  font-size: 15px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
 }
 
 main .gsc-comment-box-textarea-extras,
@@ -128,9 +133,8 @@ main .gsc-comment-box-tabs button.color-bg-canvas {
 }
 
 main .gsc-comment-box-preview {
-  padding: 8px 0;
-  border: none;
-  border-bottom: 1px solid #ddd;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
 }
 
 /* 按钮：站点的黑白方角 */

@@ -15,6 +15,7 @@
           color: $lightest-color;
         }
         font-family: $font-google-mono;
+        font-size: 16px; // 年份要和日月并排放进 $date-width，不随正文字号变化
         width: $date-width;
         .day-month{
           text-align: center;
@@ -62,6 +63,7 @@
         }
       }
       color: $lightest-color;
+      margin-top: 4em;
       padding: 1em 0em 0em;
       border-top: $normal-border;
       a{
@@ -101,16 +103,15 @@
     }
     .post-next{
       margin-top: 2em;
+      font-size: 0.92em;
       h2{
-        font-size: 1em;
+        font-size: 0.92em;
+        font-weight: 400;
+        color: $lightest-color;
         border: none;
         padding: 0;
-        margin: 0 0 0.4em;
-      }
-      .post-next-series{
-        color: $lightest-color;
-        font-size: 0.85em;
-        margin-bottom: 0.4em;
+        margin: 0 0 0.5em;
+        a{ color: $lightest-color; }
       }
       ul{
         list-style: none;
@@ -122,10 +123,21 @@
         border-bottom: 1px solid $border-color;
         &:hover{ color: $link-hover-color; }
       }
-      .post-next-series a{ color: $lightest-color; }
     }
     #comments{
       margin-top: 2em;
+    }
+    .comments-toggle{
+      padding: 0;
+      font-size: 0.85em;
+      color: $lightest-color;
+      background: none;
+      border: none;
+      cursor: pointer;
+      &:hover{ color: $lighter-color; }
+    }
+    #comments-thread{
+      margin-top: 1em;
     }
   }
 }

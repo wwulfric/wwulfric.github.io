@@ -1,19 +1,16 @@
 {% assign series = page.series_info %}
 {% if series or page.related_items.size > 0 %}
   <section class="post-next">
-    <h2>继续阅读</h2>
-    {% if series %}
-      <p class="post-next-series">专题《<a href="{{ series.url | relative_url }}">{{ series.title }}</a>》第 {{ series.index }}/{{ series.total }} 篇</p>
-      <ul>
+    <h2>继续阅读{% if series %} · 专题《<a href="{{ series.url | relative_url }}">{{ series.title }}</a>》{{ series.index }}/{{ series.total }}{% endif %}</h2>
+    <ul>
+      {% if series %}
         {% if series.previous %}<li>上一篇：<a href="{{ series.previous.url | relative_url }}">{{ series.previous.title }}</a></li>{% endif %}
         {% if series.next %}<li>下一篇：<a href="{{ series.next.url | relative_url }}">{{ series.next.title }}</a></li>{% endif %}
-      </ul>
-    {% else %}
-      <ul>
+      {% else %}
         {% for item in page.related_items %}
           <li><a href="{{ item.url | relative_url }}">{{ item.title }}</a></li>
         {% endfor %}
-      </ul>
-    {% endif %}
+      {% endif %}
+    </ul>
   </section>
 {% endif %}

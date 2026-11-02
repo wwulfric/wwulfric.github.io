@@ -1,0 +1,190 @@
+/* Giscus 自定义主题：加载进评论 iframe，配色和字号对齐博客，并去掉多余的线框 */
+@import url("https://giscus.app/themes/light.css");
+
+main {
+  --color-fg-default: #333;
+  --color-fg-muted: #999;
+  --color-fg-subtle: #999;
+  --color-canvas-subtle: #fff;
+  --color-canvas-inset: #fff;
+  --color-border-default: #ddd;
+  --color-border-muted: #ddd;
+  --color-accent-fg: #008d00;
+  --color-btn-primary-text: #fff;
+  --color-btn-primary-bg: #333;
+  --color-btn-primary-border: #333;
+  --color-btn-primary-shadow: none;
+  --color-btn-primary-inset-shadow: none;
+  --color-btn-primary-hover-bg: #000;
+  --color-btn-primary-hover-border: #000;
+  --color-btn-primary-disabled-text: #fff;
+  --color-btn-primary-disabled-bg: #ccc;
+  --color-btn-primary-disabled-border: #ccc;
+  --color-btn-shadow: none;
+  --color-btn-inset-shadow: none;
+  --color-primer-shadow-inset: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #333;
+}
+
+/* 标题："0 条评论" 和文末其他灰色文字一致 */
+main .gsc-comments-count,
+main .gsc-comments-count h4,
+main .gsc-comments-count a,
+main .gsc-comments-count-separator,
+main .gsc-replies-count,
+main .gsc-left-header em {
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+  color: #999;
+  text-decoration: none;
+}
+
+main .gsc-right-header,
+main .gsc-right-header .BtnGroup-item {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+main .gsc-right-header .btn {
+  padding: 0 0 0 1em;
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+main .gsc-right-header .BtnGroup-item--selected .btn {
+  color: #333;
+}
+
+/* 输入框：只留底部一条细线 */
+main .gsc-comment-box,
+main .gsc-comment-box-tabs,
+main .gsc-comment-box-main,
+main .gsc-comment-box-write {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+main .gsc-comment-box-main {
+  margin: 0.75rem 0 0;
+}
+
+main .gsc-comment-box-bottom {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+main .gsc-comment-box-textarea,
+main .gsc-comment-box-textarea:focus {
+  padding: 8px 0;
+  font-size: 15px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #ddd;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+main .gsc-comment-box-textarea:focus {
+  border-bottom-color: #333;
+}
+
+main .gsc-comment-box-textarea-extras,
+main .gsc-comment-box-md-toolbar {
+  display: none;
+}
+
+/* "输入 / 预览" 改成文字标签。Giscus 的工具类带 !important，这里也要带 */
+main .gsc-comment-box-tabs > div {
+  margin: 0 !important;
+}
+
+main .gsc-comment-box-tabs button {
+  margin: 0 1em 0 0 !important;
+  padding: 0 !important;
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+  background: transparent;
+  border: none;
+}
+
+main .gsc-comment-box-tabs button.color-bg-canvas {
+  color: #333;
+}
+
+main .gsc-comment-box-preview {
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid #ddd;
+}
+
+/* 按钮：站点的黑白方角 */
+main .gsc-comment-box-buttons .btn {
+  margin-left: 0.25rem !important;
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+
+main .gsc-pagination-button {
+  border-radius: 0;
+}
+
+main .gsc-comment-box-bottom .link-secondary {
+  font-size: 13px;
+  color: #999;
+}
+
+/* 已有评论：去掉卡片外框，用细线分隔 */
+main .gsc-comment > div,
+main .gsc-comment-box-is-reply,
+main .gsc-replies {
+  border: none;
+  border-radius: 0;
+}
+
+main .gsc-comment {
+  border-bottom: 1px solid #ddd;
+}
+
+main .gsc-comment-header,
+main .gsc-comment-footer,
+main .gsc-comment-content {
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+  border: none;
+}
+
+main .gsc-comment-author a,
+main .gsc-comment-content {
+  font-size: 15px;
+  font-weight: 400;
+}
+
+main .gsc-reply-box {
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+  border: none;
+}
+
+main .gsc-tl-line {
+  display: none;
+}

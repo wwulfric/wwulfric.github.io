@@ -35,13 +35,16 @@ layout: default
     <span class="toc-icon">&#9776;</span>
   </button>
 
-  <div id='additional' class='clearfix'>
+  {% include post_nav.html %}
+
+  <div id='additional'>
     <div id="tags">
       {% include tags.html %}
     </div>
+    {% if comments_enabled %}
+      <button type="button" id="comments-toggle" class="comments-toggle" aria-expanded="false" aria-controls="comments-thread">评论</button>
+    {% endif %}
   </div>
-
-  {% include post_nav.html %}
 
   {% if comments_enabled %}
     <div id="comments">

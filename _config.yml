@@ -13,9 +13,179 @@ author:
   name: wulfric
 tag_title_prefix: "标签："
 category_title_prefix: "分类："
-# 同一标签的不同写法，构建时统一
+# 构建时整理标签：同义或过细的标签并入大标签，值为 ~ 的标签直接去掉。
+# 文章里的原始标签不改
 tag_aliases:
+  # mac
   MAC: mac
+  homebrew: mac
+  brew: mac
+  brew cask: mac
+  iTerm2: mac
+  jenv: ~
+  rbenv: ~
+  path: ~
+  # python
+  ipython: python
+  matplotlib: python
+  miniconda: python
+  pythonchallenge: ~
+  jupyter: ~
+  matlab: ~
+  retina: ~
+  中文: ~
+  ggplot: ~
+  greenlet: gevent
+  coroutine: ~
+  asyncio: ~
+  # ai
+  chatgpt: ai
+  llm: ai
+  ml: ai
+  coding: ~
+  forecast: ~
+  stats: ~
+  neural: ~
+  # git / github
+  merge: ~
+  P4Merge: ~
+  rebase: ~
+  cherry-pick: ~
+  diff: ~
+  gitconfig: ~
+  gitignore: ~
+  SourceTree: ~
+  tig: ~
+  版本控制: ~
+  github pages: github
+  302 redirect: ~
+  咖啡: gitcafe
+  招聘: gitcafe
+  SNS: ~
+  学术: ~
+  写作: ~
+  技能: ~
+  教育: 编程教育
+  认知学徒制: 编程教育
+  开智: 编程教育
+  协作: 团队协作
+  敏捷: 团队协作
+  agile: ~
+  # jekyll
+  octopress: ~
+  hexo: ~
+  tinysou: ~
+  search: ~
+  compress: ~
+  highlight: ~
+  fontawesome: ~
+  colorscheme: ~
+  font: ~
+  # php
+  php7: ~
+  xhprof: ~
+  php-fpm: ~
+  error: ~
+  exception: ~
+  throwable: ~
+  ds: ~
+  数据结构: ~
+  echo: ~
+  print: ~
+  ob_start: ~
+  HTTP: ~
+  # java / dubbo
+  builder: ~
+  invariant: ~
+  jrebel: ~
+  spring: ~
+  hotswap: ~
+  remote: ~
+  分布式: ~
+  微服务: ~
+  zookeeper: ~
+  dubbo-admin: ~
+  dubbo-monitor: ~
+  dubbo-demo: ~
+  maven: ~
+  provider: ~
+  consumer: ~
+  rest: ~
+  # ruby / rails
+  passenger: rails
+  mina: rails
+  active job: rails
+  action cable: rails
+  sidekiq: rails
+  queue: ~
+  web socket: ~
+  postgresql: ~
+  # linux
+  ubuntu: linux
+  centos: linux
+  samba: linux
+  rsync: linux
+  btsync: linux
+  server: ~
+  远程: ~
+  虾米: ~
+  网易: ~
+  落网: ~
+  foobar: ~
+  iTunes: ~
+  # 效率工具
+  alfred: 效率工具
+  dash: 效率工具
+  zsh: 效率工具
+  tmux: 效率工具
+  chrome: 效率工具
+  typora: 效率工具
+  ifttt: 效率工具
+  kindle: 效率工具
+  oh-my-zsh: ~
+  autojump: ~
+  proxychains: ~
+  ag: ~
+  htop: ~
+  ccat: ~
+  mosh: ~
+  插件: ~
+  proxy: ~
+  markdown: ~
+  develop: ~
+  scrivener: ~
+  workflowy: ~
+  notes: ~
+  qiniu: ~
+  dropbox: ~
+  gmail: ~
+  Klip.me: ~
+  # 编辑器
+  emacs: ~
+  ide: ~
+  spf13: ~
+  kvim: ~
+  fisa: ~
+  prelude: ~
+  purcell: ~
+  spacemacs: ~
+  # 其他
+  nodejs: javascript
+  instagram: ~
+  unfollowgram: ~
+  repl: ~
+  rlwrap: ~
+  otp: 安全
+  二次验证: 安全
+  sql: ~
+  calcite: ~
+  葫芦娃: ~
+  复杂: 复杂系统
+  元胞自动机: ~
+  网络: ~
+  小世界: ~
+  无尺度: ~
+  大统一理论: ~
 
 feed:
   posts_limit: 20

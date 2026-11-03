@@ -2,9 +2,12 @@
 layout: page
 ---
 
+<h1 class="page-title">{{ page.title }}<small>{{ site.tags[page.tag] | size }} 篇</small></h1>
+
 {% for post in site.tags[page.tag] %}
   <div class='archive'>
     <a href='{{ post.url }}' class="archive-title">{{ post.title }}</a>
     <span class='archive-date'>{{ post.date | date: "%F" }}</span>
   </div>
 {% endfor %}
+<p class="page-back"><a href="/tags/">全部标签</a></p>

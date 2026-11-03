@@ -10,9 +10,9 @@
       .date{
         position: absolute;
         left: -$date-width;
-        color: $border-color;
+        color: $faint-color;
         &:hover{
-          color: $lightest-color;
+          color: $lighter-color;
         }
         font-family: $font-google-mono;
         font-size: 16px; // 年份要和日月并排放进 $date-width，不随正文字号变化
@@ -74,7 +74,7 @@
         color: $lightest-color;
         border: none;
         &:hover{
-          color: $lighter-color;
+          color: $link-color;
         }
       }
     }
@@ -99,8 +99,12 @@
       margin-bottom: 0.3em;
       a{
         color: $lightest-color;
-        &:hover{ color: $lighter-color; }
+        &:hover{ color: $link-color; }
       }
+    }
+    // 日期悬挂在左侧放不下时，改在声明上方显示
+    .post-date-line{
+      display: none;
     }
     .post-content{
       margin-top: 1em;
@@ -146,7 +150,7 @@
       background: none;
       border: none;
       cursor: pointer;
-      &:hover{ color: $lighter-color; }
+      &:hover{ color: $link-color; }
     }
     #comments-thread{
       margin-top: 1.5em;
@@ -154,15 +158,18 @@
   }
 }
 
-// 日期悬挂在内容左侧，放不下时隐藏
+// 日期悬挂在内容左侧，放不下时隐藏，改用标题下的一行日期
 @media screen and (max-width: $max-width + 140px) {
     .main {
         max-width: 90%;
         margin: 0 auto;
     }
-    .post {
+    .content .post {
         .date {
             display: none;
+        }
+        .post-date-line {
+            display: block;
         }
     }
 }

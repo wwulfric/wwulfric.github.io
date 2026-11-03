@@ -150,9 +150,10 @@ mark{
   padding:2px;margin:0 5px;
 }
 
+/* 行内代码：和中文之间的空隙交给 text-autospace，挨着全角标点时不再额外留白 */
 .codespan{
   background: $darker-bg-color;
-  padding:2px;margin:0 5px;
+  padding: 1px 3px;
 }
 
 /* 代码片断 */
@@ -183,7 +184,7 @@ figcaption{
   color:$lightest-color;
 }
 
-strong, b{font-weight:bold;color:$em-color;}
+strong, b{font-weight:bold;color:#000;}
 
 /* 可拖动文件添加拖动手势 */
 [draggable]{

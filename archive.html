@@ -1,16 +1,11 @@
 ---
 layout: page
-title: Blog Posts
+title: 归档
 permalink: /archive/
 ---
 
-<div class="archive-search">
-  <input type="search" id="archive-search-input" placeholder="搜索文章" aria-label="搜索文章" autocomplete="off">
-</div>
-<p class="archive-search-status" id="archive-search-status" hidden></p>
-<div id="archive-search-results" hidden></div>
+<h1 class="page-title">归档<small>{{ site.posts | size }} 篇</small></h1>
 
-<div id="archive-list">
 {% assign years = site.posts | group_by_exp: "post", "post.date | date: '%Y'" %}
 {% for year in years %}
   <h2 class="archive-year">{{ year.name }}<small>{{ year.size }} 篇</small></h2>
@@ -21,69 +16,3 @@ permalink: /archive/
     </div>
   {% endfor %}
 {% endfor %}
-</div>
-
-<script>
-(function() {
-  var RESULT_LIMIT = 20;
-  var input = document.getElementById('archive-search-input');
-  var status = document.getElementById('archive-search-status');
-  var results = document.getElementById('archive-search-results');
-  var list = document.getElementById('archive-list');
-  var pagefind;
-  var latest = 0;
-
-  function setStatus(text) {
-    status.textContent = text;
-    status.hidden = !text;
-  }
-
-  function renderResult(item) {
-    var row = document.createElement('div');
-    row.className = 'archive';
-    var link = document.createElement('a');
-    link.className = 'archive-title';
-    link.href = item.url;
-    link.textContent = item.meta.title;
-    row.appendChild(link);
-    if (item.meta.date) {
-      var date = document.createElement('span');
-      date.className = 'archive-date';
-      date.textContent = item.meta.date;
-      row.appendChild(date);
-    }
-    var excerpt = document.createElement('p');
-    excerpt.className = 'archive-excerpt';
-    excerpt.innerHTML = item.excerpt; // Pagefind 已转义正文，只保留 <mark>
-    results.appendChild(row);
-    results.appendChild(excerpt);
-  }
-
-  async function search() {
-    var query = input.value.trim();
-    var current = ++latest;
-    list.hidden = !!query;
-    results.hidden = !query;
-    if (!query) {
-      results.textContent = '';
-      setStatus('');
-      return;
-    }
-    if (!results.hasChildNodes()) setStatus('搜索中…');
-    try {
-      pagefind = pagefind || await import('/pagefind/pagefind.js');
-      var found = await pagefind.debouncedSearch(query);
-      if (!found || current !== latest) return;
-      var items = await Promise.all(found.results.slice(0, RESULT_LIMIT).map(function(r) { return r.data(); }));
-      if (current !== latest) return;
-      results.textContent = '';
-      items.forEach(renderResult);
-      setStatus(found.results.length ? '找到 ' + found.results.length + ' 篇' : '没有找到相关文章');
-    } catch (error) {
-      setStatus('搜索索引没有生成，部署后才可以使用。');
-    }
-  }
-
-  input.addEventListener('input', search);
-})();
-</script>

@@ -8,17 +8,18 @@ $max-width: 760px;
 
 $main-color : #333;
 $lighter-color: color.adjust($main-color, $lightness: 20%); //666
-$lightest-color: color.adjust($main-color, $lightness: 40%); //999
+$lightest-color: #767676; // 白底上满足 4.5:1 的最浅灰，用于次要文字
+$faint-color: color.adjust($main-color, $lightness: 40%); //999，只用于装饰性的文字
 $border-color: color.adjust($main-color, $lightness: 67%); //ddd
 $darker-bg-color: color.adjust($main-color, $lightness: 77%); //f8f8f8
 $bg-color: color.adjust($main-color, $lightness: 80%);
 
 
-$header-color : #9C0; //#B7C11E;
 $link-color : #008D00; //#23A38F;
 $link-hover-color: color.adjust($link-color, $lightness: -20%);
+$header-color : $link-color; // 正文二级标题左侧的竖条
 
-$em-color : #F0563D; // 用于红色强调
+$em-color : #F0563D; // 只用于 404 标题
 
 $mark-color: #EFF1C2;
 

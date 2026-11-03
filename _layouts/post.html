@@ -6,20 +6,21 @@ layout: default
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="{{ page.date | date: '%F' }}" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>{{ page.date | date: "%d" }}</div>
         <div class='month'>{{ page.date | date: "%b" | upcase }}</div>
       </div>
       <div class='year pull-left'>{{ page.date | date: "%Y" }}</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">{{ page.title }}</h1>
+    <h1 class="post-title">{{ page.title }}</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="{{ page.date | date: '%F' }}">{{ page.date | date: "%F" }}</time></p>
   {% include cc.html %}
   {% include age_notice.html %}
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     {{ content }}
   </article>
 

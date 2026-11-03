@@ -4,7 +4,7 @@ module Jekyll
   Hooks.register :site, :post_read do |site|
     aliases = site.config['tag_aliases'] || {}
     site.posts.docs.each do |post|
-      post.data['tags'] = Array(post.data['tags']).map { |tag| aliases.fetch(tag, tag) }.uniq
+      post.data['tags'] = Array(post.data['tags']).map { |tag| aliases.fetch(tag, tag) }.compact.uniq
     end
   end
 

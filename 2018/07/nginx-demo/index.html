@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2018-07-19" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>19</div>
         <div class='month'>JUL</div>
       </div>
       <div class='year pull-left'>2018</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">nginx 502 和 504 超时演示</h1>
+    <h1 class="post-title">nginx 502 和 504 超时演示</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2018-07-19">2018-07-19</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -93,7 +94,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>最近线上 nginx 遇到了一些较难排查的 502 和 504 错误，顺便了解了一下 nginx 的相关配置。我发现网上很多介绍 nginx 超时配置只是列了这几个配置的含义和数值，并没有解释什么原因会触发哪个配置。因此趁这个机会演示一下，如何让 nginx 符合预期正确出现 502 和 504。</p>
 
 <h2 id="502-和-504-的解释">502 和 504 的解释</h2>
@@ -385,10 +386,6 @@ php_1  | [18-Jul-2018 16:33:42] NOTICE: [pool www] child 8 started
       
     <a class='tag' href="/tags/nginx/">
       nginx
-    </a>
-
-    <a class='tag' href="/tags/php-fpm/">
-      php-fpm
     </a>
 
     <a class='tag' href="/tags/php/">

@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2016-09-05" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>05</div>
         <div class='month'>SEP</div>
       </div>
       <div class='year pull-left'>2016</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">Rails 应用生产环境利用  Active Job 和 Action Cable 实现消息推送</h1>
+    <h1 class="post-title">Rails 应用生产环境利用  Active Job 和 Action Cable 实现消息推送</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2016-09-05">2016-09-05</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -93,7 +94,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <h2 id="设计">设计</h2>
 
 <p>基本的设计思路是，在相应的场合创建 message，通过 Active Job 广播到 Action Cable。</p>
@@ -384,28 +385,8 @@ service redis start/stop/restart
   <div id='additional'>
     <div id="tags">
       
-    <a class='tag' href="/tags/active%20job/">
-      active job
-    </a>
-
-    <a class='tag' href="/tags/action%20cable/">
-      action cable
-    </a>
-
-    <a class='tag' href="/tags/web%20socket/">
-      web socket
-    </a>
-
-    <a class='tag' href="/tags/passenger/">
-      passenger
-    </a>
-
-    <a class='tag' href="/tags/queue/">
-      queue
-    </a>
-
-    <a class='tag' href="/tags/sidekiq/">
-      sidekiq
+    <a class='tag' href="/tags/rails/">
+      rails
     </a>
 
 

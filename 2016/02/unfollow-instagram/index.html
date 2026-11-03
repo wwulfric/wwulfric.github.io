@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2016-02-18" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>18</div>
         <div class='month'>FEB</div>
       </div>
       <div class='year pull-left'>2016</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">批量取关 instagram 好友</h1>
+    <h1 class="post-title">批量取关 instagram 好友</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2016-02-18">2016-02-18</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -93,7 +94,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>前段时间由于帐号密码被撞库，instagram 被人盗去关注了好多广告帐号，大概有 1000 多个。登录进去一看吓了一跳，赶紧改了密码。可是怎么把这 1000 多号人取消关注，却犯了难。</p>
 
 <p>首先我想借助官方的力量，可是并没有在 instagram 里找到人工服务的地方，也没有发现提交工单的表单；去 twitter @ 也没人理。要是 instagram 的 web 页面能够有 unfollow 的按钮，那倒还好办，异步发一堆 unfollow 请求就行了（被盗的 twitter 就是这样取消所有关注的，其实就是简单的<span class="codespan">$(something).click()</span>），可惜没有。移动端不是很了解，不知道如何将一堆点击操作换成代码。也曾经想利用 instagram 的 API 自己写一个批量 unfollow 的脚本，然而 instagram 的安全等级太高，给出的权限很少，申请高级的权限还被拒了，所以这条路也走不通了。只好另寻他法了。</p>
@@ -158,21 +159,24 @@
 
   
 
+  <section class="post-next">
+    <h2>继续阅读</h2>
+    <ul>
+      
+        
+          <li><a href="/2016/02/better-repl/">更好的 repl</a></li>
+        
+      
+    </ul>
+  </section>
+
 
 
   <div id='additional'>
     <div id="tags">
       
-    <a class='tag' href="/tags/instagram/">
-      instagram
-    </a>
-
     <a class='tag' href="/tags/javascript/">
       javascript
-    </a>
-
-    <a class='tag' href="/tags/unfollowgram/">
-      unfollowgram
     </a>
 
 

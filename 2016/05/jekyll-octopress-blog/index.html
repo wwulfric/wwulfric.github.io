@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2016-05-11" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>11</div>
         <div class='month'>MAY</div>
       </div>
       <div class='year pull-left'>2016</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">jekyll 和 octopress 博客程序的选择</h1>
+    <h1 class="post-title">jekyll 和 octopress 博客程序的选择</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2016-05-11">2016-05-11</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -93,7 +94,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>首先，你需要理解 jekyll 和 octopress 的本质区别。jekyll 是运行在 github 的服务器上的，他可以 <strong>自动</strong> 把你上传的 md 文件转成 html。也就是说，在一个配置好的 repo 中，你只需要更改或新增 md 文件，你的博客内容就自动更改好了。但是，octopress 不一样。github 的服务器上没有这么一个服务，所以你需要在本地先把 md 文件转换成 html，然后把 html 文件发布出去。</p>
 
 <div  class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+----+
@@ -199,14 +200,6 @@ git push origin master
       
     <a class='tag' href="/tags/jekyll/">
       jekyll
-    </a>
-
-    <a class='tag' href="/tags/octopress/">
-      octopress
-    </a>
-
-    <a class='tag' href="/tags/hexo/">
-      hexo
     </a>
 
 

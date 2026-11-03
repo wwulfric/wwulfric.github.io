@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2026-05-08" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>08</div>
         <div class='month'>MAY</div>
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">gevent monkey patch 对 profiling 工具的影响</h1>
+    <h1 class="post-title">gevent monkey patch 对 profiling 工具的影响</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2026-05-08">2026-05-08</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -91,7 +92,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>上一篇文章中，我们提到了几个常见的 python 进程诊断工具。其中提到的 <a href="https://github.com/peeka-project/peeka">peeka</a> 就属于 attach agent 这一类。用户在外部选择一个正在运行的 Python 进程，peeka 把一段 agent 代码送进去；agent 在目标进程里建立命令通道，后续 <span class="codespan">watch</span>、<span class="codespan">trace</span>、<span class="codespan">top</span> 等命令再通过这个通道执行。它更接近运行时诊断工具，而不是离线性能分析器。</p>
 
 <p>运行时诊断工具可以分成控制面和数据面两层：</p>

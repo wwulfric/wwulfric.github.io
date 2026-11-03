@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2025-10-14" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>14</div>
         <div class='month'>OCT</div>
       </div>
       <div class='year pull-left'>2025</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">一个简单的通过 sql 查询 prometheus 的转换器实现</h1>
+    <h1 class="post-title">一个简单的通过 sql 查询 prometheus 的转换器实现</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2025-10-14">2025-10-14</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -91,7 +92,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <h2 id="背景">背景</h2>
 
 <p>可观测的一个重要的趋势是链路、日志、指标的统一存储和使用。大模型时代，在业务层实现链路、日志、指标的统一查询语言将是一个重要的过渡方案。本文尝试实现一个简单的通过 sql 查询 prometheus 指标的工具。</p>
@@ -654,14 +655,6 @@ my_app, 1696118520000, 0.02
       
     <a class='tag' href="/tags/prometheus/">
       prometheus
-    </a>
-
-    <a class='tag' href="/tags/sql/">
-      sql
-    </a>
-
-    <a class='tag' href="/tags/calcite/">
-      calcite
     </a>
 
 

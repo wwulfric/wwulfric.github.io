@@ -3,8 +3,8 @@
 
 main {
   --color-fg-default: #333;
-  --color-fg-muted: #999;
-  --color-fg-subtle: #999;
+  --color-fg-muted: #767676;
+  --color-fg-subtle: #767676;
   --color-canvas-subtle: #fff;
   --color-canvas-inset: #fff;
   --color-border-default: #ddd;
@@ -39,7 +39,7 @@ main .gsc-left-header em {
   font-size: 14px;
   font-weight: 400;
   font-style: normal;
-  color: #999;
+  color: #767676;
   text-decoration: none;
 }
 
@@ -55,7 +55,7 @@ main .gsc-right-header .btn {
   padding: 0 0 0 1em;
   font-size: 14px;
   font-weight: 400;
-  color: #999;
+  color: #767676;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -92,7 +92,7 @@ main .gsc-comment-box-write {
 }
 
 main .gsc-comment-box-write:focus-within {
-  border-color: #999;
+  border-color: #767676;
   box-shadow: none;
 }
 
@@ -123,7 +123,7 @@ main .gsc-comment-box-tabs button {
   padding: 0 !important;
   font-size: 14px;
   font-weight: 400;
-  color: #999;
+  color: #767676;
   background: transparent;
   border: none;
 }
@@ -152,7 +152,7 @@ main .gsc-pagination-button {
 
 main .gsc-comment-box-bottom .link-secondary {
   font-size: 13px;
-  color: #999;
+  color: #767676;
 }
 
 /* 已有评论：去掉卡片外框，用细线分隔 */

@@ -83,16 +83,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2014-09-01" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>01</div>
         <div class='month'>SEP</div>
       </div>
       <div class='year pull-left'>2014</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">短信验证的设计</h1>
+    <h1 class="post-title">短信验证的设计</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2014-09-01">2014-09-01</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -110,7 +111,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>在业务中，为安全起见，常常需要二次验证。其流程一般为，密码验证之后，需要再次输入一个一次性的密码（一般为位数较短的数字），才能完成验证。二次验证一般需要同时验证设备的唯一性。</p>
 
 <p>从验证方式上看，二次验证可以通过短信验证或 APP 验证（Google Authenticator）。对于短信验证，优点是操作方便，不需安装额外的 APP；缺点是实时性较差，依赖短信，有被窃听的风险。APP 方式正好相反。</p>
@@ -181,17 +182,24 @@
 
   
 
+  <section class="post-next">
+    <h2>继续阅读</h2>
+    <ul>
+      
+        
+          <li><a href="/2026/04/python-process-injection/">理解 Python 进程注入：从 ptrace 到 PEP 768</a></li>
+        
+      
+    </ul>
+  </section>
+
 
 
   <div id='additional'>
     <div id="tags">
       
-    <a class='tag' href="/tags/otp/">
-      otp
-    </a>
-
-    <a class='tag' href="/tags/%E4%BA%8C%E6%AC%A1%E9%AA%8C%E8%AF%81/">
-      二次验证
+    <a class='tag' href="/tags/%E5%AE%89%E5%85%A8/">
+      安全
     </a>
 
 

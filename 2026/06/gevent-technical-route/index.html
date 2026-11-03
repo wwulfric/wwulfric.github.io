@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2026-06-07" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>07</div>
         <div class='month'>JUN</div>
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</h1>
+    <h1 class="post-title">gevent 的技术路线：从 yield 到 greenlet、Hub 与 monkey patch</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2026-06-07">2026-06-07</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -91,7 +92,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>协程可以粗略理解成「能暂停、过会儿再恢复的函数执行流」。一个函数执行到一半让出 CPU，保存住自己的现场，等外部事件来了再恢复，继续从刚才的位置往下跑，这就是协程。</p>
 
 <p>Python 里最常见的两个协程库是 asyncio 和 gevent。asyncio 用 <span class="codespan">async</span>/<span class="codespan">await</span> 语法把暂停点写进代码，协程由事件循环调度，暂停和恢复发生在 Python 字节码层。gevent 走的是另一条路：它对外保留同步 API 的外观，底层用 greenlet 保存一整段调用栈，再用一个特殊的 Hub greenlet 跑 event loop 做调度。这条技术路线可以画成这样：</p>
@@ -376,14 +377,6 @@ OS thread 2
 
     <a class='tag' href="/tags/gevent/">
       gevent
-    </a>
-
-    <a class='tag' href="/tags/greenlet/">
-      greenlet
-    </a>
-
-    <a class='tag' href="/tags/coroutine/">
-      coroutine
     </a>
 
 

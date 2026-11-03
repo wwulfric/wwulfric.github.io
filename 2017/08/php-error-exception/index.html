@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2017-08-04" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>04</div>
         <div class='month'>AUG</div>
       </div>
       <div class='year pull-left'>2017</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">PHP 的错误和异常处理机制</h1>
+    <h1 class="post-title">PHP 的错误和异常处理机制</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2017-08-04">2017-08-04</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -93,7 +94,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>原先的 PHP 只有错误没有异常。看一些老的文档你能看到不少错误输出是直接 echo html 标签的。而现代一点的框架早已经包裹好了一切，直接抛出异常就可以有比较漂亮的错误显示页面，比如 rails 的 <a href="https://github.com/charliesome/better_errors">better errors</a>。当然，PHP 的现代框架也已经做的不错了，比如 laravel。然而我司目前还是用 codeigniter 2，它的错误和异常处理还比较简陋。借着升级到 PHP7 的契机梳理了一下 PHP 的错误和异常处理的机制。</p>
 
 <h2 id="php-的错误和异常">PHP 的错误和异常</h2>
@@ -515,18 +516,6 @@
       
     <a class='tag' href="/tags/php/">
       php
-    </a>
-
-    <a class='tag' href="/tags/error/">
-      error
-    </a>
-
-    <a class='tag' href="/tags/exception/">
-      exception
-    </a>
-
-    <a class='tag' href="/tags/throwable/">
-      throwable
     </a>
 
 

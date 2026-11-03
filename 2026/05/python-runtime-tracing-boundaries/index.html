@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2026-05-27" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>27</div>
         <div class='month'>MAY</div>
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">Python 运行时观测的四条边界：frame、code object、greenlet、task</h1>
+    <h1 class="post-title">Python 运行时观测的四条边界：frame、code object、greenlet、task</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2026-05-27">2026-05-27</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -91,7 +92,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>Python 提供了几套观测程序运行时行为的接口：<span class="codespan">sys.settrace</span>、<span class="codespan">sys.monitoring</span>、<span class="codespan">greenlet.settrace</span>、asyncio Task API。它们都用来追踪正在执行的代码，但作用对象处于不同层次，触发的事件和能回答的问题也不一样。这篇文章按 frame -&gt; code object -&gt; greenlet -&gt; Task 的顺序，把这四条边界看到什么、看不到什么逐个讲清楚：</p>
 
 <ul>
@@ -636,10 +637,6 @@
 
     <a class='tag' href="/tags/gevent/">
       gevent
-    </a>
-
-    <a class='tag' href="/tags/asyncio/">
-      asyncio
     </a>
 
     <a class='tag' href="/tags/debug/">

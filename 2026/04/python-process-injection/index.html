@@ -66,16 +66,17 @@
 <div class="post typo">
 
   <header class="post-header clearfix">
-    <div class='date pull-left clearfix' data-date="2026-04-19" data-pagefind-meta="date[data-date]">
+    <div class='date pull-left clearfix'>
       <div class='day-month pull-left'>
         <div class='day'>19</div>
         <div class='month'>APR</div>
       </div>
       <div class='year pull-left'>2026</div>
     </div>
-    <h1 class="post-title" data-pagefind-meta="title">理解 Python 进程注入：从 ptrace 到 PEP 768</h1>
+    <h1 class="post-title">理解 Python 进程注入：从 ptrace 到 PEP 768</h1>
   </header>
 
+  <p class="post-note post-date-line"><time datetime="2026-04-19">2026-04-19</time></p>
   
 <p class='post-note'>声明: 本文采用 <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" rel="nofollow" target="_blank" title="姓名标示-非商业性-禁止改作4.0国际">CC BY-NC-ND 4.0</a> 授权。</p>
 
@@ -91,7 +92,7 @@
 
 
 
-  <article class="post-content" data-pagefind-body>
+  <article class="post-content">
     <p>线上 Python 服务偶尔卡住、CPU 飙高，或者某个接口突然变慢时，进程往往还在跑，不能为了加一行日志或者打开 <span class="codespan">cProfile</span> 就重启。此时关心的是这个 PID 正在做什么：哪些函数在调用，栈停在哪里，内存分配是否异常，某个函数的入参、返回值和耗时到底是什么。</p>
 
 <p>能不能趁这个 PID 还活着，把一小段诊断逻辑送进去，让它在原来的 Python 解释器里执行？这就是<strong>进程注入</strong>，也常叫 process inject。它不是为了给业务代码增加新功能，而是让外部工具临时进入目标进程，读取运行时状态、安装 hook，或者启动一个诊断 agent。</p>

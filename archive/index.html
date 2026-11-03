@@ -11,10 +11,10 @@
   <meta name="baidu-site-verification" content="9nNaof1vhh" />
 
   
-  <title>Blog Posts | Storm Spirit</title>
+  <title>归档 | Storm Spirit</title>
   <!-- Begin Jekyll SEO tag v2.9.1 -->
 <meta name="generator" content="Jekyll v4.4.1" />
-<meta property="og:title" content="Blog Posts" />
+<meta property="og:title" content="归档" />
 <meta name="author" content="wulfric" />
 <meta property="og:locale" content="zh_CN" />
 <meta name="description" content="这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。" />
@@ -26,9 +26,9 @@
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="https://www.wulfric.me/assets/images/og-default.png" />
-<meta name="twitter:title" content="Blog Posts" />
+<meta name="twitter:title" content="归档" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","author":{"@type":"Person","name":"wulfric"},"description":"这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。","headline":"Blog Posts","image":"https://www.wulfric.me/assets/images/og-default.png","url":"https://www.wulfric.me/archive/"}</script>
+{"@context":"https://schema.org","@type":"WebPage","author":{"@type":"Person","name":"wulfric"},"description":"这是我的中文博客，记录自己在技术、生活等方面的一些感想。博客叫 Storm Spirit， 因为我特别喜欢 Dota 里蓝猫这个英雄，可惜玩得不好…… 希望自己能够通过博客，得到成长。","headline":"归档","image":"https://www.wulfric.me/assets/images/og-default.png","url":"https://www.wulfric.me/archive/"}</script>
 <!-- End Jekyll SEO tag -->
 
   <link type="application/atom+xml" rel="alternate" href="https://www.wulfric.me/feed.xml" title="Storm Spirit" />
@@ -59,13 +59,8 @@
 
 
       <div class='main'>
-        <div class="archive-search">
-  <input type="search" id="archive-search-input" placeholder="搜索文章" aria-label="搜索文章" autocomplete="off">
-</div>
-<p class="archive-search-status" id="archive-search-status" hidden></p>
-<div id="archive-search-results" hidden></div>
+        <h1 class="page-title">归档<small>65 篇</small></h1>
 
-<div id="archive-list">
 
 
   <h2 class="archive-year">2026<small>6 篇</small></h2>
@@ -423,72 +418,6 @@
     </div>
   
 
-</div>
-
-<script>
-(function() {
-  var RESULT_LIMIT = 20;
-  var input = document.getElementById('archive-search-input');
-  var status = document.getElementById('archive-search-status');
-  var results = document.getElementById('archive-search-results');
-  var list = document.getElementById('archive-list');
-  var pagefind;
-  var latest = 0;
-
-  function setStatus(text) {
-    status.textContent = text;
-    status.hidden = !text;
-  }
-
-  function renderResult(item) {
-    var row = document.createElement('div');
-    row.className = 'archive';
-    var link = document.createElement('a');
-    link.className = 'archive-title';
-    link.href = item.url;
-    link.textContent = item.meta.title;
-    row.appendChild(link);
-    if (item.meta.date) {
-      var date = document.createElement('span');
-      date.className = 'archive-date';
-      date.textContent = item.meta.date;
-      row.appendChild(date);
-    }
-    var excerpt = document.createElement('p');
-    excerpt.className = 'archive-excerpt';
-    excerpt.innerHTML = item.excerpt; // Pagefind 已转义正文，只保留 <mark>
-    results.appendChild(row);
-    results.appendChild(excerpt);
-  }
-
-  async function search() {
-    var query = input.value.trim();
-    var current = ++latest;
-    list.hidden = !!query;
-    results.hidden = !query;
-    if (!query) {
-      results.textContent = '';
-      setStatus('');
-      return;
-    }
-    if (!results.hasChildNodes()) setStatus('搜索中…');
-    try {
-      pagefind = pagefind || await import('/pagefind/pagefind.js');
-      var found = await pagefind.debouncedSearch(query);
-      if (!found || current !== latest) return;
-      var items = await Promise.all(found.results.slice(0, RESULT_LIMIT).map(function(r) { return r.data(); }));
-      if (current !== latest) return;
-      results.textContent = '';
-      items.forEach(renderResult);
-      setStatus(found.results.length ? '找到 ' + found.results.length + ' 篇' : '没有找到相关文章');
-    } catch (error) {
-      setStatus('搜索索引没有生成，部署后才可以使用。');
-    }
-  }
-
-  input.addEventListener('input', search);
-})();
-</script>
 
 
       </div>

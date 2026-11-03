@@ -1,10 +1,8 @@
 ---
 layout: page
-title: 归档
+title: 博客
 permalink: /archive/
 ---
-
-<h1 class="page-title">归档<small>{{ site.posts | size }} 篇</small></h1>
 
 {% assign years = site.posts | group_by_exp: "post", "post.date | date: '%Y'" %}
 {% for year in years %}

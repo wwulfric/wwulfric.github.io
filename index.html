@@ -16,6 +16,7 @@ layout: default
 
 {% endfor %}
 
+{% comment %} 首页的最近文章入口，暂时去掉，以后再决定要不要加回来。样式 .post-entry 仍在 layout.scss
 <section class="post-entry clearfix">
   <div class="post-entry-title">$ ls -t posts | head -3</div>
   <div class="post-entry-list">
@@ -28,3 +29,4 @@ layout: default
   </div>
   <a class="post-entry-all" href="{{ '/archive/' | relative_url }}">READ ALL {{ site.posts | size }} POSTS →</a>
 </section>
+{% endcomment %}
